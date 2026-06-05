@@ -2,6 +2,7 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
+import Image from 'next/image';
 import { Eye, EyeOff, Phone, Lock, Loader2 } from 'lucide-react';
 import { useAuthStore } from '@/lib/store';
 import { apiLogin } from '@/lib/api';
@@ -86,7 +87,9 @@ export default function LoginPage() {
           borderRadius: '50%',
         }} />
         <div style={{ textAlign: 'center', color: 'white', zIndex: 1 }}>
-          <div style={{ fontSize: 52, marginBottom: 4 }}>🤖</div>
+          <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 8 }}>
+            <Image src="/logo.png" alt="Winary AI Logo" width={80} height={80} style={{ borderRadius: 16 }} />
+          </div>
           <div style={{
             fontSize: 20, fontWeight: 800,
             fontFamily: 'Space Grotesk, sans-serif',

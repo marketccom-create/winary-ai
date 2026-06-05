@@ -2,6 +2,7 @@
 import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuthStore } from '@/lib/store';
+import Image from 'next/image';
 
 export default function RootPage() {
   const { isAuthenticated, user, _hasHydrated } = useAuthStore();
@@ -42,9 +43,11 @@ export default function RootPage() {
         alignItems: 'center',
         justifyContent: 'center',
         marginBottom: 20,
-        fontSize: 40,
         border: '2px solid rgba(255,255,255,0.25)',
-      }}>🤖</div>
+        overflow: 'hidden',
+      }}>
+        <Image src="/logo.png" alt="Winary AI" width={80} height={80} style={{ objectFit: 'contain' }} />
+      </div>
 
       <div style={{
         fontSize: 32,

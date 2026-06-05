@@ -2,6 +2,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
+import Image from 'next/image';
 import { Eye, EyeOff, Lock, Shield, RefreshCw, Loader2 } from 'lucide-react';
 import { useAuthStore } from '@/lib/store';
 import { apiRegister } from '@/lib/api';
@@ -125,7 +126,9 @@ export default function RegisterPage() {
           width: 180, height: 180, background: 'rgba(255,255,255,0.05)', borderRadius: '50%',
         }} />
         <div style={{ textAlign: 'center', color: 'white', zIndex: 1 }}>
-          <div style={{ fontSize: 36, marginBottom: 4 }}>🤖</div>
+          <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 6 }}>
+            <Image src="/logo.png" alt="Winary AI Logo" width={64} height={64} style={{ borderRadius: 12 }} />
+          </div>
           <div style={{ fontSize: 16, fontWeight: 700, fontFamily: 'Space Grotesk, sans-serif' }}>
             Créez votre compte
           </div>
