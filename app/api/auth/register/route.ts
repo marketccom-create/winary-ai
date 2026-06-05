@@ -15,7 +15,7 @@ function generateReferralCode() {
 export async function POST(req: Request) {
   try {
     const { phone, password, referralCode } = await req.json();
-    if (!phone || !password || !referralCode) {
+    if (!phone || !password) {
       return NextResponse.json({ error: 'Champs manquants' }, { status: 400 });
     }
 
@@ -28,13 +28,17 @@ export async function POST(req: Request) {
     }
 
     // Find referrer
-    const { data: referrer } = await db
-      .from('users')
-      .select('id')
-      .eq('referral_code', referralCode)
-      .single();
-    if (!referrer) {
-      return NextResponse.json({ error: 'Code de parrainage invalide' }, { status: 400 });
+    let referrerId = null;
+    if (referralCode && referralCode.trim() !== '') {
+      const { data: referrer } = await db
+        .from('users')
+        .select('id')
+        .eq('referral_code', referralCode.trim())
+        .single();
+      if (!referrer) {
+        return NextResponse.json({ error: 'Code de parrainage invalide' }, { status: 400 });
+      }
+      referrerId = referrer.id;
     }
 
     const passwordHash = await bcrypt.hash(password, 10);
@@ -47,7 +51,7 @@ export async function POST(req: Request) {
         phone,
         password_hash: passwordHash,
         referral_code: newReferralCode,
-        referred_by_id: referrer.id,
+        referred_by_id: referrerId,
         balance_cents: WELCOME_BONUS_CENTS,
         is_admin: false,
       })

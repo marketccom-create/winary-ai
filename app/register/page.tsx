@@ -63,7 +63,6 @@ export default function RegisterPage() {
     if (!phone || phone.replace(/\s/g, '').length < 8) errs.phone = 'Numéro invalide';
     if (!password || password.length < 6) errs.password = 'Minimum 6 caractères';
     if (password !== confirm) errs.confirm = 'Les mots de passe ne correspondent pas';
-    if (!refCode.trim()) errs.refCode = 'Code de parrainage obligatoire';
     if (captchaInput !== captcha.answer) { errs.captcha = 'Code de vérification incorrect'; refreshCaptcha(); }
     setFieldErrors(errs);
     return Object.keys(errs).length === 0;
@@ -220,15 +219,12 @@ export default function RegisterPage() {
               </div>
               <input
                 className={`input-field${fieldErrors.refCode ? ' error' : ''}`}
-                type="text" placeholder="Code d'invitation (obligatoire)"
+                type="text" placeholder="Code d'invitation (Optionnel)"
                 value={refCode} onChange={e => setRefCode(e.target.value.toUpperCase())}
                 style={{ paddingLeft: 44 }}
               />
             </div>
             {fieldErrors.refCode && <p style={{ color: '#EF4444', fontSize: 12, margin: '4px 0 0 4px' }}>{fieldErrors.refCode}</p>}
-            <p style={{ color: '#6B7280', fontSize: 11, margin: '4px 0 0 4px' }}>
-              Utilisez: <strong>WIN-DEMO</strong> pour le test
-            </p>
           </div>
 
           {/* Captcha */}
