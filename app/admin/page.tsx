@@ -1,6 +1,7 @@
 'use client';
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
+import Image from 'next/image';
 import {
   Users, Bot, CreditCard, Megaphone, Settings, LogOut,
   Search, TrendingUp, AlertCircle, Check, X, Save, Loader2, ChevronRight, Plus, Trash, Edit, RefreshCw
@@ -268,10 +269,15 @@ export default function AdminPage() {
       }}>
         {/* Logo */}
         <div style={{ padding: '0 20px 24px', borderBottom: '1px solid rgba(255,255,255,0.1)' }}>
-          <div style={{
-            fontSize: 18, fontWeight: 800, color: 'white',
-            fontFamily: 'Space Grotesk, sans-serif',
-          }}>WINARY AI</div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            <div style={{ width: 32, height: 32, borderRadius: 8, overflow: 'hidden' }}>
+              <Image src="/logo.png" alt="Logo" width={32} height={32} style={{ objectFit: 'cover' }} />
+            </div>
+            <div style={{
+              fontSize: 18, fontWeight: 800, color: 'white',
+              fontFamily: 'Space Grotesk, sans-serif',
+            }}>WINARY AI</div>
+          </div>
           <div style={{ fontSize: 11, color: '#6B7280', marginTop: 2 }}>Administration</div>
         </div>
 

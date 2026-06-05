@@ -104,8 +104,10 @@ export default function RegisterPage() {
           <div style={{
             width: 36, height: 36, background: 'rgba(255,255,255,0.2)',
             borderRadius: 8, display: 'flex', alignItems: 'center', justifyContent: 'center',
-            fontSize: 18, fontWeight: 800, color: 'white', fontFamily: 'Space Grotesk, sans-serif',
-          }}>W</div>
+            overflow: 'hidden',
+          }}>
+            <Image src="/logo.png" alt="Logo" width={36} height={36} style={{ objectFit: 'cover' }} />
+          </div>
           <span style={{ color: 'white', fontWeight: 700, fontSize: 18, fontFamily: 'Space Grotesk, sans-serif' }}>WINARY AI</span>
         </div>
         <Link href="/login" style={{

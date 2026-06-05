@@ -1,6 +1,7 @@
 'use client';
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
+import Image from 'next/image';
 import { Bell, ArrowUpRight, ArrowDownLeft, UserPlus, ChevronRight, Loader2, X } from 'lucide-react';
 import { useAuthStore, useAppStore, useUIStore } from '@/lib/store';
 import { apiGetBots, apiPurchaseBot, apiDeposit, apiWithdraw, apiGetBotPaymentConfigs } from '@/lib/api';
@@ -428,8 +429,10 @@ export default function HomePage() {
           <div style={{
             width: 32, height: 32, background: '#1A56DB', borderRadius: 8,
             display: 'flex', alignItems: 'center', justifyContent: 'center',
-            fontSize: 16, fontWeight: 800, color: 'white', fontFamily: 'Space Grotesk, sans-serif',
-          }}>W</div>
+            overflow: 'hidden',
+          }}>
+            <Image src="/logo.png" alt="Logo" width={32} height={32} style={{ objectFit: 'cover' }} />
+          </div>
           <span style={{ fontWeight: 700, fontSize: 17, fontFamily: 'Space Grotesk, sans-serif', color: '#111827' }}>
             WINARY AI
           </span>
