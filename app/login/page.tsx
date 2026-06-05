@@ -165,15 +165,6 @@ export default function LoginPage() {
             }}>⚠️ {error}</div>
           )}
 
-          {/* Demo hint */}
-          <div style={{
-            background: '#EFF6FF', border: '1px solid #BFDBFE', color: '#1D4ED8',
-            padding: '10px 14px', borderRadius: 10, fontSize: 12,
-          }}>
-            <strong>Démo:</strong> +22997001234 / Demo@1234<br />
-            <strong>Admin:</strong> +22901010101 / Admin@2024
-          </div>
-
           {/* Submit */}
           <button
             type="submit"
