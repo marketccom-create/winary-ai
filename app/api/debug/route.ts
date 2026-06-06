@@ -1,62 +1,81 @@
 import { NextResponse } from 'next/server';
-import { createAdminClient } from '@/lib/supabase';
 import bcrypt from 'bcryptjs';
 
 export async function GET() {
   const diagnostics: Record<string, any> = {};
 
-  // 1. Check environment variables
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
+  const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
+
   diagnostics.env = {
-    SUPABASE_URL: process.env.NEXT_PUBLIC_SUPABASE_URL ? '✅ SET (' + process.env.NEXT_PUBLIC_SUPABASE_URL.slice(0, 30) + '...)' : '❌ MISSING',
-    ANON_KEY: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ? '✅ SET (length: ' + process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY.length + ')' : '❌ MISSING',
-    SERVICE_ROLE_KEY: process.env.SUPABASE_SERVICE_ROLE_KEY ? '✅ SET (length: ' + process.env.SUPABASE_SERVICE_ROLE_KEY.length + ')' : '❌ MISSING',
-    JWT_SECRET: process.env.JWT_SECRET ? '✅ SET' : '❌ MISSING (using default)',
+    SUPABASE_URL: supabaseUrl || '❌ MISSING',
+    SERVICE_KEY_LENGTH: serviceRoleKey?.length || 0,
   };
 
-  // 2. Test database connection
+  // Test 1: Raw fetch to Supabase REST API (bypass @supabase/supabase-js)
   try {
-    const db = createAdminClient();
-    
-    // 2a. Try to query the users table
-    const { data: users, error: usersError } = await db
-      .from('users')
-      .select('id, phone, is_admin, password_hash')
-      .limit(5);
+    const url = `${supabaseUrl}/rest/v1/users?phone=eq.%2B22901010101&select=id,phone,password_hash,is_admin`;
+    const res = await fetch(url, {
+      headers: {
+        'apikey': serviceRoleKey,
+        'Authorization': `Bearer ${serviceRoleKey}`,
+        'Content-Type': 'application/json',
+      },
+    });
+    const text = await res.text();
+    diagnostics.rawFetch = {
+      status: res.status,
+      statusText: res.statusText,
+      bodyPreview: text.slice(0, 500),
+    };
 
-    if (usersError) {
-      diagnostics.db = { status: '❌ ERROR', error: usersError.message, code: usersError.code, hint: usersError.hint };
-    } else {
-      diagnostics.db = { status: '✅ CONNECTED', userCount: users?.length || 0 };
-      
-      // 2b. Check if admin user exists
-      const adminUser = users?.find(u => u.phone === '+22901010101');
-      if (adminUser) {
-        diagnostics.adminUser = {
-          exists: true,
-          id: adminUser.id,
-          phone: adminUser.phone,
-          isAdmin: adminUser.is_admin,
-          hashPrefix: adminUser.password_hash?.slice(0, 20) + '...',
-          hashLength: adminUser.password_hash?.length,
-        };
-
-        // 2c. Test bcrypt compare
-        const valid = await bcrypt.compare('admin123', adminUser.password_hash);
-        diagnostics.bcryptTest = { password: 'admin123', valid };
-      } else {
-        diagnostics.adminUser = { exists: false, allPhones: users?.map(u => u.phone) };
+    if (res.ok) {
+      try {
+        const users = JSON.parse(text);
+        diagnostics.usersFound = users.length;
+        if (users.length > 0) {
+          const user = users[0];
+          diagnostics.adminUser = {
+            id: user.id,
+            phone: user.phone,
+            is_admin: user.is_admin,
+            hashPrefix: user.password_hash?.slice(0, 25),
+          };
+          // Test bcrypt
+          const valid = await bcrypt.compare('admin123', user.password_hash);
+          diagnostics.bcrypt_admin123 = valid;
+        }
+      } catch (e: any) {
+        diagnostics.parseError = e.message;
       }
     }
-
-    // 2d. Check tables existence
-    const { data: tables, error: tablesError } = await db
-      .from('users')
-      .select('id')
-      .limit(1);
-    diagnostics.tablesCheck = tablesError ? '❌ users table error: ' + tablesError.message : '✅ users table OK';
-
   } catch (err: any) {
-    diagnostics.db = { status: '❌ EXCEPTION', message: err.message };
+    diagnostics.rawFetchError = {
+      message: err.message,
+      cause: err.cause?.message || 'none',
+      code: err.cause?.code || 'none',
+    };
+
+    // Test 2: Can we reach the Supabase URL at all?
+    try {
+      const pingRes = await fetch(`${supabaseUrl}/rest/v1/`, {
+        headers: { 'apikey': serviceRoleKey },
+      });
+      diagnostics.pingSupabase = { status: pingRes.status };
+    } catch (pingErr: any) {
+      diagnostics.pingError = {
+        message: pingErr.message,
+        cause: pingErr.cause?.message || 'none',
+      };
+    }
+
+    // Test 3: Can we reach google.com? (general network test)
+    try {
+      const googleRes = await fetch('https://www.google.com');
+      diagnostics.googleTest = { status: googleRes.status, ok: '✅ Internet works' };
+    } catch (googleErr: any) {
+      diagnostics.googleTest = { error: googleErr.message };
+    }
   }
 
   return NextResponse.json(diagnostics, { status: 200 });
