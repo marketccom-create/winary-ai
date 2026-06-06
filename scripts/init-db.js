@@ -142,7 +142,7 @@ async function initDB() {
     console.log('\n⚠️  Méthode RPC non disponible. Utilisez le SQL Editor Supabase.');
     console.log('   Fichier SQL : supabase-schema.sql');
     console.log('\n   COMMENT FAIRE :');
-    console.log('   1. Allez sur https://supabase.com/dashboard/project/ooxqvhcguuynamaoefqc/sql');
+    console.log('   1. Allez sur https://supabase.com/dashboard/project/ooxqvhcguuynapaoefqc/sql');
     console.log('   2. Cliquez "New query"');
     console.log('   3. Collez le contenu de supabase-schema.sql');
     console.log('   4. Cliquez Run (▶)');
