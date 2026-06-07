@@ -36,14 +36,15 @@ export async function GET(
 
   const { data: referees } = await db
     .from('users')
-    .select('phone, created_at')
+    .select('phone, created_at, first_name, last_name')
     .eq('referred_by_id', id);
 
   return NextResponse.json({
     user: {
       id: user.id,
       phone: user.phone,
-      fullName: user.full_name,
+      firstName: user.first_name,
+      lastName: user.last_name,
       referralCode: user.referral_code,
       balanceCents: user.balance_cents,
       isAdmin: user.is_admin,

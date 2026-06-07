@@ -5,6 +5,7 @@ import { LogOut, ArrowUpRight, ArrowDownLeft, Zap, Gift, Users, Settings, Loader
 import { useAuthStore, useAppStore, useUIStore } from '@/lib/store';
 import { apiGetTransactions } from '@/lib/api';
 import { formatXOF } from '@/lib/data';
+import { apiChangePassword } from '@/lib/api';
 import type { Transaction } from '@/lib/data';
 
 const TX_ICONS: Record<string, { icon: string; color: string; bg: string; label: string }> = {
@@ -24,12 +25,92 @@ const STATUS_LABELS: Record<string, { label: string; color: string }> = {
   CANCELLED: { label: 'Annulé',  color: '#6B7280' },
 };
 
+function ChangePasswordModal({ onClose }: { onClose: () => void }) {
+  const [oldPassword, setOldPassword] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+  const { showToast } = useUIStore();
+
+  async function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    if (!oldPassword || !newPassword) {
+      setError('Veuillez remplir tous les champs');
+      return;
+    }
+    if (newPassword.length < 6) {
+      setError('Le nouveau mot de passe doit contenir au moins 6 caractères');
+      return;
+    }
+    setError('');
+    setLoading(true);
+    try {
+      await apiChangePassword(oldPassword, newPassword);
+      showToast('Mot de passe modifié avec succès !', 'success');
+      onClose();
+    } catch (err: any) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  return (
+    <div className="modal-overlay" onClick={onClose}>
+      <div className="modal-sheet slide-up" onClick={e => e.stopPropagation()}>
+        <div className="modal-handle" />
+        <h2 style={{ fontSize: 18, fontWeight: 700, margin: '0 0 4px', fontFamily: 'Space Grotesk, sans-serif' }}>
+          Changer de mot de passe
+        </h2>
+        <p style={{ color: '#6B7280', fontSize: 13, margin: '0 0 20px' }}>
+          Sécurisez votre compte en mettant à jour votre mot de passe.
+        </p>
+        <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+          <div>
+            <label style={{ fontSize: 13, fontWeight: 600, color: '#374151', display: 'block', marginBottom: 6 }}>
+              Ancien mot de passe
+            </label>
+            <input
+              className="input-field" type="password" placeholder="Mot de passe actuel"
+              value={oldPassword} onChange={e => setOldPassword(e.target.value)}
+            />
+          </div>
+          <div>
+            <label style={{ fontSize: 13, fontWeight: 600, color: '#374151', display: 'block', marginBottom: 6 }}>
+              Nouveau mot de passe
+            </label>
+            <input
+              className="input-field" type="password" placeholder="Min 6 caractères"
+              value={newPassword} onChange={e => setNewPassword(e.target.value)}
+            />
+          </div>
+          {error && (
+            <div style={{
+              background: '#FEE2E2', color: '#DC2626', padding: '10px 14px',
+              borderRadius: 10, fontSize: 13, fontWeight: 500,
+            }}>⚠️ {error}</div>
+          )}
+          <button type="submit" className="btn-press" disabled={loading} style={{
+            height: 52, background: loading ? '#93C5FD' : 'linear-gradient(135deg, #1A56DB, #1D4ED8)',
+            color: 'white', border: 'none', borderRadius: 12,
+            fontSize: 15, fontWeight: 700, cursor: loading ? 'not-allowed' : 'pointer',
+            display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, marginTop: 8
+          }}>
+            {loading ? <><Loader2 size={18} style={{ animation: 'spin 0.8s linear infinite' }} /> Mise à jour...</> : 'Mettre à jour'}
+          </button>
+        </form>
+      </div>
+    </div>
+  );
+}
+
 export default function AccountPage() {
   const router = useRouter();
   const { user, logout } = useAuthStore();
   const { transactions, setTransactions, resetAnnouncementSeen } = useAppStore();
   const { showToast } = useUIStore();
   const [loading, setLoading] = useState(true);
+  const [showPasswordModal, setShowPasswordModal] = useState(false);
 
   useEffect(() => {
     if (!user) return;
@@ -76,9 +157,9 @@ export default function AccountPage() {
             }}>👤</div>
             <div>
               <div style={{ fontSize: 16, fontWeight: 700, color: '#111827' }}>
-                {user?.fullName || user?.phone}
+                {user?.firstName ? `${user.firstName} ${user.lastName || ''}` : user?.phone}
               </div>
-              {user?.fullName && (
+              {user?.firstName && (
                 <div style={{ fontSize: 12, color: '#6B7280', marginTop: 1 }}>{user?.phone}</div>
               )}
               <div style={{ fontSize: 12, color: '#9CA3AF', marginTop: 2 }}>
@@ -171,6 +252,23 @@ export default function AccountPage() {
           )}
         </div>
 
+        {/* Change Password */}
+        <button
+          onClick={() => setShowPasswordModal(true)}
+          className="btn-press"
+          style={{
+            width: '100%', height: 50,
+            background: 'white', border: '1.5px solid #E5E7EB',
+            borderRadius: 12, color: '#374151',
+            fontSize: 14, fontWeight: 700, cursor: 'pointer',
+            display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
+            marginTop: 16,
+          }}
+        >
+          <Settings size={16} />
+          Changer mon mot de passe
+        </button>
+
         {/* Logout */}
         <button
           onClick={handleLogout}
@@ -181,13 +279,16 @@ export default function AccountPage() {
             borderRadius: 12, color: '#DC2626',
             fontSize: 14, fontWeight: 700, cursor: 'pointer',
             display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
-            marginTop: 8,
+            marginTop: 12,
           }}
         >
           <LogOut size={16} />
           Se déconnecter
         </button>
       </div>
+
+      {showPasswordModal && <ChangePasswordModal onClose={() => setShowPasswordModal(false)} />}
+
       <style>{`@keyframes spin { to { transform: rotate(360deg); }}`}</style>
     </div>
   );

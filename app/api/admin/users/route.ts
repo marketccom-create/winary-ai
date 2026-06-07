@@ -17,7 +17,7 @@ export async function GET(req: Request) {
   const db = createAdminClient();
   const { data: users, error: dbErr } = await db
     .from('users')
-    .select('id, phone, referral_code, balance_cents, is_admin, created_at, referred_by_id, full_name')
+    .select('id, phone, referral_code, balance_cents, is_admin, created_at, referred_by_id, first_name, last_name')
     .order('created_at', { ascending: false });
 
   if (dbErr) return NextResponse.json({ error: dbErr.message }, { status: 500 });
@@ -32,7 +32,8 @@ export async function GET(req: Request) {
       return {
         id: u.id,
         phone: u.phone,
-        fullName: u.full_name,
+        firstName: u.first_name,
+        lastName: u.last_name,
         referralCode: u.referral_code,
         balanceCents: u.balance_cents,
         isAdmin: u.is_admin,

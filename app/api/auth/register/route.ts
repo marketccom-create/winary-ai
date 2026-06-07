@@ -14,8 +14,8 @@ function generateReferralCode() {
 
 export async function POST(req: Request) {
   try {
-    const { phone, password, referralCode, fullName } = await req.json();
-    if (!phone || !password || !fullName || !fullName.trim()) {
+    const { phone, password, referralCode, firstName, lastName } = await req.json();
+    if (!phone || !password || !firstName || !firstName.trim() || !lastName || !lastName.trim()) {
       return NextResponse.json({ error: 'Champs manquants' }, { status: 400 });
     }
 
@@ -54,7 +54,8 @@ export async function POST(req: Request) {
         referred_by_id: referrerId,
         balance_cents: WELCOME_BONUS_CENTS,
         is_admin: false,
-        full_name: fullName.trim(),
+        first_name: firstName.trim(),
+        last_name: lastName.trim(),
       })
       .select()
       .single();
@@ -81,7 +82,8 @@ export async function POST(req: Request) {
     const safeUser = {
       id: newUser.id,
       phone: newUser.phone,
-      fullName: newUser.full_name,
+      firstName: newUser.first_name,
+      lastName: newUser.last_name,
       referralCode: newUser.referral_code,
       balanceCents: newUser.balance_cents,
       createdAt: newUser.created_at,

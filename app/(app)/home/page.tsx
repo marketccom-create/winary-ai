@@ -487,7 +487,7 @@ export default function HomePage() {
       {/* Hero Banner */}
       <div className="hero-banner" style={{ padding: '20px 20px 28px', marginBottom: 20 }}>
         <div style={{ color: 'white' }}>
-          <p style={{ fontSize: 13, opacity: 0.8, margin: '0 0 2px' }}>Bonjour 👋</p>
+          <p style={{ fontSize: 13, opacity: 0.8, margin: '0 0 2px' }}>Bonjour 👋, {user?.firstName || 'Utilisateur'}</p>
           <h2 style={{
             fontSize: 22, fontWeight: 800, margin: '0 0 4px',
             fontFamily: 'Space Grotesk, sans-serif', letterSpacing: '-0.5px',

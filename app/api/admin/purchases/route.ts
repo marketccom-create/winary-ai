@@ -18,7 +18,7 @@ export async function GET(req: Request) {
   const db = createAdminClient();
   const { data, error: dbErr } = await db
     .from('purchases')
-    .select('*, users(phone, full_name)')
+    .select(`*, users(phone, first_name, last_name)`)
     .order('purchased_at', { ascending: false });
 
   if (dbErr) return NextResponse.json({ error: dbErr.message }, { status: 500 });
@@ -28,7 +28,7 @@ export async function GET(req: Request) {
       id: p.id,
       userId: p.user_id,
       userPhone: p.users?.phone || 'Inconnu',
-      userName: p.users?.full_name || '',
+      userName: p.users?.first_name ? `${p.users.first_name} ${p.users.last_name || ''}`.trim() : '',
       botId: p.bot_id,
       botName: p.bot_name,
       pricePaidCents: p.price_paid_cents,

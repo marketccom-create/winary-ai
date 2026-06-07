@@ -39,7 +39,8 @@ export async function POST(req: Request) {
     const safeUser = {
       id: user.id,
       phone: user.phone,
-      fullName: user.full_name,
+      firstName: user.first_name,
+      lastName: user.last_name,
       referralCode: user.referral_code,
       balanceCents: user.balance_cents,
       createdAt: user.created_at,

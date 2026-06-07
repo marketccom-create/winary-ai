@@ -47,7 +47,8 @@ export async function apiRegister(data: {
   referralCode: string;
   captchaAnswer: string;
   captchaToken: string;
-  fullName: string;
+  firstName: string;
+  lastName: string;
 }) {
   return apiFetch<{ user: any; token: string }>('/api/auth/register', {
     method: 'POST',
@@ -55,8 +56,16 @@ export async function apiRegister(data: {
       phone: data.phone,
       password: data.password,
       referralCode: data.referralCode,
-      fullName: data.fullName,
+      firstName: data.firstName,
+      lastName: data.lastName,
     }),
+  });
+}
+
+export async function apiChangePassword(oldPassword: string, newPassword: string) {
+  return apiFetch<{ success: boolean }>('/api/auth/change-password', {
+    method: 'POST',
+    body: JSON.stringify({ oldPassword, newPassword }),
   });
 }
 

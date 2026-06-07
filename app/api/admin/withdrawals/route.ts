@@ -17,7 +17,7 @@ export async function GET(req: Request) {
   const db = createAdminClient();
   const { data, error: dbErr } = await db
     .from('transactions')
-    .select('*, users(phone, full_name)')
+    .select(`*, users(phone, first_name, last_name)`)
     .eq('type', 'WITHDRAWAL')
     .eq('status', 'PENDING')
     .order('created_at', { ascending: false });
@@ -29,7 +29,7 @@ export async function GET(req: Request) {
       id: t.id,
       userId: t.user_id,
       userPhone: t.users?.phone || 'Inconnu',
-      userName: t.users?.full_name || '',
+      userName: t.users?.first_name ? `${t.users.first_name} ${t.users.last_name || ''}`.trim() : '',
       type: t.type,
       status: t.status,
       amountCents: t.amount_cents,

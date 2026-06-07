@@ -509,7 +509,7 @@ export default function AdminPage() {
                       {filteredUsers.map((u, i) => (
                         <tr key={u.id} style={{ borderBottom: i < filteredUsers.length - 1 ? '1px solid #F3F4F6' : 'none' }}>
                           <td style={{ padding: '12px 16px', fontSize: 13, color: '#111827' }}>
-                            <div style={{ fontWeight: 600 }}>{u.fullName || '—'}</div>
+                            <div style={{ fontWeight: 600 }}>{u.firstName ? `${u.firstName} ${u.lastName || ''}` : '—'}</div>
                             <div style={{ fontSize: 12, color: '#6B7280' }}>{u.phone}</div>
                           </td>
                           <td style={{ padding: '12px 16px', fontSize: 12, color: '#6B7280', fontFamily: 'monospace' }}>
@@ -1061,7 +1061,7 @@ export default function AdminPage() {
           <div className="modal-card pop-in" style={{ maxWidth: 650, width: '90%' }} onClick={e => e.stopPropagation()}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '16px 20px', borderBottom: '1px solid #E5E7EB' }}>
               <h3 style={{ fontSize: 16, fontWeight: 800, margin: 0, fontFamily: 'Space Grotesk, sans-serif' }}>
-                Fiche Utilisateur : {selectedUserDetail.user.fullName || selectedUserDetail.user.phone}
+                Fiche Utilisateur : {selectedUserDetail.user.firstName ? `${selectedUserDetail.user.firstName} ${selectedUserDetail.user.lastName || ''}` : selectedUserDetail.user.phone}
               </h3>
               <button onClick={() => setSelectedUserDetail(null)} style={{ background: 'none', border: 'none', cursor: 'pointer' }}><X size={18} /></button>
             </div>
@@ -1069,10 +1069,10 @@ export default function AdminPage() {
               
               {/* User details columns */}
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 12 }}>
-                {selectedUserDetail.user.fullName && (
+                {selectedUserDetail.user.firstName && (
                   <div style={{ background: '#F9FAFB', border: '1px solid #E5E7EB', borderRadius: 10, padding: 12, gridColumn: 'span 2' }}>
                     <span style={{ fontSize: 11, color: '#9CA3AF', display: 'block' }}>Nom & Prénom</span>
-                    <strong style={{ fontSize: 14, color: '#111827' }}>{selectedUserDetail.user.fullName}</strong>
+                    <strong style={{ fontSize: 14, color: '#111827' }}>{selectedUserDetail.user.firstName} {selectedUserDetail.user.lastName || ''}</strong>
                   </div>
                 )}
                 <div style={{ background: '#F9FAFB', border: '1px solid #E5E7EB', borderRadius: 10, padding: 12 }}>

@@ -40,7 +40,8 @@ export default function RegisterPage() {
   const searchParams = useSearchParams();
   const { login } = useAuthStore();
 
-  const [fullName, setFullName] = useState('');
+  const [firstName, setFirstName] = useState('');
+  const [lastName, setLastName] = useState('');
   const [phone, setPhone] = useState('');
   const [password, setPassword] = useState('');
   const [confirm, setConfirm] = useState('');
@@ -61,7 +62,8 @@ export default function RegisterPage() {
   function validate() {
     const errs: Record<string, string> = {};
     const fullPhone = '+229' + phone.replace(/\s/g, '');
-    if (!fullName.trim()) errs.fullName = 'Nom & Prénom requis';
+    if (!firstName.trim()) errs.firstName = 'Prénom requis';
+    if (!lastName.trim()) errs.lastName = 'Nom requis';
     if (!phone || phone.replace(/\s/g, '').length < 8) errs.phone = 'Numéro invalide';
     if (!password || password.length < 6) errs.password = 'Minimum 6 caractères';
     if (password !== confirm) errs.confirm = 'Les mots de passe ne correspondent pas';
@@ -78,7 +80,8 @@ export default function RegisterPage() {
     setLoading(true);
     try {
       const { user, token } = await apiRegister({
-        fullName: fullName.trim(),
+        firstName: firstName.trim(),
+        lastName: lastName.trim(),
         phone: fullPhone,
         password,
         referralCode: refCode.trim().toUpperCase(),
@@ -149,19 +152,33 @@ export default function RegisterPage() {
         <form onSubmit={handleRegister} style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
 
           {/* Nom & Prénom */}
-          <div>
-            <div style={{ position: 'relative' }}>
-              <div style={{ position: 'absolute', left: 16, top: '50%', transform: 'translateY(-50%)', color: '#9CA3AF' }}>
-                <User size={18} />
+          <div style={{ display: 'flex', gap: 10 }}>
+            <div style={{ flex: 1 }}>
+              <div style={{ position: 'relative' }}>
+                <div style={{ position: 'absolute', left: 16, top: '50%', transform: 'translateY(-50%)', color: '#9CA3AF' }}>
+                  <User size={18} />
+                </div>
+                <input
+                  className={`input-field${fieldErrors.lastName ? ' error' : ''}`}
+                  type="text" placeholder="Nom"
+                  value={lastName} onChange={e => setLastName(e.target.value)}
+                  style={{ paddingLeft: 44 }}
+                />
               </div>
-              <input
-                className={`input-field${fieldErrors.fullName ? ' error' : ''}`}
-                type="text" placeholder="Nom & Prénom"
-                value={fullName} onChange={e => setFullName(e.target.value)}
-                style={{ paddingLeft: 44 }}
-              />
+              {fieldErrors.lastName && <p style={{ color: '#EF4444', fontSize: 12, margin: '4px 0 0 4px' }}>{fieldErrors.lastName}</p>}
             </div>
-            {fieldErrors.fullName && <p style={{ color: '#EF4444', fontSize: 12, margin: '4px 0 0 4px' }}>{fieldErrors.fullName}</p>}
+            
+            <div style={{ flex: 1 }}>
+              <div style={{ position: 'relative' }}>
+                <input
+                  className={`input-field${fieldErrors.firstName ? ' error' : ''}`}
+                  type="text" placeholder="Prénom"
+                  value={firstName} onChange={e => setFirstName(e.target.value)}
+                  style={{ paddingLeft: 16 }}
+                />
+              </div>
+              {fieldErrors.firstName && <p style={{ color: '#EF4444', fontSize: 12, margin: '4px 0 0 4px' }}>{fieldErrors.firstName}</p>}
+            </div>
           </div>
 
           {/* Phone */}
