@@ -177,18 +177,7 @@ function PurchaseCard({ purchase }: { purchase: UserPurchase }) {
         ))}
       </div>
 
-      {/* Progress bar */}
-      <div style={{ marginBottom: 16 }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 6 }}>
-          <span style={{ fontSize: 11, color: '#9CA3AF' }}>Progression</span>
-          <span style={{ fontSize: 11, fontWeight: 600, color: '#1A56DB' }}>
-            {progressPct.toFixed(1)}%
-          </span>
-        </div>
-        <div className="progress-track">
-          <div className="progress-fill" style={{ width: `${progressPct}%` }} />
-        </div>
-      </div>
+
 
       {/* Work button / Pending notice */}
       {isPending ? (
