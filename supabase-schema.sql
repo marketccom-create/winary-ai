@@ -15,6 +15,7 @@ CREATE TABLE IF NOT EXISTS users (
   referred_by_id  UUID REFERENCES users(id),
   balance_cents   BIGINT NOT NULL DEFAULT 0,
   is_admin        BOOLEAN NOT NULL DEFAULT false,
+  full_name       TEXT,
   created_at      TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 

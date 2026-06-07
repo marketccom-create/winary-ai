@@ -3,7 +3,7 @@ import { useState, useEffect, useRef } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import Image from 'next/image';
-import { Eye, EyeOff, Lock, Shield, RefreshCw, Loader2 } from 'lucide-react';
+import { Eye, EyeOff, Lock, Shield, RefreshCw, Loader2, User } from 'lucide-react';
 import { useAuthStore } from '@/lib/store';
 import { apiRegister } from '@/lib/api';
 
@@ -40,6 +40,7 @@ export default function RegisterPage() {
   const searchParams = useSearchParams();
   const { login } = useAuthStore();
 
+  const [fullName, setFullName] = useState('');
   const [phone, setPhone] = useState('');
   const [password, setPassword] = useState('');
   const [confirm, setConfirm] = useState('');
@@ -60,6 +61,7 @@ export default function RegisterPage() {
   function validate() {
     const errs: Record<string, string> = {};
     const fullPhone = '+229' + phone.replace(/\s/g, '');
+    if (!fullName.trim()) errs.fullName = 'Nom & Prénom requis';
     if (!phone || phone.replace(/\s/g, '').length < 8) errs.phone = 'Numéro invalide';
     if (!password || password.length < 6) errs.password = 'Minimum 6 caractères';
     if (password !== confirm) errs.confirm = 'Les mots de passe ne correspondent pas';
@@ -76,6 +78,7 @@ export default function RegisterPage() {
     setLoading(true);
     try {
       const { user, token } = await apiRegister({
+        fullName: fullName.trim(),
         phone: fullPhone,
         password,
         referralCode: refCode.trim().toUpperCase(),
@@ -144,6 +147,22 @@ export default function RegisterPage() {
         boxShadow: '0 -4px 20px rgba(0,0,0,0.06)',
       }}>
         <form onSubmit={handleRegister} style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+
+          {/* Nom & Prénom */}
+          <div>
+            <div style={{ position: 'relative' }}>
+              <div style={{ position: 'absolute', left: 16, top: '50%', transform: 'translateY(-50%)', color: '#9CA3AF' }}>
+                <User size={18} />
+              </div>
+              <input
+                className={`input-field${fieldErrors.fullName ? ' error' : ''}`}
+                type="text" placeholder="Nom & Prénom"
+                value={fullName} onChange={e => setFullName(e.target.value)}
+                style={{ paddingLeft: 44 }}
+              />
+            </div>
+            {fieldErrors.fullName && <p style={{ color: '#EF4444', fontSize: 12, margin: '4px 0 0 4px' }}>{fieldErrors.fullName}</p>}
+          </div>
 
           {/* Phone */}
           <div>

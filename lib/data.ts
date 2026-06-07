@@ -109,6 +109,7 @@ export type User = {
   referralCode: string;
   balanceCents: number;
   createdAt: Date;
+  fullName?: string;
 };
 
 // Per-bot SSD payment config (set by admin)

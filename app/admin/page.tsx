@@ -498,7 +498,7 @@ export default function AdminPage() {
                   <table style={{ width: '100%', minWidth: 700, borderCollapse: 'collapse' }}>
                     <thead>
                       <tr style={{ background: '#F9FAFB', borderBottom: '1px solid #E5E7EB' }}>
-                        {['Téléphone', 'Code Parrainage', 'Filleuls', 'Solde', 'Statut', 'Actions'].map(h => (
+                        {['Utilisateur', 'Code Parrainage', 'Filleuls', 'Solde', 'Statut', 'Actions'].map(h => (
                           <th key={h} style={{ padding: '12px 16px', textAlign: 'left', fontSize: 12, fontWeight: 700, color: '#6B7280' }}>
                             {h}
                           </th>
@@ -508,8 +508,9 @@ export default function AdminPage() {
                     <tbody>
                       {filteredUsers.map((u, i) => (
                         <tr key={u.id} style={{ borderBottom: i < filteredUsers.length - 1 ? '1px solid #F3F4F6' : 'none' }}>
-                          <td style={{ padding: '12px 16px', fontSize: 13, fontWeight: 600, color: '#111827' }}>
-                            {u.phone}
+                          <td style={{ padding: '12px 16px', fontSize: 13, color: '#111827' }}>
+                            <div style={{ fontWeight: 600 }}>{u.fullName || '—'}</div>
+                            <div style={{ fontSize: 12, color: '#6B7280' }}>{u.phone}</div>
                           </td>
                           <td style={{ padding: '12px 16px', fontSize: 12, color: '#6B7280', fontFamily: 'monospace' }}>
                             {u.referralCode}
@@ -592,8 +593,9 @@ export default function AdminPage() {
                       <tbody>
                         {pendingPurchasesOnly.map((p, i) => (
                           <tr key={p.id} style={{ borderBottom: i < pendingPurchasesOnly.length - 1 ? '1px solid #F3F4F6' : 'none' }}>
-                            <td style={{ padding: '12px 16px', fontSize: 13, fontWeight: 600, color: '#111827' }}>
-                              {p.userPhone}
+                            <td style={{ padding: '12px 16px', fontSize: 13, color: '#111827' }}>
+                              <div style={{ fontWeight: 600 }}>{p.userName || '—'}</div>
+                              <div style={{ fontSize: 12, color: '#6B7280' }}>{p.userPhone}</div>
                             </td>
                             <td style={{ padding: '12px 16px', fontSize: 13, fontWeight: 700, color: '#111827' }}>
                               {p.botName}
@@ -680,8 +682,9 @@ export default function AdminPage() {
                       <tbody>
                         {pendingWithdrawals.map((w, i) => (
                           <tr key={w.id} style={{ borderBottom: i < pendingWithdrawals.length - 1 ? '1px solid #F3F4F6' : 'none' }}>
-                            <td style={{ padding: '12px 16px', fontSize: 13, fontWeight: 600, color: '#111827' }}>
-                              {w.userPhone}
+                            <td style={{ padding: '12px 16px', fontSize: 13, color: '#111827' }}>
+                              <div style={{ fontWeight: 600 }}>{w.userName || '—'}</div>
+                              <div style={{ fontSize: 12, color: '#6B7280' }}>{w.userPhone}</div>
                             </td>
                             <td style={{ padding: '12px 16px', fontSize: 13, color: '#374151' }}>
                               {w.description}
@@ -1058,7 +1061,7 @@ export default function AdminPage() {
           <div className="modal-card pop-in" style={{ maxWidth: 650, width: '90%' }} onClick={e => e.stopPropagation()}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '16px 20px', borderBottom: '1px solid #E5E7EB' }}>
               <h3 style={{ fontSize: 16, fontWeight: 800, margin: 0, fontFamily: 'Space Grotesk, sans-serif' }}>
-                Fiche Utilisateur : {selectedUserDetail.user.phone}
+                Fiche Utilisateur : {selectedUserDetail.user.fullName || selectedUserDetail.user.phone}
               </h3>
               <button onClick={() => setSelectedUserDetail(null)} style={{ background: 'none', border: 'none', cursor: 'pointer' }}><X size={18} /></button>
             </div>
@@ -1066,6 +1069,12 @@ export default function AdminPage() {
               
               {/* User details columns */}
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 12 }}>
+                {selectedUserDetail.user.fullName && (
+                  <div style={{ background: '#F9FAFB', border: '1px solid #E5E7EB', borderRadius: 10, padding: 12, gridColumn: 'span 2' }}>
+                    <span style={{ fontSize: 11, color: '#9CA3AF', display: 'block' }}>Nom & Prénom</span>
+                    <strong style={{ fontSize: 14, color: '#111827' }}>{selectedUserDetail.user.fullName}</strong>
+                  </div>
+                )}
                 <div style={{ background: '#F9FAFB', border: '1px solid #E5E7EB', borderRadius: 10, padding: 12 }}>
                   <span style={{ fontSize: 11, color: '#9CA3AF', display: 'block' }}>Téléphone</span>
                   <strong style={{ fontSize: 14, color: '#111827' }}>{selectedUserDetail.user.phone}</strong>

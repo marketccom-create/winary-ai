@@ -43,6 +43,7 @@ export async function GET(
     user: {
       id: user.id,
       phone: user.phone,
+      fullName: user.full_name,
       referralCode: user.referral_code,
       balanceCents: user.balance_cents,
       isAdmin: user.is_admin,

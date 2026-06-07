@@ -75,7 +75,12 @@ export default function AccountPage() {
               fontSize: 24,
             }}>👤</div>
             <div>
-              <div style={{ fontSize: 16, fontWeight: 700, color: '#111827' }}>{user?.phone}</div>
+              <div style={{ fontSize: 16, fontWeight: 700, color: '#111827' }}>
+                {user?.fullName || user?.phone}
+              </div>
+              {user?.fullName && (
+                <div style={{ fontSize: 12, color: '#6B7280', marginTop: 1 }}>{user?.phone}</div>
+              )}
               <div style={{ fontSize: 12, color: '#9CA3AF', marginTop: 2 }}>
                 Membre depuis {memberSince}
               </div>

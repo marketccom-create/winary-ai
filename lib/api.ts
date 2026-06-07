@@ -47,6 +47,7 @@ export async function apiRegister(data: {
   referralCode: string;
   captchaAnswer: string;
   captchaToken: string;
+  fullName: string;
 }) {
   return apiFetch<{ user: any; token: string }>('/api/auth/register', {
     method: 'POST',
@@ -54,6 +55,7 @@ export async function apiRegister(data: {
       phone: data.phone,
       password: data.password,
       referralCode: data.referralCode,
+      fullName: data.fullName,
     }),
   });
 }
