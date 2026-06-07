@@ -68,7 +68,9 @@ function PurchaseCard({ purchase }: { purchase: UserPurchase }) {
   useEffect(() => {
     if (isReady && !working && !autoClaimed) {
       setAutoClaimed(true);
-      handleClaim();
+      setTimeout(() => {
+        handleClaim();
+      }, 1500); // 1.5s buffer for backend sync
     }
   }, [isReady, working, autoClaimed]);
 
@@ -116,7 +118,12 @@ function PurchaseCard({ purchase }: { purchase: UserPurchase }) {
       setTimeout(() => setEarned(null), 3000);
       showToast(`+${formatXOF(earnedCents)} crédité !`, 'success');
     } catch (err: any) {
-      showToast(err.message, 'error');
+      if (!err.message.includes("n'est pas encore terminé")) {
+        showToast(err.message, 'error');
+      } else {
+        // Retry after a short delay if the backend clock is slightly behind
+        setTimeout(() => setAutoClaimed(false), 2000);
+      }
     } finally {
       setWorking(false);
     }
@@ -309,7 +316,6 @@ export default function ProductsPage() {
 
   const active = purchases.filter(p => p.status === 'ACTIVE');
   const pending = purchases.filter(p => p.status === 'PENDING');
-  const expired = purchases.filter(p => p.status === 'EXPIRED');
 
   return (
     <div className="main-content">
@@ -320,7 +326,7 @@ export default function ProductsPage() {
             Mes Produits
           </h1>
           <p style={{ fontSize: 11, color: '#9CA3AF', margin: '2px 0 0' }}>
-            {active.length} actif{active.length !== 1 ? 's' : ''} · {pending.length} en attente · {expired.length} expiré{expired.length !== 1 ? 's' : ''}
+            {active.length} actif{active.length !== 1 ? 's' : ''} · {pending.length} en attente
           </p>
         </div>
       </header>
@@ -357,14 +363,6 @@ export default function ProductsPage() {
                 </div>
               )}
               {active.map(p => <PurchaseCard key={p.id} purchase={p} />)}
-            </>
-          )}
-          {expired.length > 0 && (
-            <>
-              <div style={{ margin: '16px 16px 12px', fontSize: 13, fontWeight: 600, color: '#9CA3AF' }}>
-                Bots expirés
-              </div>
-              {expired.map(p => <PurchaseCard key={p.id} purchase={p} />)}
             </>
           )}
         </>
