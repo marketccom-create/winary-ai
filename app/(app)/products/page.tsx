@@ -257,7 +257,7 @@ function PurchaseCard({ purchase }: { purchase: UserPurchase }) {
                 border: '1px solid #DBEAFE',
               }}>
                 <span style={{ fontSize: 24, fontWeight: 800, color: '#15803D', fontFamily: 'Space Grotesk, sans-serif', fontVariantNumeric: 'tabular-nums' }}>
-                  {liveEarned.toFixed(6)} XOF
+                  {(liveEarned / 100).toFixed(6)} XOF
                 </span>
                 <span style={{ fontSize: 13, color: '#9CA3AF', fontWeight: 600 }}>/ {formatXOF(targetEarned)}</span>
               </div>
