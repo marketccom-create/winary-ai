@@ -111,9 +111,16 @@ export async function apiPurchaseBot(
   return { purchase: normalizePurchase(purchase), newBalanceCents: 0 };
 }
 
-export async function apiWork(_userId: string, purchaseId: string) {
-  return apiFetch<{ earnedCents: number; newBalanceCents: number; nextAllowedAt: string }>(
-    `/api/purchases/${purchaseId}/work`,
+export async function apiStartWork(_userId: string, purchaseId: string) {
+  return apiFetch<{ nextAllowedAt: string; lastWorkedAt: string }>(
+    `/api/purchases/${purchaseId}/start`,
+    { method: 'POST' }
+  );
+}
+
+export async function apiClaimWork(_userId: string, purchaseId: string) {
+  return apiFetch<{ earnedCents: number; newBalanceCents: number }>(
+    `/api/purchases/${purchaseId}/claim`,
     { method: 'POST' }
   );
 }

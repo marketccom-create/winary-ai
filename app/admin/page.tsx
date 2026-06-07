@@ -944,7 +944,7 @@ export default function AdminPage() {
               <h3 style={{ fontSize: 16, fontWeight: 700, margin: 0 }}>{editingAnn.id ? 'Modifier l\'annonce' : 'Créer une annonce'}</h3>
               <button onClick={() => setEditingAnn(null)} style={{ background: 'none', border: 'none', cursor: 'pointer' }}><X size={18} /></button>
             </div>
-            <div style={{ padding: '20px', display: 'flex', flexDirection: 'column', gap: 14 }}>
+            <div style={{ padding: '20px', display: 'flex', flexDirection: 'column', gap: 14, maxHeight: '70dvh', overflowY: 'auto' }}>
               <div>
                 <label style={{ fontSize: 12, fontWeight: 600, color: '#374151', display: 'block', marginBottom: 4 }}>Titre de l'annonce</label>
                 <input

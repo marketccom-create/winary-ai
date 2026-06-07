@@ -2,7 +2,7 @@
 import { useEffect, useState } from 'react';
 import { Loader2, Zap, Clock, CheckCircle } from 'lucide-react';
 import { useAuthStore, useAppStore, useUIStore } from '@/lib/store';
-import { apiGetMyPurchases, apiWork } from '@/lib/api';
+import { apiGetMyPurchases, apiStartWork, apiClaimWork } from '@/lib/api';
 import { formatXOF, formatCountdown, workRevenueCents } from '@/lib/data';
 import type { UserPurchase } from '@/lib/data';
 
@@ -30,29 +30,74 @@ function PurchaseCard({ purchase }: { purchase: UserPurchase }) {
   const [earned, setEarned] = useState<number | null>(null);
 
   const nextAllowedAt = purchase.nextAllowedAt ? new Date(purchase.nextAllowedAt) : null;
+  const lastWorkedAt = purchase.lastWorkedAt ? new Date(purchase.lastWorkedAt) : null;
   const remaining = useCountdown(nextAllowedAt);
-  const canWork = remaining === 0 && purchase.status === 'ACTIVE';
+  
+  const isIdle = !nextAllowedAt;
+  const isWorking = nextAllowedAt && remaining > 0;
+  const isReady = nextAllowedAt && remaining === 0;
+
+  const targetEarned = workRevenueCents(purchase.pricePaidCents);
+  const [liveEarned, setLiveEarned] = useState(0);
+
+  useEffect(() => {
+    if (!isWorking || !lastWorkedAt || !nextAllowedAt) {
+      setLiveEarned(isReady ? targetEarned : 0);
+      return;
+    }
+    const updateMoney = () => {
+      const now = Date.now();
+      const start = lastWorkedAt.getTime();
+      const end = nextAllowedAt.getTime();
+      const totalDuration = end - start;
+      const elapsed = Math.max(0, now - start);
+      if (elapsed >= totalDuration) {
+        setLiveEarned(targetEarned);
+      } else {
+        setLiveEarned(Math.floor((elapsed / totalDuration) * targetEarned));
+      }
+    };
+    updateMoney();
+    const interval = setInterval(updateMoney, 1000);
+    return () => clearInterval(interval);
+  }, [isWorking, lastWorkedAt, nextAllowedAt, isReady, targetEarned]);
 
   const expiresAt = new Date(purchase.expiresAt);
   const purchasedAt = new Date(purchase.purchasedAt);
   const totalDays = 45;
-  const daysElapsed = Math.floor((Date.now() - purchasedAt.getTime()) / (1000 * 60 * 60 * 24));
-  const progressPct = Math.min((purchase.totalEarnedCents / (workRevenueCents(purchase.pricePaidCents) * totalDays * 3)) * 100, 100);
+  const progressPct = Math.min((purchase.totalEarnedCents / (targetEarned * totalDays * 3)) * 100, 100);
 
   const daysLeft = Math.max(0, Math.ceil((expiresAt.getTime() - Date.now()) / (1000 * 60 * 60 * 24)));
   const isPending = purchase.status === 'PENDING';
   const isExpired = purchase.status === 'EXPIRED' || (!isPending && daysLeft === 0);
 
-  async function handleWork() {
-    if (!user || !canWork || working) return;
+  async function handleStart() {
+    if (!user || working) return;
+    setWorking(true);
+    try {
+      const { nextAllowedAt: next, lastWorkedAt: last } = await apiStartWork(user.id, purchase.id);
+      updatePurchase(purchase.id, {
+        lastWorkedAt: new Date(last),
+        nextAllowedAt: new Date(next),
+      });
+      showToast(`Bot lancé pour 8 heures !`, 'info');
+    } catch (err: any) {
+      showToast(err.message, 'error');
+    } finally {
+      setWorking(false);
+    }
+  }
+
+  async function handleClaim() {
+    if (!user || working) return;
     setWorking(true);
     setEarned(null);
     try {
-      const { earnedCents, newBalanceCents, nextAllowedAt: next } = await apiWork(user.id, purchase.id);
+      const { earnedCents, newBalanceCents } = await apiClaimWork(user.id, purchase.id);
       updateBalance(newBalanceCents);
       updatePurchase(purchase.id, {
-        lastWorkedAt: new Date(),
-        nextAllowedAt: new Date(next),
+        lastWorkedAt: null,
+        nextAllowedAt: null,
         totalEarnedCents: purchase.totalEarnedCents + earnedCents,
         workCount: purchase.workCount + 1,
       });
@@ -152,10 +197,10 @@ function PurchaseCard({ purchase }: { purchase: UserPurchase }) {
         </div>
       ) : !isExpired && (
         <>
-          {canWork ? (
+          {isIdle && (
             <div style={{ position: 'relative' }}>
               <button
-                onClick={handleWork}
+                onClick={handleStart}
                 disabled={working}
                 className={`btn-press ${!working ? 'pulse-blue' : ''}`}
                 style={{
@@ -169,7 +214,64 @@ function PurchaseCard({ purchase }: { purchase: UserPurchase }) {
               >
                 {working
                   ? <><Loader2 size={18} style={{ animation: 'spin 0.8s linear infinite' }} /> Traitement...</>
-                  : <><Zap size={18} /> Travailler — +{formatXOF(workRevenueCents(purchase.pricePaidCents))}</>
+                  : <><Zap size={18} /> Lancer le bot — {formatXOF(targetEarned)} dans 8h</>
+                }
+              </button>
+            </div>
+          )}
+
+          {isWorking && (
+            <div style={{
+              background: '#EFF6FF', border: '1.5px solid #BFDBFE',
+              borderRadius: 12, padding: '16px',
+              display: 'flex', flexDirection: 'column', gap: 12,
+            }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <Loader2 size={16} color="#1A56DB" style={{ animation: 'spin 2s linear infinite' }} />
+                  <span style={{ fontSize: 13, color: '#1E40AF', fontWeight: 700 }}>
+                    Génération en cours...
+                  </span>
+                </div>
+                <div className="tick-tock" style={{
+                  fontSize: 14, fontWeight: 800, color: '#1A56DB',
+                  fontFamily: 'monospace', letterSpacing: 1,
+                }}>
+                  {formatCountdown(remaining)}
+                </div>
+              </div>
+              <div style={{
+                background: 'white', borderRadius: 8, padding: '10px',
+                display: 'flex', justifyContent: 'center', alignItems: 'baseline', gap: 4,
+                border: '1px solid #DBEAFE',
+              }}>
+                <span style={{ fontSize: 24, fontWeight: 800, color: '#15803D', fontFamily: 'Space Grotesk, sans-serif' }}>
+                  {formatXOF(liveEarned)}
+                </span>
+                <span style={{ fontSize: 13, color: '#9CA3AF', fontWeight: 600 }}>/ {formatXOF(targetEarned)}</span>
+              </div>
+            </div>
+          )}
+
+          {isReady && (
+            <div style={{ position: 'relative' }}>
+              <button
+                onClick={handleClaim}
+                disabled={working}
+                className="btn-press"
+                style={{
+                  width: '100%', height: 52,
+                  background: working ? '#86EFAC' : 'linear-gradient(135deg, #15803D, #16A34A)',
+                  color: 'white', border: 'none', borderRadius: 12,
+                  fontSize: 16, fontWeight: 800, cursor: working ? 'not-allowed' : 'pointer',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
+                  fontFamily: 'Space Grotesk, sans-serif',
+                  boxShadow: '0 4px 14px rgba(21, 128, 61, 0.4)',
+                }}
+              >
+                {working
+                  ? <><Loader2 size={18} style={{ animation: 'spin 0.8s linear infinite' }} /> Récolte...</>
+                  : <><CheckCircle size={18} /> Récolter {formatXOF(targetEarned)}</>
                 }
               </button>
               {earned !== null && (
@@ -183,25 +285,6 @@ function PurchaseCard({ purchase }: { purchase: UserPurchase }) {
                   +{formatXOF(earned)} 🎉
                 </div>
               )}
-            </div>
-          ) : (
-            <div style={{
-              background: '#F9FAFB', border: '1.5px solid #E5E7EB',
-              borderRadius: 12, padding: '12px 16px',
-              display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-            }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                <Clock size={16} color="#9CA3AF" />
-                <span style={{ fontSize: 13, color: '#6B7280', fontWeight: 500 }}>
-                  Disponible dans
-                </span>
-              </div>
-              <div className="tick-tock" style={{
-                fontSize: 16, fontWeight: 800, color: '#1A56DB',
-                fontFamily: 'monospace', letterSpacing: 1,
-              }}>
-                {formatCountdown(remaining)}
-              </div>
             </div>
           )}
         </>
