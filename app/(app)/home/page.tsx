@@ -208,6 +208,11 @@ function PurchaseModal({ bot, onClose, onConfirm }: {
   const [configs, setConfigs] = useState<BotPaymentConfig[]>([]);
   const [loading, setLoading] = useState(true);
 
+  // Aggregator inputs
+  const [fullName, setFullName] = useState('');
+  const [payPhone, setPayPhone] = useState('');
+  const [error, setError] = useState('');
+
   useEffect(() => {
     apiGetBotPaymentConfigs().then(cfg => {
       setConfigs(cfg);
@@ -218,14 +223,22 @@ function PurchaseModal({ bot, onClose, onConfirm }: {
   const config = configs.find(c => c.botId === bot.id);
   const mtnCode = config?.ssdCodeMTN || `*880*1*${bot.priceCents / 100}*97001122#`;
   const moovCode = config?.ssdCodeMoov || `*155*1*${bot.priceCents / 100}*95001122#`;
-  const mtnPhone = config?.merchantPhoneMTN || '97001122';
-  const moovPhone = config?.merchantPhoneMoov || '95001122';
 
   const selectedCode = provider === 'mtn' ? mtnCode : moovCode;
-  const selectedPhone = provider === 'mtn' ? mtnPhone : moovPhone;
 
   function handleSubmit() {
-    onConfirm(provider.toUpperCase() as 'MTN' | 'MOOV', 'Achat Direct', selectedCode);
+    if (!fullName.trim()) {
+      setError('Veuillez saisir votre Nom & Prénom.');
+      return;
+    }
+    if (!payPhone.trim()) {
+      setError('Veuillez saisir votre numéro de paiement Mobile Money.');
+      return;
+    }
+    setError('');
+    // Reference format: "Nom Prénom (+229 Numéro)"
+    const ref = `${fullName.trim()} (+229 ${payPhone.trim()})`;
+    onConfirm(provider.toUpperCase() as 'MTN' | 'MOOV', ref, selectedCode);
   }
 
   return (
@@ -257,35 +270,79 @@ function PurchaseModal({ bot, onClose, onConfirm }: {
           ))}
         </div>
 
-        {/* Payment info card */}
+        {/* Payment Form (Aggregator style) */}
         {loading ? (
           <div style={{ display: 'flex', justifyContent: 'center', padding: 20 }}>
             <Loader2 size={24} color="#1A56DB" style={{ animation: 'spin 0.8s linear infinite' }} />
           </div>
         ) : (
-          <div style={{
-            background: '#F9FAFB', border: '1.5px solid #E5E7EB',
-            borderRadius: 14, padding: 14, marginBottom: 16,
-          }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8, fontSize: 12 }}>
-              <span style={{ color: '#6B7280' }}>Numéro marchand :</span>
-              <span style={{ fontWeight: 700, color: '#111827' }}>+229 {selectedPhone}</span>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 14, marginBottom: 16 }}>
+            {/* Nom & Prénom */}
+            <div>
+              <label style={{ fontSize: 12, fontWeight: 600, color: '#374151', display: 'block', marginBottom: 6 }}>
+                Nom & Prénom
+              </label>
+              <input
+                className="input-field"
+                type="text"
+                placeholder="Ex: Jean Dupont"
+                value={fullName}
+                onChange={e => { setFullName(e.target.value); setError(''); }}
+              />
             </div>
-            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8, fontSize: 12 }}>
-              <span style={{ color: '#6B7280' }}>Montant :</span>
-              <span style={{ fontWeight: 700, color: '#1A56DB' }}>{formatXOF(bot.priceCents)}</span>
+
+            {/* Numéro de paiement */}
+            <div>
+              <label style={{ fontSize: 12, fontWeight: 600, color: '#374151', display: 'block', marginBottom: 6 }}>
+                Numéro Mobile Money de paiement
+              </label>
+              <div style={{ position: 'relative' }}>
+                <div style={{
+                  position: 'absolute', left: 16, top: '50%', transform: 'translateY(-50%)',
+                  fontSize: 13, fontWeight: 600, color: '#374151',
+                  display: 'flex', alignItems: 'center', gap: 6,
+                }}>
+                  <span>🇧🇯</span> +229
+                  <div style={{ width: 1, height: 16, background: '#E5E7EB' }} />
+                </div>
+                <input
+                  className="input-field"
+                  type="tel"
+                  placeholder="XX XX XX XX"
+                  value={payPhone}
+                  onChange={e => { setPayPhone(e.target.value); setError(''); }}
+                  style={{ paddingLeft: 90 }}
+                  inputMode="numeric"
+                />
+              </div>
             </div>
-            <div style={{ borderTop: '1px solid #E5E7EB', paddingTop: 8, marginTop: 4 }}>
-              <span style={{ fontSize: 11, color: '#9CA3AF', display: 'block', marginBottom: 4 }}>
-                📱 Code SSD à composer sur votre téléphone :
-              </span>
+
+            {/* Summary / Total amount */}
+            <div style={{
+              background: '#F9FAFB', border: '1.5px solid #E5E7EB',
+              borderRadius: 14, padding: '12px 14px', marginTop: 4,
+              display: 'flex', justifyContent: 'space-between', alignItems: 'center'
+            }}>
+              <span style={{ fontSize: 12, fontWeight: 500, color: '#6B7280' }}>Total à payer :</span>
+              <span style={{ fontSize: 15, fontWeight: 800, color: '#1A56DB' }}>{formatXOF(bot.priceCents)}</span>
+            </div>
+
+            {/* Redirect notification */}
+            <div style={{
+              background: '#EFF6FF', border: '1px solid #BFDBFE',
+              borderRadius: 12, padding: '10px 12px', fontSize: 11, color: '#1D4ED8',
+              display: 'flex', alignItems: 'flex-start', gap: 6
+            }}>
+              <span style={{ fontSize: 14 }}>🔒</span>
+              <span>Vous allez être redirigé vers l'application téléphone pour valider l'activation sécurisée via Mobile Money.</span>
+            </div>
+
+            {error && (
               <div style={{
-                background: 'white', borderRadius: 8, padding: '10px',
-                fontFamily: 'monospace', fontSize: 16, fontWeight: 800,
-                color: '#1A56DB', letterSpacing: 0.5, textAlign: 'center',
-                border: '1.5px solid #BFDBFE',
-              }}>{selectedCode}</div>
-            </div>
+                background: '#FEE2E2', color: '#DC2626', padding: '10px 14px',
+                borderRadius: 10, fontSize: 12, fontWeight: 500,
+              }}>⚠️ {error}</div>
+            )}
           </div>
         )}
 

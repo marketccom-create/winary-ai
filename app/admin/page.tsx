@@ -47,6 +47,7 @@ export default function AdminPage() {
   const [bots, setBots] = useState<any[]>([]);
   const [botConfigs, setBotConfigs] = useState<BotPaymentConfig[]>([]);
   const [announcements, setAnnouncements] = useState<Announcement[]>([]);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   const [search, setSearch] = useState('');
   const [loading, setLoading] = useState(true);
@@ -260,76 +261,117 @@ export default function AdminPage() {
   ];
 
   return (
-    <div style={{ minHeight: '100dvh', background: '#F9FAFB', display: 'flex' }}>
-      {/* Sidebar */}
-      <aside style={{
-        width: 220, background: '#111827', padding: '24px 0',
-        display: 'flex', flexDirection: 'column', flexShrink: 0,
-        minHeight: '100dvh', position: 'sticky', top: 0,
+    <div style={{ minHeight: '100dvh', background: '#F9FAFB', display: 'flex', flexDirection: 'column' }}>
+      
+      {/* Mobile Top Bar */}
+      <div className="mobile-header" style={{
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        padding: '12px 16px',
+        background: '#111827',
+        color: 'white',
+        borderBottom: '1px solid rgba(255,255,255,0.1)'
       }}>
-        {/* Logo */}
-        <div style={{ padding: '0 20px 24px', borderBottom: '1px solid rgba(255,255,255,0.1)' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-            <div style={{ width: 32, height: 32, borderRadius: 8, overflow: 'hidden' }}>
-              <Image src="/logo.png" alt="Logo" width={32} height={32} style={{ objectFit: 'cover' }} />
-            </div>
-            <div style={{
-              fontSize: 18, fontWeight: 800, color: 'white',
-              fontFamily: 'Space Grotesk, sans-serif',
-            }}>WINARY AI</div>
-          </div>
-          <div style={{ fontSize: 11, color: '#6B7280', marginTop: 2 }}>Administration</div>
-        </div>
+        <button 
+          onClick={() => setMobileMenuOpen(true)} 
+          style={{ 
+            background: 'none', 
+            border: 'none', 
+            color: 'white', 
+            cursor: 'pointer', 
+            padding: 4,
+            display: 'flex',
+            alignItems: 'center'
+          }}
+        >
+          {/* Hamburger menu icon */}
+          <svg width="24" height="24" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" d="M4 6h16M4 12h16M4 18h16"></path>
+          </svg>
+        </button>
+        <div style={{ fontSize: 16, fontWeight: 800, fontFamily: 'Space Grotesk, sans-serif' }}>WINARY AI</div>
+        <div style={{ width: 24 }} /> {/* Balance spacer */}
+      </div>
 
-        {/* Nav */}
-        <nav style={{ padding: '16px 12px', flex: 1 }}>
-          {NAV_ITEMS.map(({ key, label, icon: Icon }) => (
-            <button key={key} onClick={() => { setActiveTab(key); setSearch(''); }} style={{
-              width: '100%', display: 'flex', alignItems: 'center', gap: 10,
-              padding: '10px 12px', borderRadius: 10, marginBottom: 4,
-              background: activeTab === key ? '#1A56DB' : 'transparent',
-              color: activeTab === key ? 'white' : '#9CA3AF',
-              border: 'none', cursor: 'pointer', textAlign: 'left',
-              fontSize: 13, fontWeight: activeTab === key ? 700 : 400,
-              transition: 'all 150ms ease',
-            }}>
-              <Icon size={16} />
-              <div style={{ flex: 1, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <span>{label}</span>
-                {key === 'pending' && pendingPurchasesOnly.length > 0 && (
-                  <span style={{
-                    background: '#EF4444', color: 'white', fontSize: 10,
-                    fontWeight: 700, borderRadius: 99, padding: '2px 6px',
-                  }}>{pendingPurchasesOnly.length}</span>
-                )}
+      <div style={{ display: 'flex', flex: 1, minHeight: 0 }}>
+        {/* Mobile Sidebar Overlay */}
+        {mobileMenuOpen && (
+          <div 
+            onClick={() => setMobileMenuOpen(false)}
+            style={{
+              position: 'fixed',
+              top: 0, left: 0, right: 0, bottom: 0,
+              background: 'rgba(0,0,0,0.5)',
+              zIndex: 95,
+            }}
+          />
+        )}
+
+        {/* Sidebar */}
+        <aside className={`admin-sidebar ${mobileMenuOpen ? 'open' : ''}`}>
+          {/* Logo */}
+          <div style={{ padding: '0 20px 24px', borderBottom: '1px solid rgba(255,255,255,0.1)' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+              <div style={{ width: 32, height: 32, borderRadius: 8, overflow: 'hidden' }}>
+                <Image src="/logo.png" alt="Logo" width={32} height={32} style={{ objectFit: 'cover' }} />
               </div>
+              <div style={{
+                fontSize: 18, fontWeight: 800, color: 'white',
+                fontFamily: 'Space Grotesk, sans-serif',
+              }}>WINARY AI</div>
+            </div>
+            <div style={{ fontSize: 11, color: '#6B7280', marginTop: 2 }}>Administration</div>
+          </div>
+
+          {/* Nav */}
+          <nav style={{ padding: '16px 12px', flex: 1 }}>
+            {NAV_ITEMS.map(({ key, label, icon: Icon }) => (
+              <button key={key} onClick={() => { setActiveTab(key); setSearch(''); setMobileMenuOpen(false); }} style={{
+                width: '100%', display: 'flex', alignItems: 'center', gap: 10,
+                padding: '10px 12px', borderRadius: 10, marginBottom: 4,
+                background: activeTab === key ? '#1A56DB' : 'transparent',
+                color: activeTab === key ? 'white' : '#9CA3AF',
+                border: 'none', cursor: 'pointer', textAlign: 'left',
+                fontSize: 13, fontWeight: activeTab === key ? 700 : 400,
+                transition: 'all 150ms ease',
+              }}>
+                <Icon size={16} />
+                <div style={{ flex: 1, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <span>{label}</span>
+                  {key === 'pending' && pendingPurchasesOnly.length > 0 && (
+                    <span style={{
+                      background: '#EF4444', color: 'white', fontSize: 10,
+                      fontWeight: 700, borderRadius: 99, padding: '2px 6px',
+                    }}>{pendingPurchasesOnly.length}</span>
+                  )}
+                </div>
+              </button>
+            ))}
+          </nav>
+
+          {/* Reload & Logout */}
+          <div style={{ padding: '16px 12px', borderTop: '1px solid rgba(255,255,255,0.1)', display: 'flex', flexDirection: 'column', gap: 8 }}>
+            <button onClick={() => { loadData(); setMobileMenuOpen(false); }} style={{
+              width: '100%', display: 'flex', alignItems: 'center', gap: 10,
+              padding: '10px 12px', borderRadius: 10,
+              background: 'rgba(255,255,255,0.05)', color: '#D1D5DB',
+              border: 'none', cursor: 'pointer', fontSize: 13,
+            }}>
+              <RefreshCw size={16} /> Actualiser
             </button>
-          ))}
-        </nav>
+            <button onClick={() => { handleLogout(); setMobileMenuOpen(false); }} style={{
+              width: '100%', display: 'flex', alignItems: 'center', gap: 10,
+              padding: '10px 12px', borderRadius: 10,
+              background: 'transparent', color: '#9CA3AF',
+              border: 'none', cursor: 'pointer', fontSize: 13,
+            }}>
+              <LogOut size={16} /> Déconnexion
+            </button>
+          </div>
+        </aside>
 
-        {/* Reload & Logout */}
-        <div style={{ padding: '16px 12px', borderTop: '1px solid rgba(255,255,255,0.1)', display: 'flex', flexDirection: 'column', gap: 8 }}>
-          <button onClick={loadData} style={{
-            width: '100%', display: 'flex', alignItems: 'center', gap: 10,
-            padding: '10px 12px', borderRadius: 10,
-            background: 'rgba(255,255,255,0.05)', color: '#D1D5DB',
-            border: 'none', cursor: 'pointer', fontSize: 13,
-          }}>
-            <RefreshCw size={16} /> Actualiser
-          </button>
-          <button onClick={handleLogout} style={{
-            width: '100%', display: 'flex', alignItems: 'center', gap: 10,
-            padding: '10px 12px', borderRadius: 10,
-            background: 'transparent', color: '#9CA3AF',
-            border: 'none', cursor: 'pointer', fontSize: 13,
-          }}>
-            <LogOut size={16} /> Déconnexion
-          </button>
-        </div>
-      </aside>
-
-      {/* Main content */}
-      <main style={{ flex: 1, padding: '28px', overflowY: 'auto', maxHeight: '100dvh' }}>
+        {/* Main content */}
+        <main className="admin-main">
         {loading ? (
           <div style={{ display: 'flex', justifyContent: 'center', padding: 60 }}>
             <Loader2 size={32} color="#1A56DB" style={{ animation: 'spin 0.8s linear infinite' }} />
@@ -384,8 +426,8 @@ export default function AdminPage() {
                   />
                 </div>
 
-                <div style={{ background: 'white', borderRadius: 16, border: '1.5px solid #E5E7EB', overflow: 'hidden' }}>
-                  <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                <div className="table-container" style={{ background: 'white', borderRadius: 16, border: '1.5px solid #E5E7EB' }}>
+                  <table style={{ width: '100%', minWidth: 700, borderCollapse: 'collapse' }}>
                     <thead>
                       <tr style={{ background: '#F9FAFB', borderBottom: '1px solid #E5E7EB' }}>
                         {['Téléphone', 'Code Parrainage', 'Filleuls', 'Solde', 'Statut', 'Actions'].map(h => (
@@ -468,8 +510,8 @@ export default function AdminPage() {
                     <p style={{ fontSize: 13, color: '#9CA3AF', margin: 0 }}>Toutes les demandes de bot ont été traitées.</p>
                   </div>
                 ) : (
-                  <div style={{ background: 'white', borderRadius: 16, border: '1.5px solid #E5E7EB', overflow: 'hidden' }}>
-                    <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                  <div className="table-container" style={{ background: 'white', borderRadius: 16, border: '1.5px solid #E5E7EB' }}>
+                    <table style={{ width: '100%', minWidth: 800, borderCollapse: 'collapse' }}>
                       <thead>
                         <tr style={{ background: '#F9FAFB', borderBottom: '1px solid #E5E7EB' }}>
                           {['Acheteur', 'Bot', 'Montant', 'Opérateur', 'Réf. Transaction', 'Date de demande', 'Actions'].map(h => (
@@ -546,7 +588,7 @@ export default function AdminPage() {
                   Configurez le code SSD et le numéro marchand affichés au client lors de l'achat de chaque bot.
                 </p>
 
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(360px, 1fr))', gap: 20, marginBottom: 24 }}>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: 20, marginBottom: 24 }}>
                   {bots.map((bot: any) => {
                     const cfgIndex = botConfigs.findIndex(c => c.botId === bot.id);
                     if (cfgIndex === -1) return null;
@@ -680,8 +722,8 @@ export default function AdminPage() {
                   </button>
                 </div>
 
-                <div style={{ background: 'white', borderRadius: 16, border: '1.5px solid #E5E7EB', overflow: 'hidden' }}>
-                  <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                <div className="table-container" style={{ background: 'white', borderRadius: 16, border: '1.5px solid #E5E7EB' }}>
+                  <table style={{ width: '100%', minWidth: 700, borderCollapse: 'collapse' }}>
                     <thead>
                       <tr style={{ background: '#F9FAFB', borderBottom: '1px solid #E5E7EB' }}>
                         {['Titre', 'CTA Bouton', 'CTA Lien', 'Date de création', 'Statut', 'Actions'].map(h => (
@@ -1037,7 +1079,59 @@ export default function AdminPage() {
         </div>
       )}
 
-      <style>{`@keyframes spin { to { transform: rotate(360deg); }}`}</style>
+      </div>
+
+      <style>{`
+        .admin-sidebar {
+          width: 220px;
+          background: #111827;
+          padding: 24px 0;
+          display: flex;
+          flex-direction: column;
+          flex-shrink: 0;
+          min-height: 100dvh;
+          position: sticky;
+          top: 0;
+          z-index: 100;
+          transition: transform 0.2s ease-in-out;
+        }
+        .admin-main {
+          flex: 1;
+          padding: 28px;
+          overflow-y: auto;
+          max-height: 100dvh;
+        }
+        .mobile-header {
+          display: none;
+        }
+        .table-container {
+          overflow-x: auto;
+          -webkit-overflow-scrolling: touch;
+          border-radius: 16px;
+        }
+        @media (max-width: 768px) {
+          .admin-sidebar {
+            position: fixed;
+            left: 0;
+            top: 0;
+            bottom: 0;
+            transform: translateX(-100%);
+            min-height: 100vh;
+            z-index: 100;
+          }
+          .admin-sidebar.open {
+            transform: translateX(0);
+          }
+          .admin-main {
+            padding: 16px;
+            max-height: calc(100dvh - 48px);
+          }
+          .mobile-header {
+            display: flex;
+          }
+        }
+        @keyframes spin { to { transform: rotate(360deg); }}
+      `}</style>
     </div>
   );
 }
