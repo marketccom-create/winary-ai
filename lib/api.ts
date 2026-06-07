@@ -218,10 +218,28 @@ export async function apiAdminApprovePurchase(purchaseId: string) {
   });
 }
 
-export async function apiAdminRejectPurchase(purchaseId: string) {
+export async function apiAdminRejectPurchase(purchaseId: string, reason: string) {
   return apiFetch<{ success: boolean }>('/api/admin/purchases', {
     method: 'POST',
-    body: JSON.stringify({ purchaseId, action: 'reject' }),
+    body: JSON.stringify({ purchaseId, action: 'reject', reason }),
+  });
+}
+
+export async function apiAdminGetPendingWithdrawals() {
+  return apiFetch<any[]>('/api/admin/withdrawals');
+}
+
+export async function apiAdminApproveWithdrawal(transactionId: string) {
+  return apiFetch<{ success: boolean }>('/api/admin/withdrawals', {
+    method: 'POST',
+    body: JSON.stringify({ transactionId, action: 'approve' }),
+  });
+}
+
+export async function apiAdminRejectWithdrawal(transactionId: string, reason: string) {
+  return apiFetch<{ success: boolean }>('/api/admin/withdrawals', {
+    method: 'POST',
+    body: JSON.stringify({ transactionId, action: 'reject', reason }),
   });
 }
 

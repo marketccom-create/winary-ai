@@ -49,7 +49,7 @@ export async function POST(req: Request) {
   const { error } = await requireAdmin(req);
   if (error) return error;
 
-  const { purchaseId, action } = await req.json();
+  const { purchaseId, action, reason } = await req.json();
   if (!purchaseId || !['approve', 'reject'].includes(action)) {
     return NextResponse.json({ error: 'Paramètres invalides' }, { status: 400 });
   }
@@ -100,9 +100,19 @@ export async function POST(req: Request) {
     }
   } else {
     // reject
-    await db.from('purchases').update({ status: 'EXPIRED' }).eq('id', purchaseId);
+    const reasonSuffix = reason?.trim() ? ` (Rejeté : ${reason.trim()})` : '';
+    const newTxRef = (purchase.tx_reference || '') + reasonSuffix;
+
+    await db.from('purchases')
+      .update({ status: 'EXPIRED', tx_reference: newTxRef })
+      .eq('id', purchaseId);
+
     await db.from('transactions')
-      .update({ status: 'FAILED' })
+      .update({ 
+        status: 'FAILED',
+        tx_reference: newTxRef,
+        description: `Achat ${purchase.bot_name} (${purchase.operator}) - Réf: ${newTxRef}`
+      })
       .eq('user_id', purchase.user_id)
       .eq('type', 'BOT_PURCHASE')
       .eq('tx_reference', purchase.tx_reference);

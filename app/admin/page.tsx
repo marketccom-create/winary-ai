@@ -11,20 +11,25 @@ import {
   apiAdminGetStats, apiAdminGetUsers, apiAdminGetUserDetails, apiAdminUpdateUser,
   apiAdminGetAnnouncements, apiAdminUpdateAnnouncement, apiAdminDeleteAnnouncement,
   apiGetBots, apiGetBotPaymentConfigs, apiAdminUpdateBotPaymentConfigs,
-  apiAdminGetPendingPurchases, apiAdminApprovePurchase, apiAdminRejectPurchase
+  apiAdminGetPendingPurchases, apiAdminApprovePurchase, apiAdminRejectPurchase,
+  apiAdminGetPendingWithdrawals, apiAdminApproveWithdrawal, apiAdminRejectWithdrawal
 } from '@/lib/api';
 import { formatXOF } from '@/lib/data';
 import type { BotPaymentConfig, Announcement } from '@/lib/data';
 
-type Tab = 'dashboard' | 'users' | 'pending' | 'bots' | 'announcements';
+type Tab = 'dashboard' | 'users' | 'pending' | 'withdrawals' | 'bots' | 'announcements';
 
 // ─── Stat Card ─────────────────────────────────────────────────────────────────
-function StatCard({ label, value, icon, color }: { label: string; value: string | number; icon: string; color: string }) {
+function StatCard({ label, value, icon, color, onClick }: { label: string; value: string | number; icon: string; color: string; onClick?: () => void }) {
   return (
-    <div style={{
-      background: 'white', borderRadius: 14, padding: '16px',
-      border: '1.5px solid #E5E7EB', flex: 1, minWidth: 200,
-    }}>
+    <div 
+      onClick={onClick}
+      style={{
+        background: 'white', borderRadius: 14, padding: '16px',
+        border: '1.5px solid #E5E7EB', flex: 1, minWidth: 200,
+        cursor: onClick ? 'pointer' : 'default',
+      }}
+    >
       <div style={{
         width: 36, height: 36, borderRadius: 10, background: color + '20',
         display: 'flex', alignItems: 'center', justifyContent: 'center',
@@ -44,6 +49,7 @@ export default function AdminPage() {
   const [stats, setStats] = useState<any>(null);
   const [users, setUsers] = useState<any[]>([]);
   const [pendingPurchases, setPendingPurchases] = useState<any[]>([]);
+  const [pendingWithdrawals, setPendingWithdrawals] = useState<any[]>([]);
   const [bots, setBots] = useState<any[]>([]);
   const [botConfigs, setBotConfigs] = useState<BotPaymentConfig[]>([]);
   const [announcements, setAnnouncements] = useState<Announcement[]>([]);
@@ -72,13 +78,14 @@ export default function AdminPage() {
   async function loadData() {
     setLoading(true);
     try {
-      const [s, u, b, cfg, ann, p] = await Promise.all([
+      const [s, u, b, cfg, ann, p, w] = await Promise.all([
         apiAdminGetStats(),
         apiAdminGetUsers(),
         apiGetBots(),
         apiGetBotPaymentConfigs(),
         apiAdminGetAnnouncements(),
         apiAdminGetPendingPurchases(),
+        apiAdminGetPendingWithdrawals(),
       ]);
       setStats(s);
       setUsers(u);
@@ -86,6 +93,7 @@ export default function AdminPage() {
       setBotConfigs(cfg);
       setAnnouncements(ann);
       setPendingPurchases(p);
+      setPendingWithdrawals(w);
     } catch (err: any) {
       alert('Erreur chargement : ' + err.message);
     } finally {
@@ -152,9 +160,16 @@ export default function AdminPage() {
   }
 
   async function handleRejectPurchase(pid: string) {
+    const reason = prompt("Veuillez saisir la raison du rejet pour cet achat (obligatoire) :");
+    if (reason === null) return;
+    if (!reason.trim()) {
+      alert("La raison du rejet est obligatoire.");
+      return;
+    }
+
     setActionLoading(pid);
     try {
-      await apiAdminRejectPurchase(pid);
+      await apiAdminRejectPurchase(pid, reason.trim());
       alert('Achat rejeté.');
       await loadData();
       if (selectedUserDetail) {
@@ -162,6 +177,39 @@ export default function AdminPage() {
         const details = await apiAdminGetUserDetails(selectedUserDetail.user.id);
         setSelectedUserDetail(details);
       }
+    } catch (err: any) {
+      alert(err.message);
+    } finally {
+      setActionLoading(null);
+    }
+  }
+
+  async function handleApproveWithdrawal(txId: string) {
+    setActionLoading(txId);
+    try {
+      await apiAdminApproveWithdrawal(txId);
+      alert('Retrait approuvé avec succès !');
+      await loadData();
+    } catch (err: any) {
+      alert(err.message);
+    } finally {
+      setActionLoading(null);
+    }
+  }
+
+  async function handleRejectWithdrawal(txId: string) {
+    const reason = prompt("Veuillez saisir la raison du rejet pour ce retrait (obligatoire) :");
+    if (reason === null) return;
+    if (!reason.trim()) {
+      alert("La raison du rejet est obligatoire.");
+      return;
+    }
+
+    setActionLoading(txId);
+    try {
+      await apiAdminRejectWithdrawal(txId, reason.trim());
+      alert('Retrait rejeté.');
+      await loadData();
     } catch (err: any) {
       alert(err.message);
     } finally {
@@ -255,8 +303,9 @@ export default function AdminPage() {
   const NAV_ITEMS: { key: Tab; label: string; icon: React.ElementType }[] = [
     { key: 'dashboard',     label: 'Tableau de bord', icon: TrendingUp },
     { key: 'users',         label: 'Utilisateurs',    icon: Users },
-    { key: 'pending',       label: 'Achats en attente', icon: CreditCard },
-    { key: 'bots',          label: 'Configuration Bots/SSD', icon: Bot },
+    { key: 'pending',       label: 'Achats en attente', icon: Bot },
+    { key: 'withdrawals',   label: 'Retraits en attente', icon: CreditCard },
+    { key: 'bots',          label: 'Configuration Bots/SSD', icon: Settings },
     { key: 'announcements', label: 'Annonces Popups', icon: Megaphone },
   ];
 
@@ -344,6 +393,12 @@ export default function AdminPage() {
                       fontWeight: 700, borderRadius: 99, padding: '2px 6px',
                     }}>{pendingPurchasesOnly.length}</span>
                   )}
+                  {key === 'withdrawals' && pendingWithdrawals.length > 0 && (
+                    <span style={{
+                      background: '#EF4444', color: 'white', fontSize: 10,
+                      fontWeight: 700, borderRadius: 99, padding: '2px 6px',
+                    }}>{pendingWithdrawals.length}</span>
+                  )}
                 </div>
               </button>
             ))}
@@ -391,8 +446,8 @@ export default function AdminPage() {
                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12, marginBottom: 24 }}>
                   <StatCard label="Utilisateurs" value={stats?.totalUsers || 0} icon="👥" color="#1A56DB" />
                   <StatCard label="Total Revenu Approuvé" value={formatXOF(stats?.totalRevenueCents || 0)} icon="💰" color="#15803D" />
-                  <StatCard label="Achats en attente SSD" value={pendingPurchasesOnly.length} icon="🤖" color="#7C3AED" />
-                  <StatCard label="Retraits en attente" value={stats?.pendingWithdrawals || 0} icon="⏳" color="#D97706" />
+                  <StatCard label="Achats en attente SSD" value={pendingPurchasesOnly.length} icon="🤖" color="#7C3AED" onClick={() => setActiveTab('pending')} />
+                  <StatCard label="Retraits en attente" value={stats?.pendingWithdrawals || 0} icon="⏳" color="#D97706" onClick={() => setActiveTab('withdrawals')} />
                 </div>
 
                 {pendingPurchasesOnly.length > 0 && (
@@ -404,6 +459,19 @@ export default function AdminPage() {
                     <AlertCircle size={18} />
                     <span style={{ fontSize: 13, fontWeight: 600 }}>
                       {pendingPurchasesOnly.length} demande(s) d'achats de bot SSD en attente de vérification
+                    </span>
+                  </div>
+                )}
+
+                {pendingWithdrawals.length > 0 && (
+                  <div style={{
+                    background: '#FEF3C7', border: '1.5px solid #FDE68A',
+                    borderRadius: 14, padding: '14px 16px', marginBottom: 12,
+                    display: 'flex', alignItems: 'center', gap: 10, color: '#D97706', cursor: 'pointer',
+                  }} onClick={() => setActiveTab('withdrawals')}>
+                    <AlertCircle size={18} />
+                    <span style={{ fontSize: 13, fontWeight: 600 }}>
+                      {pendingWithdrawals.length} demande(s) de retrait en attente de traitement
                     </span>
                   </div>
                 )}
@@ -559,6 +627,87 @@ export default function AdminPage() {
                               <button
                                 onClick={() => handleRejectPurchase(p.id)}
                                 disabled={actionLoading === p.id}
+                                style={{
+                                  background: '#FFF1F2', border: '1px solid #FECACA', borderRadius: 8,
+                                  padding: '6px 12px', fontSize: 12, fontWeight: 700,
+                                  cursor: 'pointer', color: '#B91C1C', display: 'flex', alignItems: 'center', gap: 4,
+                                }}
+                              >
+                                <X size={12} />
+                                Rejeter
+                              </button>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* ── Pending Withdrawals Approval ── */}
+            {activeTab === 'withdrawals' && (
+              <div>
+                <h1 style={{ fontSize: 20, fontWeight: 800, margin: '0 0 6px', fontFamily: 'Space Grotesk, sans-serif', color: '#111827' }}>
+                  Demandes de retraits
+                </h1>
+                <p style={{ color: '#9CA3AF', fontSize: 13, margin: '0 0 20px' }}>
+                  Vérifiez le numéro bénéficiaire Mobile Money et validez ou rejetez le retrait.
+                </p>
+
+                {pendingWithdrawals.length === 0 ? (
+                  <div style={{
+                    background: 'white', borderRadius: 16, border: '1.5px solid #E5E7EB',
+                    padding: '40px 20px', textAlign: 'center',
+                  }}>
+                    <span style={{ fontSize: 32 }}>💤</span>
+                    <h3 style={{ fontSize: 16, fontWeight: 700, color: '#374151', margin: '8px 0 2px' }}>Aucun retrait en attente</h3>
+                    <p style={{ fontSize: 13, color: '#9CA3AF', margin: 0 }}>Toutes les demandes de retrait ont été traitées.</p>
+                  </div>
+                ) : (
+                  <div className="table-container" style={{ background: 'white', borderRadius: 16, border: '1.5px solid #E5E7EB' }}>
+                    <table style={{ width: '100%', minWidth: 700, borderCollapse: 'collapse' }}>
+                      <thead>
+                        <tr style={{ background: '#F9FAFB', borderBottom: '1px solid #E5E7EB' }}>
+                          {['Utilisateur', 'Description', 'Montant', 'Date de demande', 'Actions'].map(h => (
+                            <th key={h} style={{ padding: '12px 16px', textAlign: 'left', fontSize: 12, fontWeight: 700, color: '#6B7280' }}>
+                              {h}
+                            </th>
+                          ))}
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {pendingWithdrawals.map((w, i) => (
+                          <tr key={w.id} style={{ borderBottom: i < pendingWithdrawals.length - 1 ? '1px solid #F3F4F6' : 'none' }}>
+                            <td style={{ padding: '12px 16px', fontSize: 13, fontWeight: 600, color: '#111827' }}>
+                              {w.userPhone}
+                            </td>
+                            <td style={{ padding: '12px 16px', fontSize: 13, color: '#374151' }}>
+                              {w.description}
+                            </td>
+                            <td style={{ padding: '12px 16px', fontSize: 13, fontWeight: 700, color: '#B91C1C' }}>
+                              {formatXOF(Math.abs(w.amountCents))}
+                            </td>
+                            <td style={{ padding: '12px 16px', fontSize: 12, color: '#9CA3AF' }}>
+                              {new Date(w.createdAt).toLocaleString('fr-BJ')}
+                            </td>
+                            <td style={{ padding: '12px 16px', display: 'flex', gap: 8 }}>
+                              <button
+                                onClick={() => handleApproveWithdrawal(w.id)}
+                                disabled={actionLoading === w.id}
+                                style={{
+                                  background: '#EFF6FF', border: '1px solid #BFDBFE', borderRadius: 8,
+                                  padding: '6px 12px', fontSize: 12, fontWeight: 700,
+                                  cursor: 'pointer', color: '#1A56DB', display: 'flex', alignItems: 'center', gap: 4,
+                                }}
+                              >
+                                {actionLoading === w.id ? <Loader2 size={12} style={{ animation: 'spin 0.8s linear' }} /> : <Check size={12} />}
+                                Approuver
+                              </button>
+                              <button
+                                onClick={() => handleRejectWithdrawal(w.id)}
+                                disabled={actionLoading === w.id}
                                 style={{
                                   background: '#FFF1F2', border: '1px solid #FECACA', borderRadius: 8,
                                   padding: '6px 12px', fontSize: 12, fontWeight: 700,
