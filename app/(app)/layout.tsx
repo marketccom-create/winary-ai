@@ -34,6 +34,8 @@ function AnnouncementModal({ announcements, onClose }: { announcements: any[]; o
   }
 
   const headerBg = current.headerColor || 'linear-gradient(135deg, #1A56DB, #1e3a8a)';
+  const isImageLink = current.imageUrl && (current.imageUrl.startsWith('http') || current.imageUrl.startsWith('/'));
+  const iconStr = current.imageUrl && !isImageLink ? current.imageUrl : '📢';
 
   return (
     <div className="modal-overlay centered" style={{ zIndex: 300 }}>
@@ -44,17 +46,17 @@ function AnnouncementModal({ announcements, onClose }: { announcements: any[]; o
         {/* ── Header ── */}
         <div style={{
           background: headerBg,
-          padding: current.imageUrl ? '0' : '28px 20px 20px',
+          padding: isImageLink ? '0' : '28px 20px 20px',
           position: 'relative',
         }}>
-          {current.imageUrl ? (
+          {isImageLink ? (
             <img
               src={current.imageUrl}
               alt={current.title}
               style={{ width: '100%', maxHeight: 160, objectFit: 'cover', display: 'block' }}
             />
           ) : (
-            <div style={{ fontSize: 36, marginBottom: 8, marginTop: announcements.length > 1 ? 16 : 0 }}>📢</div>
+            <div style={{ fontSize: 36, marginBottom: 8, marginTop: announcements.length > 1 ? 16 : 0, textAlign: 'center' }}>{iconStr}</div>
           )}
 
           {/* Close button */}
@@ -67,10 +69,10 @@ function AnnouncementModal({ announcements, onClose }: { announcements: any[]; o
           }}><X size={15} /></button>
 
           {/* Title bar (shown only when no image) */}
-          {!current.imageUrl && (
+          {!isImageLink && (
             <div style={{
               color: 'white', fontSize: 18, fontWeight: 700,
-              fontFamily: 'Space Grotesk, sans-serif',
+              fontFamily: 'Space Grotesk, sans-serif', textAlign: 'center'
             }}>{current.title}</div>
           )}
 

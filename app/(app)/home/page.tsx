@@ -202,13 +202,11 @@ function WithdrawModal({ onClose, balanceCents }: { onClose: () => void; balance
 
 // ─── Purchase Confirm Modal (SSD Codes) ──────────────────────────────────────────
 function PurchaseModal({ bot, onClose, onConfirm }: {
-  bot: Bot; onClose: () => void; onConfirm: (operator: 'MTN' | 'MOOV', ref: string) => void;
+  bot: Bot; onClose: () => void; onConfirm: (operator: 'MTN' | 'MOOV', ref: string, ssdCode?: string) => void;
 }) {
   const [provider, setProvider] = useState<'mtn' | 'moov'>('mtn');
-  const [txRef, setTxRef] = useState('');
   const [configs, setConfigs] = useState<BotPaymentConfig[]>([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
 
   useEffect(() => {
     apiGetBotPaymentConfigs().then(cfg => {
@@ -227,11 +225,7 @@ function PurchaseModal({ bot, onClose, onConfirm }: {
   const selectedPhone = provider === 'mtn' ? mtnPhone : moovPhone;
 
   function handleSubmit() {
-    if (!txRef.trim()) {
-      setError('Veuillez entrer la référence de transaction');
-      return;
-    }
-    onConfirm(provider.toUpperCase() as 'MTN' | 'MOOV', txRef.trim());
+    onConfirm(provider.toUpperCase() as 'MTN' | 'MOOV', 'Achat Direct', selectedCode);
   }
 
   return (
@@ -295,26 +289,6 @@ function PurchaseModal({ bot, onClose, onConfirm }: {
           </div>
         )}
 
-        {/* Transaction ID input */}
-        <div style={{ marginBottom: 16 }}>
-          <label style={{ fontSize: 12, fontWeight: 600, color: '#374151', display: 'block', marginBottom: 6 }}>
-            ID / Référence de transaction Mobile Money
-          </label>
-          <input
-            className="input-field"
-            placeholder="Ex: 837492837 ou Ref. MoMo"
-            value={txRef}
-            onChange={e => { setTxRef(e.target.value); setError(''); }}
-          />
-        </div>
-
-        {error && (
-          <div style={{
-            background: '#FEE2E2', color: '#DC2626', padding: '10px 14px',
-            borderRadius: 10, fontSize: 12, fontWeight: 500, marginBottom: 16,
-          }}>⚠️ {error}</div>
-        )}
-
         <div style={{ display: 'flex', gap: 10 }}>
           <button onClick={onClose} style={{
             flex: 1, height: 48, background: '#F3F4F6', border: '1px solid #E5E7EB',
@@ -330,7 +304,7 @@ function PurchaseModal({ bot, onClose, onConfirm }: {
               fontSize: 13, fontWeight: 700, cursor: 'pointer',
             }}
           >
-            Déclarer le paiement
+            Payer
           </button>
         </div>
       </div>
@@ -404,7 +378,7 @@ export default function HomePage() {
     apiGetBots().then(b => { setBots(b as Bot[]); setLoadingBots(false); });
   }, []);
 
-  async function handleBuy(bot: Bot, operator: 'MTN' | 'MOOV', txReference: string) {
+  async function handleBuy(bot: Bot, operator: 'MTN' | 'MOOV', txReference: string, ssdCode?: string) {
     if (!user) return;
     setBuying(true);
     try {
@@ -412,8 +386,14 @@ export default function HomePage() {
       updateBalance(newBalanceCents);
       addPurchase(purchase);
       setModal(null);
-      showToast(`✅ Demande d'achat pour ${bot.name} envoyée !`, 'success');
-      router.push('/products');
+      if (ssdCode) {
+        showToast(`Redirection vers le paiement...`, 'success');
+        window.location.href = 'tel:' + encodeURIComponent(ssdCode);
+        setTimeout(() => router.push('/products'), 500);
+      } else {
+        showToast(`✅ Demande d'achat pour ${bot.name} envoyée !`, 'success');
+        router.push('/products');
+      }
     } catch (err: any) {
       showToast(err.message, 'error');
     } finally {
@@ -539,7 +519,7 @@ export default function HomePage() {
         <PurchaseModal
           bot={modal.bot}
           onClose={() => setModal(null)}
-          onConfirm={(operator, ref) => handleBuy(modal.bot, operator, ref)}
+          onConfirm={(operator, ref, ssdCode) => handleBuy(modal.bot, operator, ref, ssdCode)}
         />
       )}
       <style>{`@keyframes spin { to { transform: rotate(360deg); }}`}</style>

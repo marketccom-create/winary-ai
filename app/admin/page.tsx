@@ -796,15 +796,15 @@ export default function AdminPage() {
               </div>
               <div>
                 <label style={{ fontSize: 12, fontWeight: 600, color: '#374151', display: 'block', marginBottom: 4 }}>
-                  URL d'image bannière <span style={{ fontWeight: 400, color: '#9CA3AF' }}>(optionnel)</span>
+                  Icône (ex: 🎉) OU URL de bannière (http...) <span style={{ fontWeight: 400, color: '#9CA3AF' }}>(optionnel)</span>
                 </label>
                 <input
                   className="input-field"
                   value={(editingAnn as any).imageUrl || ''}
                   onChange={e => setEditingAnn({ ...editingAnn, imageUrl: e.target.value } as any)}
-                  placeholder="Ex: https://example.com/banniere.jpg"
+                  placeholder="Ex: 🎉 ou https://example.com/banniere.jpg"
                 />
-                {(editingAnn as any).imageUrl && (
+                {(editingAnn as any).imageUrl && ((editingAnn as any).imageUrl.startsWith('http') || (editingAnn as any).imageUrl.startsWith('/')) && (
                   <img
                     src={(editingAnn as any).imageUrl}
                     alt="Aperçu"

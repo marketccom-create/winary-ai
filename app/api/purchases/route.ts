@@ -28,9 +28,11 @@ export async function POST(req: Request) {
   if (!payload) return unauthorized();
 
   const { botId, operator, txReference } = await req.json();
-  if (!botId || !operator || !txReference) {
+  if (!botId || !operator) {
     return NextResponse.json({ error: 'Champs manquants' }, { status: 400 });
   }
+  
+  const finalTxRef = txReference?.trim() || 'Achat Direct';
 
   const bot = BOTS.find(b => b.id === botId);
   if (!bot) return NextResponse.json({ error: 'Bot introuvable' }, { status: 404 });
@@ -52,7 +54,7 @@ export async function POST(req: Request) {
       work_count: 0,
       status: 'PENDING',
       operator,
-      tx_reference: txReference,
+      tx_reference: finalTxRef,
     })
     .select()
     .single();
@@ -65,9 +67,9 @@ export async function POST(req: Request) {
     type: 'BOT_PURCHASE',
     status: 'PENDING',
     amount_cents: -bot.priceCents,
-    description: `Achat ${bot.name} (${operator}) - Réf: ${txReference}`,
+    description: `Achat ${bot.name} (${operator}) - Réf: ${finalTxRef}`,
     operator,
-    tx_reference: txReference,
+    tx_reference: finalTxRef,
   });
 
   return NextResponse.json({ purchase: mapPurchase(purchase) }, { status: 201 });

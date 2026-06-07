@@ -23,7 +23,8 @@ export default function InvitePage() {
     apiGetReferrals(user.id).then(d => { setData(d as ReferralData); setLoading(false); });
   }, [user]);
 
-  const shareUrl = `https://winary-ai.app/register?ref=${data?.code || ''}`;
+  const origin = typeof window !== 'undefined' ? window.location.origin : 'https://winary-ai.app';
+  const shareUrl = `${origin}/register?ref=${data?.code || ''}`;
 
   function copyToClipboard(text: string, type: 'code' | 'link') {
     navigator.clipboard.writeText(text).then(() => {
