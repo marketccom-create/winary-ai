@@ -54,13 +54,23 @@ function PurchaseCard({ purchase }: { purchase: UserPurchase }) {
       if (elapsed >= totalDuration) {
         setLiveEarned(targetEarned);
       } else {
-        setLiveEarned(Math.floor((elapsed / totalDuration) * targetEarned));
+        setLiveEarned((elapsed / totalDuration) * targetEarned);
       }
     };
     updateMoney();
-    const interval = setInterval(updateMoney, 1000);
+    const interval = setInterval(updateMoney, 50);
     return () => clearInterval(interval);
   }, [isWorking, lastWorkedAt, nextAllowedAt, isReady, targetEarned]);
+
+  const [autoClaimed, setAutoClaimed] = useState(false);
+
+  // Auto-claim when ready
+  useEffect(() => {
+    if (isReady && !working && !autoClaimed) {
+      setAutoClaimed(true);
+      handleClaim();
+    }
+  }, [isReady, working, autoClaimed]);
 
   const expiresAt = new Date(purchase.expiresAt);
   const purchasedAt = new Date(purchase.purchasedAt);
@@ -74,6 +84,7 @@ function PurchaseCard({ purchase }: { purchase: UserPurchase }) {
   async function handleStart() {
     if (!user || working) return;
     setWorking(true);
+    setAutoClaimed(false); // Reset auto claim flag for the next cycle
     try {
       const { nextAllowedAt: next, lastWorkedAt: last } = await apiStartWork(user.id, purchase.id);
       updatePurchase(purchase.id, {
@@ -245,8 +256,8 @@ function PurchaseCard({ purchase }: { purchase: UserPurchase }) {
                 display: 'flex', justifyContent: 'center', alignItems: 'baseline', gap: 4,
                 border: '1px solid #DBEAFE',
               }}>
-                <span style={{ fontSize: 24, fontWeight: 800, color: '#15803D', fontFamily: 'Space Grotesk, sans-serif' }}>
-                  {formatXOF(liveEarned)}
+                <span style={{ fontSize: 24, fontWeight: 800, color: '#15803D', fontFamily: 'Space Grotesk, sans-serif', fontVariantNumeric: 'tabular-nums' }}>
+                  {liveEarned.toFixed(6)} XOF
                 </span>
                 <span style={{ fontSize: 13, color: '#9CA3AF', fontWeight: 600 }}>/ {formatXOF(targetEarned)}</span>
               </div>
