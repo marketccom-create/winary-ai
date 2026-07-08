@@ -101,14 +101,18 @@ export async function apiGetMyPurchases(_userId: string) {
 export async function apiPurchaseBot(
   _userId: string,
   botId: string,
-  operator: 'MTN' | 'MOOV',
+  operator: 'MTN' | 'MOOV' | 'BALANCE' | 'SENEPAY',
   txReference: string
 ) {
-  const { purchase } = await apiFetch<{ purchase: any }>('/api/purchases', {
+  const data = await apiFetch<{ purchase: any; checkoutUrl?: string; newBalanceCents?: number }>('/api/purchases', {
     method: 'POST',
     body: JSON.stringify({ botId, operator, txReference }),
   });
-  return { purchase: normalizePurchase(purchase), newBalanceCents: 0 };
+  return {
+    purchase: normalizePurchase(data.purchase),
+    checkoutUrl: data.checkoutUrl,
+    newBalanceCents: data.newBalanceCents ?? 0,
+  };
 }
 
 export async function apiStartWork(_userId: string, purchaseId: string) {
@@ -150,6 +154,13 @@ export async function apiDeposit(provider: string) {
     moov: { ssdCode: '*155*1*MONTANT*CODE#', phone: process.env.NEXT_PUBLIC_MERCHANT_MOOV || '+22995000000' },
   };
   return settings[provider] || settings.mtn;
+}
+
+export async function apiInitiateDeposit(amount: number) {
+  return apiFetch<{ checkoutUrl: string; sessionToken: string }>('/api/transactions/deposit', {
+    method: 'POST',
+    body: JSON.stringify({ amount }),
+  });
 }
 
 // ─── Referrals ────────────────────────────────────────────────────────────────

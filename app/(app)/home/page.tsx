@@ -4,21 +4,34 @@ import { useRouter } from 'next/navigation';
 import Image from 'next/image';
 import { Bell, ArrowUpRight, ArrowDownLeft, UserPlus, ChevronRight, Loader2, X } from 'lucide-react';
 import { useAuthStore, useAppStore, useUIStore } from '@/lib/store';
-import { apiGetBots, apiPurchaseBot, apiDeposit, apiWithdraw, apiGetBotPaymentConfigs } from '@/lib/api';
+import { apiGetBots, apiPurchaseBot, apiDeposit, apiWithdraw, apiGetBotPaymentConfigs, apiInitiateDeposit } from '@/lib/api';
 import { formatXOF, Bot, MIN_WITHDRAWAL_CENTS, BotPaymentConfig } from '@/lib/data';
 
 // ─── Deposit Modal ─────────────────────────────────────────────────────────────
 function DepositModal({ onClose }: { onClose: () => void }) {
-  const [provider, setProvider] = useState<'mtn' | 'moov'>('mtn');
+  const { showToast } = useUIStore();
   const [amount, setAmount] = useState('');
-  const [info, setInfo] = useState<{ ssdCode: string; phone: string } | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
 
-  async function handleShow() {
-    const data = await apiDeposit(provider);
-    setInfo(data);
+  async function handleDeposit() {
+    setError('');
+    const amtNum = parseFloat(amount);
+    if (!amount || isNaN(amtNum) || amtNum < 200) {
+      setError('Minimum 200 XOF');
+      return;
+    }
+    setLoading(true);
+    try {
+      const data = await apiInitiateDeposit(amtNum);
+      showToast('Redirection vers Sene-Pay...', 'success');
+      window.location.href = data.checkoutUrl;
+    } catch (err: any) {
+      setError(err.message || 'Une erreur est survenue');
+    } finally {
+      setLoading(false);
+    }
   }
-
-  const finalCode = info ? info.ssdCode.replace('MONTANT', amount || 'XXXX').replace('CODE', '2024') : '';
 
   return (
     <div className="modal-overlay" onClick={onClose}>
@@ -28,26 +41,8 @@ function DepositModal({ onClose }: { onClose: () => void }) {
           Recharger mon compte
         </h2>
         <p style={{ color: '#6B7280', fontSize: 13, margin: '0 0 20px' }}>
-          Choisissez votre opérateur Mobile Money
+          Payez de manière sécurisée avec Wave, Orange, MTN, Moov, etc. via Sene-Pay
         </p>
-
-        {/* Provider selector */}
-        <div style={{ display: 'flex', gap: 10, marginBottom: 20 }}>
-          {(['mtn', 'moov'] as const).map(p => (
-            <button key={p} onClick={() => { setProvider(p); setInfo(null); }} style={{
-              flex: 1, height: 52,
-              background: provider === p ? '#EFF6FF' : '#F9FAFB',
-              border: `2px solid ${provider === p ? '#1A56DB' : '#E5E7EB'}`,
-              borderRadius: 12, cursor: 'pointer',
-              display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
-              fontSize: 14, fontWeight: 700,
-              color: provider === p ? '#1A56DB' : '#374151',
-            }}>
-              <span style={{ fontSize: 20 }}>{p === 'mtn' ? '🟡' : '🔵'}</span>
-              {p === 'mtn' ? 'MTN MoMo' : 'Moov Money'}
-            </button>
-          ))}
-        </div>
 
         {/* Amount */}
         <div style={{ marginBottom: 16 }}>
@@ -56,40 +51,28 @@ function DepositModal({ onClose }: { onClose: () => void }) {
           </label>
           <input
             className="input-field" type="number"
-            placeholder="Ex: 10000" value={amount}
-            onChange={e => { setAmount(e.target.value); setInfo(null); }}
+            placeholder="Ex: 5000" value={amount}
+            onChange={e => { setAmount(e.target.value); setError(''); }}
             inputMode="numeric"
           />
         </div>
 
-        <button onClick={handleShow} className="btn-press" style={{
-          width: '100%', height: 52,
-          background: 'linear-gradient(135deg, #1A56DB, #1D4ED8)',
-          color: 'white', border: 'none', borderRadius: 12,
-          fontSize: 15, fontWeight: 700, cursor: 'pointer', marginBottom: 16,
-        }}>
-          Générer le code de paiement
-        </button>
-
-        {info && (
-          <div className="fade-in" style={{
-            background: '#EFF6FF', border: '1.5px solid #BFDBFE',
-            borderRadius: 14, padding: 16,
-          }}>
-            <p style={{ fontSize: 13, color: '#1D4ED8', fontWeight: 600, margin: '0 0 8px' }}>
-              📱 Composez ce code sur votre téléphone {provider.toUpperCase()} :
-            </p>
-            <div style={{
-              background: 'white', borderRadius: 10, padding: '12px 16px',
-              fontFamily: 'monospace', fontSize: 20, fontWeight: 800,
-              color: '#1A56DB', letterSpacing: 1, textAlign: 'center',
-              border: '1.5px solid #BFDBFE', marginBottom: 10,
-            }}>{finalCode}</div>
-            <p style={{ fontSize: 12, color: '#4B5563', margin: 0 }}>
-              ⚠️ Remplacez <strong>MONTANT</strong> par votre montant exact en XOF. Votre solde sera mis à jour après validation par l'administrateur sous 24h.
-            </p>
-          </div>
+        {error && (
+          <div style={{
+            background: '#FEE2E2', color: '#DC2626', padding: '10px 14px',
+            borderRadius: 10, fontSize: 13, fontWeight: 500, marginBottom: 16
+          }}>⚠️ {error}</div>
         )}
+
+        <button onClick={handleDeposit} className="btn-press" disabled={loading} style={{
+          width: '100%', height: 52,
+          background: loading ? '#93C5FD' : 'linear-gradient(135deg, #1A56DB, #1D4ED8)',
+          color: 'white', border: 'none', borderRadius: 12,
+          fontSize: 15, fontWeight: 700, cursor: loading ? 'not-allowed' : 'pointer',
+          display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
+        }}>
+          {loading ? <Loader2 size={18} style={{ animation: 'spin 0.8s linear infinite' }} /> : 'Payer avec Sene-Pay'}
+        </button>
       </div>
     </div>
   );
@@ -201,45 +184,16 @@ function WithdrawModal({ onClose, balanceCents }: { onClose: () => void; balance
 }
 
 // ─── Purchase Confirm Modal (SSD Codes) ──────────────────────────────────────────
-function PurchaseModal({ bot, onClose, onConfirm }: {
-  bot: Bot; onClose: () => void; onConfirm: (operator: 'MTN' | 'MOOV', ref: string, ssdCode?: string) => void;
+function PurchaseModal({ bot, balanceCents, onClose, onConfirm, buying }: {
+  bot: Bot;
+  balanceCents: number;
+  onClose: () => void;
+  onConfirm: (bot: Bot, method: 'BALANCE' | 'SENEPAY') => void;
+  buying: boolean;
 }) {
-  const [provider, setProvider] = useState<'mtn' | 'moov'>('mtn');
-  const [configs, setConfigs] = useState<BotPaymentConfig[]>([]);
-  const [loading, setLoading] = useState(true);
-
-  // Aggregator inputs
-  const [fullName, setFullName] = useState('');
-  const [payPhone, setPayPhone] = useState('');
-  const [error, setError] = useState('');
-
-  useEffect(() => {
-    apiGetBotPaymentConfigs().then(cfg => {
-      setConfigs(cfg);
-      setLoading(false);
-    });
-  }, []);
-
-  const config = configs.find(c => c.botId === bot.id);
-  const mtnCode = config?.ssdCodeMTN || `*880*1*${bot.priceCents / 100}*97001122#`;
-  const moovCode = config?.ssdCodeMoov || `*155*1*${bot.priceCents / 100}*95001122#`;
-
-  const selectedCode = provider === 'mtn' ? mtnCode : moovCode;
-
-  function handleSubmit() {
-    if (!fullName.trim()) {
-      setError('Veuillez saisir votre Nom & Prénom.');
-      return;
-    }
-    if (!payPhone.trim()) {
-      setError('Veuillez saisir votre numéro de paiement Mobile Money.');
-      return;
-    }
-    setError('');
-    // Reference format: "Nom Prénom (+229 Numéro)"
-    const ref = `${fullName.trim()} (+229 ${payPhone.trim()})`;
-    onConfirm(provider.toUpperCase() as 'MTN' | 'MOOV', ref, selectedCode);
-  }
+  const [method, setMethod] = useState<'balance' | 'senepay'>(
+    balanceCents >= bot.priceCents ? 'balance' : 'senepay'
+  );
 
   return (
     <div className="modal-overlay" onClick={onClose}>
@@ -249,102 +203,54 @@ function PurchaseModal({ bot, onClose, onConfirm }: {
           Activer {bot.name}
         </h2>
         <p style={{ color: '#6B7280', fontSize: 12, margin: '0 0 16px' }}>
-          Sélectionnez votre opérateur Mobile Money pour payer {formatXOF(bot.priceCents)}
+          Sélectionnez votre mode de paiement pour {formatXOF(bot.priceCents)}
         </p>
 
-        {/* Operator Choice */}
-        <div style={{ display: 'flex', gap: 10, marginBottom: 16 }}>
-          {(['mtn', 'moov'] as const).map(p => (
-            <button key={p} onClick={() => setProvider(p)} style={{
-              flex: 1, height: 48,
-              background: provider === p ? '#EFF6FF' : '#F9FAFB',
-              border: `2px solid ${provider === p ? '#1A56DB' : '#E5E7EB'}`,
-              borderRadius: 12, cursor: 'pointer',
-              display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
-              fontSize: 13, fontWeight: 700,
-              color: provider === p ? '#1A56DB' : '#374151',
-            }}>
-              <span style={{ fontSize: 16 }}>{p === 'mtn' ? '🟡' : '🔵'}</span>
-              {p === 'mtn' ? 'MTN' : 'Moov'}
-            </button>
-          ))}
-        </div>
-
-        {/* Payment Form (Aggregator style) */}
-        {loading ? (
-          <div style={{ display: 'flex', justifyContent: 'center', padding: 20 }}>
-            <Loader2 size={24} color="#1A56DB" style={{ animation: 'spin 0.8s linear infinite' }} />
-          </div>
-        ) : (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 14, marginBottom: 16 }}>
-            {/* Nom & Prénom */}
-            <div>
-              <label style={{ fontSize: 12, fontWeight: 600, color: '#374151', display: 'block', marginBottom: 6 }}>
-                Nom & Prénom
-              </label>
-              <input
-                className="input-field"
-                type="text"
-                placeholder="Ex: Jean Dupont"
-                value={fullName}
-                onChange={e => { setFullName(e.target.value); setError(''); }}
-              />
-            </div>
-
-            {/* Numéro de paiement */}
-            <div>
-              <label style={{ fontSize: 12, fontWeight: 600, color: '#374151', display: 'block', marginBottom: 6 }}>
-                Numéro Mobile Money de paiement
-              </label>
-              <div style={{ position: 'relative' }}>
-                <div style={{
-                  position: 'absolute', left: 16, top: '50%', transform: 'translateY(-50%)',
-                  fontSize: 13, fontWeight: 600, color: '#374151',
-                  display: 'flex', alignItems: 'center', gap: 6,
-                }}>
-                  <span>🇧🇯</span> +229
-                  <div style={{ width: 1, height: 16, background: '#E5E7EB' }} />
-                </div>
-                <input
-                  className="input-field"
-                  type="tel"
-                  placeholder="XX XX XX XX"
-                  value={payPhone}
-                  onChange={e => { setPayPhone(e.target.value); setError(''); }}
-                  style={{ paddingLeft: 90 }}
-                  inputMode="numeric"
-                />
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginBottom: 20 }}>
+          {/* Balance Payment (if user has enough) */}
+          <button
+            onClick={() => setMethod('balance')}
+            disabled={balanceCents < bot.priceCents}
+            style={{
+              width: '100%', height: 56,
+              background: method === 'balance' ? '#EFF6FF' : '#F9FAFB',
+              border: `2px solid ${method === 'balance' ? '#1A56DB' : '#E5E7EB'}`,
+              borderRadius: 12, cursor: balanceCents < bot.priceCents ? 'not-allowed' : 'pointer',
+              display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 16px',
+              opacity: balanceCents < bot.priceCents ? 0.6 : 1,
+            }}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+              <span style={{ fontSize: 20 }}>💳</span>
+              <div style={{ textAlign: 'left' }}>
+                <div style={{ fontSize: 13, fontWeight: 700, color: '#374151' }}>Payer avec mon solde</div>
+                <div style={{ fontSize: 11, color: '#6B7280' }}>Disponible: {formatXOF(balanceCents)}</div>
               </div>
             </div>
+            {method === 'balance' && <span style={{ color: '#1A56DB', fontWeight: 'bold' }}>✓</span>}
+          </button>
 
-            {/* Summary / Total amount */}
-            <div style={{
-              background: '#F9FAFB', border: '1.5px solid #E5E7EB',
-              borderRadius: 14, padding: '12px 14px', marginTop: 4,
-              display: 'flex', justifyContent: 'space-between', alignItems: 'center'
-            }}>
-              <span style={{ fontSize: 12, fontWeight: 500, color: '#6B7280' }}>Total à payer :</span>
-              <span style={{ fontSize: 15, fontWeight: 800, color: '#1A56DB' }}>{formatXOF(bot.priceCents)}</span>
+          {/* Sene-Pay Checkout */}
+          <button
+            onClick={() => setMethod('senepay')}
+            style={{
+              width: '100%', height: 56,
+              background: method === 'senepay' ? '#EFF6FF' : '#F9FAFB',
+              border: `2px solid ${method === 'senepay' ? '#1A56DB' : '#E5E7EB'}`,
+              borderRadius: 12, cursor: 'pointer',
+              display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 16px',
+            }}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+              <span style={{ fontSize: 20 }}>⚡</span>
+              <div style={{ textAlign: 'left' }}>
+                <div style={{ fontSize: 13, fontWeight: 700, color: '#374151' }}>Sene-Pay (Mobile Money)</div>
+                <div style={{ fontSize: 11, color: '#6B7280' }}>Wave, Orange, MTN, Moov, etc.</div>
+              </div>
             </div>
-
-            {/* Redirect notification */}
-            <div style={{
-              background: '#EFF6FF', border: '1px solid #BFDBFE',
-              borderRadius: 12, padding: '10px 12px', fontSize: 11, color: '#1D4ED8',
-              display: 'flex', alignItems: 'flex-start', gap: 6
-            }}>
-              <span style={{ fontSize: 14 }}>🔒</span>
-              <span>Vous allez être redirigé vers l'application téléphone pour valider l'activation sécurisée via Mobile Money.</span>
-            </div>
-
-            {error && (
-              <div style={{
-                background: '#FEE2E2', color: '#DC2626', padding: '10px 14px',
-                borderRadius: 10, fontSize: 12, fontWeight: 500,
-              }}>⚠️ {error}</div>
-            )}
-          </div>
-        )}
+            {method === 'senepay' && <span style={{ color: '#1A56DB', fontWeight: 'bold' }}>✓</span>}
+          </button>
+        </div>
 
         <div style={{ display: 'flex', gap: 10 }}>
           <button onClick={onClose} style={{
@@ -352,16 +258,18 @@ function PurchaseModal({ bot, onClose, onConfirm }: {
             borderRadius: 12, fontSize: 13, fontWeight: 600, cursor: 'pointer', color: '#374151',
           }}>Annuler</button>
           <button
-            onClick={handleSubmit}
+            onClick={() => onConfirm(bot, method.toUpperCase() as 'BALANCE' | 'SENEPAY')}
             className="btn-press"
+            disabled={buying}
             style={{
               flex: 2, height: 48,
-              background: 'linear-gradient(135deg, #1A56DB, #1D4ED8)',
+              background: buying ? '#93C5FD' : 'linear-gradient(135deg, #1A56DB, #1D4ED8)',
               color: 'white', border: 'none', borderRadius: 12,
-              fontSize: 13, fontWeight: 700, cursor: 'pointer',
+              fontSize: 13, fontWeight: 700, cursor: buying ? 'not-allowed' : 'pointer',
+              display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8
             }}
           >
-            Payer
+            {buying ? <Loader2 size={16} style={{ animation: 'spin 0.8s linear infinite' }} /> : 'Confirmer le paiement'}
           </button>
         </div>
       </div>
@@ -435,20 +343,21 @@ export default function HomePage() {
     apiGetBots().then(b => { setBots(b as Bot[]); setLoadingBots(false); });
   }, []);
 
-  async function handleBuy(bot: Bot, operator: 'MTN' | 'MOOV', txReference: string, ssdCode?: string) {
+  async function handleBuy(bot: Bot, method: 'BALANCE' | 'SENEPAY') {
     if (!user) return;
     setBuying(true);
     try {
-      const { purchase, newBalanceCents } = await apiPurchaseBot(user.id, bot.id, operator, txReference);
-      updateBalance(newBalanceCents);
+      const { purchase, checkoutUrl, newBalanceCents } = await apiPurchaseBot(user.id, bot.id, method, '');
+      if (newBalanceCents !== undefined) {
+        updateBalance(newBalanceCents);
+      }
       addPurchase(purchase);
       setModal(null);
-      if (ssdCode) {
-        showToast(`Redirection vers le paiement...`, 'success');
-        window.location.href = 'tel:' + encodeURIComponent(ssdCode);
-        setTimeout(() => router.push('/products'), 500);
+      if (method === 'SENEPAY' && checkoutUrl) {
+        showToast(`Redirection vers Sene-Pay...`, 'success');
+        window.location.href = checkoutUrl;
       } else {
-        showToast(`✅ Demande d'achat pour ${bot.name} envoyée !`, 'success');
+        showToast(`Félicitations, ${bot.name} a été activé !`, 'success');
         router.push('/products');
       }
     } catch (err: any) {
@@ -575,8 +484,10 @@ export default function HomePage() {
       {modal && typeof modal === 'object' && modal.type === 'buy' && (
         <PurchaseModal
           bot={modal.bot}
+          balanceCents={user?.balanceCents || 0}
           onClose={() => setModal(null)}
-          onConfirm={(operator, ref, ssdCode) => handleBuy(modal.bot, operator, ref, ssdCode)}
+          onConfirm={handleBuy}
+          buying={buying}
         />
       )}
       <style>{`@keyframes spin { to { transform: rotate(360deg); }}`}</style>
