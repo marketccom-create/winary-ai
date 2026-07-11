@@ -195,6 +195,9 @@ export default function RegisterPage() {
 
           {/* Country Selection */}
           <div>
+            <label style={{ fontSize: 12, fontWeight: 600, color: '#374151', display: 'block', marginBottom: 6 }}>
+              Pays
+            </label>
             <div style={{ position: 'relative' }}>
               <select
                 value={selectedCountry.code}
@@ -211,7 +214,7 @@ export default function RegisterPage() {
               >
                 {COUNTRIES.map(c => (
                   <option key={c.code} value={c.code}>
-                    {c.flag} {c.name} ({c.prefix})
+                    {c.name}
                   </option>
                 ))}
               </select>
@@ -220,6 +223,9 @@ export default function RegisterPage() {
 
           {/* Phone */}
           <div>
+            <label style={{ fontSize: 12, fontWeight: 600, color: '#374151', display: 'block', marginBottom: 6 }}>
+              Numéro de téléphone
+            </label>
             <div style={{ position: 'relative' }}>
               <div style={{
                 position: 'absolute', left: 16, top: '50%', transform: 'translateY(-50%)',
