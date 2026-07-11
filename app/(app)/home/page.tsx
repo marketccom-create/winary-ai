@@ -89,6 +89,30 @@ function WithdrawModal({ onClose, balanceCents }: { onClose: () => void; balance
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
+  // Extract country prefix and flag from user's registered phone
+  const registeredPhone = user?.phone || '';
+  let countryPrefix = '+229'; // default
+  let countryFlag = '🇧🇯';
+
+  const prefixes = [
+    { prefix: '+229', flag: '🇧🇯' },
+    { prefix: '+226', flag: '🇧🇫' },
+    { prefix: '+225', flag: '🇨🇮' },
+    { prefix: '+224', flag: '🇬🇳' },
+    { prefix: '+223', flag: '🇲🇱' },
+    { prefix: '+227', flag: '🇳🇪' },
+    { prefix: '+221', flag: '🇸🇳' },
+    { prefix: '+228', flag: '🇹🇬' }
+  ];
+
+  for (const item of prefixes) {
+    if (registeredPhone.startsWith(item.prefix)) {
+      countryPrefix = item.prefix;
+      countryFlag = item.flag;
+      break;
+    }
+  }
+
   async function handleWithdraw() {
     setError('');
     const cents = parseInt(amount) * 100;
@@ -97,7 +121,7 @@ function WithdrawModal({ onClose, balanceCents }: { onClose: () => void; balance
     if (!phone) { setError('Entrez votre numéro Mobile Money'); return; }
     setLoading(true);
     try {
-      const { newBalanceCents, transaction } = await apiWithdraw(user!.id, cents, provider.toUpperCase(), '+229' + phone);
+      const { newBalanceCents, transaction } = await apiWithdraw(user!.id, cents, provider.toUpperCase(), countryPrefix + phone);
       updateBalance(newBalanceCents);
       addTransaction(transaction);
       showToast('Demande de retrait envoyée !', 'success');
@@ -151,14 +175,14 @@ function WithdrawModal({ onClose, balanceCents }: { onClose: () => void; balance
               fontSize: 13, fontWeight: 600, color: '#374151',
               display: 'flex', alignItems: 'center', gap: 6,
             }}>
-              <span>🇧🇯</span> +229
+              <span>{countryFlag}</span> {countryPrefix}
               <div style={{ width: 1, height: 16, background: '#E5E7EB' }} />
             </div>
             <input
               className="input-field" type="tel"
               placeholder="XX XX XX XX"
               value={phone} onChange={e => setPhone(e.target.value)}
-              style={{ paddingLeft: 90 }} inputMode="numeric"
+              style={{ paddingLeft: 95 }} inputMode="numeric"
             />
           </div>
 

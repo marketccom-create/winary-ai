@@ -35,6 +35,17 @@ function CaptchaDisplay({ code }: { code: string }) {
   );
 }
 
+const COUNTRIES = [
+  { code: 'BJ', name: 'Bénin', prefix: '+229', flag: '🇧🇯' },
+  { code: 'BF', name: 'Burkina Faso', prefix: '+226', flag: '🇧🇫' },
+  { code: 'CI', name: 'Côte d\'Ivoire', prefix: '+225', flag: '🇨🇮' },
+  { code: 'GN', name: 'Guinée', prefix: '+224', flag: '🇬🇳' },
+  { code: 'ML', name: 'Mali', prefix: '+223', flag: '🇲🇱' },
+  { code: 'NE', name: 'Niger', prefix: '+227', flag: '🇳🇪' },
+  { code: 'SN', name: 'Sénégal', prefix: '+221', flag: '🇸🇳' },
+  { code: 'TG', name: 'Togo', prefix: '+228', flag: '🇹🇬' },
+];
+
 export default function RegisterPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -43,6 +54,7 @@ export default function RegisterPage() {
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
   const [phone, setPhone] = useState('');
+  const [selectedCountry, setSelectedCountry] = useState(COUNTRIES[0]);
   const [password, setPassword] = useState('');
   const [confirm, setConfirm] = useState('');
   const [refCode, setRefCode] = useState(searchParams.get('ref') || '');
@@ -61,7 +73,7 @@ export default function RegisterPage() {
 
   function validate() {
     const errs: Record<string, string> = {};
-    const fullPhone = '+229' + phone.replace(/\s/g, '');
+    const fullPhone = selectedCountry.prefix + phone.replace(/\s/g, '');
     if (!firstName.trim()) errs.firstName = 'Prénom requis';
     if (!lastName.trim()) errs.lastName = 'Nom requis';
     if (!phone || phone.replace(/\s/g, '').length < 8) errs.phone = 'Numéro invalide';
@@ -76,7 +88,7 @@ export default function RegisterPage() {
     e.preventDefault();
     setError('');
     if (!validate()) return;
-    const fullPhone = '+229' + phone.replace(/\s/g, '');
+    const fullPhone = selectedCountry.prefix + phone.replace(/\s/g, '');
     setLoading(true);
     try {
       const { user, token } = await apiRegister({
@@ -185,19 +197,38 @@ export default function RegisterPage() {
           <div>
             <div style={{ position: 'relative' }}>
               <div style={{
-                position: 'absolute', left: 16, top: '50%', transform: 'translateY(-50%)',
-                display: 'flex', alignItems: 'center', gap: 8,
-                fontSize: 13, fontWeight: 600, pointerEvents: 'none', color: '#374151',
+                position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)',
+                display: 'flex', alignItems: 'center', gap: 4,
+                fontSize: 13, fontWeight: 600, color: '#374151',
+                zIndex: 10,
               }}>
-                <span>🇧🇯</span>
-                <span>+229</span>
-                <div style={{ width: 1, height: 16, background: '#E5E7EB' }} />
+                <span style={{ fontSize: 16 }}>{selectedCountry.flag}</span>
+                <select
+                  value={selectedCountry.code}
+                  onChange={e => {
+                    const found = COUNTRIES.find(c => c.code === e.target.value);
+                    if (found) setSelectedCountry(found);
+                  }}
+                  style={{
+                    border: 'none', background: 'transparent',
+                    fontSize: 13, fontWeight: 700, color: '#374151',
+                    cursor: 'pointer', outline: 'none', padding: '0 2px',
+                    marginRight: 4,
+                  }}
+                >
+                  {COUNTRIES.map(c => (
+                    <option key={c.code} value={c.code}>
+                      {c.prefix}
+                    </option>
+                  ))}
+                </select>
+                <div style={{ width: 1, height: 16, background: '#E5E7EB', marginLeft: 2 }} />
               </div>
               <input
                 className={`input-field${fieldErrors.phone ? ' error' : ''}`}
                 type="tel" placeholder="XX XX XX XX"
                 value={phone} onChange={e => setPhone(e.target.value)}
-                style={{ paddingLeft: 90 }} inputMode="numeric"
+                style={{ paddingLeft: 100 }} inputMode="numeric"
               />
             </div>
             {fieldErrors.phone && <p style={{ color: '#EF4444', fontSize: 12, margin: '4px 0 0 4px' }}>{fieldErrors.phone}</p>}
