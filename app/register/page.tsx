@@ -193,42 +193,50 @@ export default function RegisterPage() {
             </div>
           </div>
 
+          {/* Country Selection */}
+          <div>
+            <div style={{ position: 'relative' }}>
+              <select
+                value={selectedCountry.code}
+                onChange={e => {
+                  const found = COUNTRIES.find(c => c.code === e.target.value);
+                  if (found) setSelectedCountry(found);
+                }}
+                className="input-field"
+                style={{
+                  cursor: 'pointer',
+                  fontWeight: 600,
+                  color: '#374151',
+                }}
+              >
+                {COUNTRIES.map(c => (
+                  <option key={c.code} value={c.code}>
+                    {c.flag} {c.name} ({c.prefix})
+                  </option>
+                ))}
+              </select>
+            </div>
+          </div>
+
           {/* Phone */}
           <div>
             <div style={{ position: 'relative' }}>
               <div style={{
-                position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)',
-                display: 'flex', alignItems: 'center', gap: 4,
+                position: 'absolute', left: 16, top: '50%', transform: 'translateY(-50%)',
+                display: 'flex', alignItems: 'center', gap: 6,
                 fontSize: 13, fontWeight: 600, color: '#374151',
+                pointerEvents: 'none',
                 zIndex: 10,
               }}>
                 <span style={{ fontSize: 16 }}>{selectedCountry.flag}</span>
-                <select
-                  value={selectedCountry.code}
-                  onChange={e => {
-                    const found = COUNTRIES.find(c => c.code === e.target.value);
-                    if (found) setSelectedCountry(found);
-                  }}
-                  style={{
-                    border: 'none', background: 'transparent',
-                    fontSize: 13, fontWeight: 700, color: '#374151',
-                    cursor: 'pointer', outline: 'none', padding: '0 2px',
-                    marginRight: 4,
-                  }}
-                >
-                  {COUNTRIES.map(c => (
-                    <option key={c.code} value={c.code}>
-                      {c.prefix}
-                    </option>
-                  ))}
-                </select>
+                <span>{selectedCountry.prefix}</span>
                 <div style={{ width: 1, height: 16, background: '#E5E7EB', marginLeft: 2 }} />
               </div>
               <input
                 className={`input-field${fieldErrors.phone ? ' error' : ''}`}
                 type="tel" placeholder="XX XX XX XX"
                 value={phone} onChange={e => setPhone(e.target.value)}
-                style={{ paddingLeft: 100 }} inputMode="numeric"
+                style={{ paddingLeft: 95 }} inputMode="numeric"
               />
             </div>
             {fieldErrors.phone && <p style={{ color: '#EF4444', fontSize: 12, margin: '4px 0 0 4px' }}>{fieldErrors.phone}</p>}
