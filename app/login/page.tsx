@@ -6,17 +6,7 @@ import Image from 'next/image';
 import { Eye, EyeOff, Phone, Lock, Loader2 } from 'lucide-react';
 import { useAuthStore } from '@/lib/store';
 import { apiLogin } from '@/lib/api';
-
-const COUNTRIES = [
-  { code: 'BJ', name: 'Bénin', prefix: '+229', flag: '🇧🇯' },
-  { code: 'BF', name: 'Burkina Faso', prefix: '+226', flag: '🇧🇫' },
-  { code: 'CI', name: 'Côte d\'Ivoire', prefix: '+225', flag: '🇨🇮' },
-  { code: 'GN', name: 'Guinée', prefix: '+224', flag: '🇬🇳' },
-  { code: 'ML', name: 'Mali', prefix: '+223', flag: '🇲🇱' },
-  { code: 'NE', name: 'Niger', prefix: '+227', flag: '🇳🇪' },
-  { code: 'SN', name: 'Sénégal', prefix: '+221', flag: '🇸🇳' },
-  { code: 'TG', name: 'Togo', prefix: '+228', flag: '🇹🇬' },
-];
+import { COUNTRIES } from '@/lib/data';
 
 export default function LoginPage() {
   const router = useRouter();

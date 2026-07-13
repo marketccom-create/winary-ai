@@ -78,21 +78,29 @@ export async function POST(req: Request) {
     if (updateErr) return NextResponse.json({ error: updateErr.message }, { status: 500 });
   } else {
     // Reject withdrawal -> FAILED and Refund user balance
-    const { data: user, error: userErr } = await db
-      .from('users')
-      .select('balance_cents')
-      .eq('id', tx.user_id)
-      .single();
-
-    if (userErr || !user) {
-      return NextResponse.json({ error: 'Utilisateur introuvable pour le remboursement' }, { status: 404 });
-    }
-
     const refundAmount = Math.abs(tx.amount_cents);
-    const newBalance = user.balance_cents + refundAmount;
 
-    // Perform refund
-    await db.from('users').update({ balance_cents: newBalance }).eq('id', tx.user_id);
+    // Perform refund using atomic RPC
+    const { error: rpcError } = await db.rpc('increment_balance', {
+      user_id: tx.user_id,
+      amount_cents: refundAmount
+    });
+
+    if (rpcError) {
+      // Fallback
+      const { data: user, error: userErr } = await db
+        .from('users')
+        .select('balance_cents')
+        .eq('id', tx.user_id)
+        .single();
+
+      if (userErr || !user) {
+        return NextResponse.json({ error: 'Utilisateur introuvable pour le remboursement' }, { status: 404 });
+      }
+
+      const newBalance = user.balance_cents + refundAmount;
+      await db.from('users').update({ balance_cents: newBalance }).eq('id', tx.user_id);
+    }
 
     // Update transaction with status FAILED and rejection reason in description
     const reasonSuffix = reason?.trim() ? ` (Rejeté : ${reason.trim()})` : '';

@@ -1,9 +1,11 @@
 import { jwtVerify } from 'jose';
 import { NextResponse } from 'next/server';
 
-const JWT_SECRET = new TextEncoder().encode(
-  process.env.JWT_SECRET || 'winary-ai-secret-change-in-production-32chars'
-);
+if (!process.env.JWT_SECRET) {
+  throw new Error('JWT_SECRET environment variable is required. Set it in your .env.local or Vercel dashboard.');
+}
+
+export const JWT_SECRET = new TextEncoder().encode(process.env.JWT_SECRET);
 
 export type JWTPayload = {
   sub: string;
@@ -31,3 +33,4 @@ export function unauthorized() {
 export function forbidden() {
   return NextResponse.json({ error: 'Accès refusé' }, { status: 403 });
 }
+

@@ -33,6 +33,11 @@ export async function POST(
 
   const now = new Date();
   
+  // Check expiration by date
+  if (purchase.expires_at && new Date(purchase.expires_at) < now) {
+    return NextResponse.json({ error: 'La période de validité de ce bot est terminée' }, { status: 400 });
+  }
+
   // If next_allowed_at is set, it means it's either working or claimable
   // We cannot start if it hasn't been claimed (i.e. next_allowed_at != null)
   if (purchase.next_allowed_at) {

@@ -47,7 +47,18 @@ export async function POST(req: Request) {
   }
 
   const newBalance = user.balance_cents - amountCents;
-  await db.from('users').update({ balance_cents: newBalance }).eq('id', payload.sub);
+  
+  // Update with condition to prevent race condition if balance changed
+  const { data: updateData, error: updateError } = await db
+    .from('users')
+    .update({ balance_cents: newBalance })
+    .eq('id', payload.sub)
+    .gte('balance_cents', amountCents)
+    .select();
+
+  if (updateError || !updateData || updateData.length === 0) {
+     return NextResponse.json({ error: 'Erreur lors du retrait, veuillez réessayer' }, { status: 409 });
+  }
 
   const { data: tx, error } = await db
     .from('transactions')

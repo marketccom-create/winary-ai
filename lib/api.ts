@@ -280,10 +280,6 @@ export async function apiAdminUpdateBotPaymentConfigs(configs: BotPaymentConfig[
 }
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
-export function isAdminPhone(phone: string): boolean {
-  return phone === '+22901010101'; // Fallback — is_admin is in JWT
-}
-
 function normalizePurchase(p: any) {
   return {
     ...p,

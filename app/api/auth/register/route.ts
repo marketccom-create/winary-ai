@@ -1,12 +1,9 @@
 import { NextResponse } from 'next/server';
 import { createAdminClient } from '@/lib/supabase';
+import { JWT_SECRET } from '@/lib/auth';
 import bcrypt from 'bcryptjs';
 import { SignJWT } from 'jose';
 import { WELCOME_BONUS_CENTS } from '@/lib/data';
-
-const JWT_SECRET = new TextEncoder().encode(
-  process.env.JWT_SECRET || 'winary-ai-secret-change-in-production-32chars'
-);
 
 function generateReferralCode() {
   return 'WIN-' + Math.random().toString(36).slice(2, 8).toUpperCase();
@@ -42,27 +39,47 @@ export async function POST(req: Request) {
     }
 
     const passwordHash = await bcrypt.hash(password, 10);
-    const newReferralCode = generateReferralCode();
+    
+    // Create user with retry for referral code collision
+    let newUser = null;
+    let createErr = null;
+    let retries = 3;
 
-    // Create user
-    const { data: newUser, error: createErr } = await db
-      .from('users')
-      .insert({
-        phone,
-        password_hash: passwordHash,
-        referral_code: newReferralCode,
-        referred_by_id: referrerId,
-        balance_cents: WELCOME_BONUS_CENTS,
-        is_admin: false,
-        first_name: firstName.trim(),
-        last_name: lastName.trim(),
-      })
-      .select()
-      .single();
+    while (retries > 0) {
+      const newReferralCode = generateReferralCode();
+      const result = await db
+        .from('users')
+        .insert({
+          phone,
+          password_hash: passwordHash,
+          referral_code: newReferralCode,
+          referred_by_id: referrerId,
+          balance_cents: WELCOME_BONUS_CENTS,
+          is_admin: false,
+          first_name: firstName.trim(),
+          last_name: lastName.trim(),
+        })
+        .select()
+        .single();
 
-    if (createErr || !newUser) {
+      if (!result.error) {
+        newUser = result.data;
+        break;
+      }
+
+      // Check if it's a unique violation for referral_code (code 23505)
+      if (result.error.code === '23505' && result.error.message.includes('referral_code')) {
+        retries--;
+        createErr = result.error;
+      } else {
+        createErr = result.error;
+        break;
+      }
+    }
+
+    if (!newUser) {
       console.error(createErr);
-      return NextResponse.json({ error: 'Erreur création compte' }, { status: 500 });
+      return NextResponse.json({ error: 'Erreur création compte, veuillez réessayer' }, { status: 500 });
     }
 
     // Welcome bonus transaction
@@ -76,7 +93,7 @@ export async function POST(req: Request) {
 
     const token = await new SignJWT({ sub: newUser.id, phone: newUser.phone, is_admin: false })
       .setProtectedHeader({ alg: 'HS256' })
-      .setExpirationTime('30d')
+      .setExpirationTime('7d')
       .sign(JWT_SECRET);
 
     const safeUser = {

@@ -36,6 +36,21 @@ export async function POST(
 
   const earned = workRevenueCents(purchase.price_paid_cents);
 
+  // Try using the atomic RPC function
+  const { data: rpcData, error: rpcError } = await db.rpc('claim_work', {
+    p_user_id: payload.sub,
+    p_purchase_id: purchaseId,
+    p_earned_cents: earned
+  });
+
+  if (!rpcError && rpcData && rpcData.length > 0) {
+    return NextResponse.json({
+      earnedCents: rpcData[0].earned_cents,
+      newBalanceCents: rpcData[0].new_balance_cents,
+    });
+  }
+
+  // Fallback if RPC is not yet installed
   // Update purchase to IDLE state (null next_allowed_at)
   await db.from('purchases').update({
     last_worked_at: null,

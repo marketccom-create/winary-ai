@@ -1,12 +1,8 @@
 import { NextResponse } from 'next/server';
 import { createAdminClient } from '@/lib/supabase';
+import { JWT_SECRET } from '@/lib/auth';
 import bcrypt from 'bcryptjs';
 import { SignJWT } from 'jose';
-import { WELCOME_BONUS_CENTS } from '@/lib/data';
-
-const JWT_SECRET = new TextEncoder().encode(
-  process.env.JWT_SECRET || 'winary-ai-secret-change-in-production-32chars'
-);
 
 export async function POST(req: Request) {
   try {
@@ -33,7 +29,7 @@ export async function POST(req: Request) {
 
     const token = await new SignJWT({ sub: user.id, phone: user.phone, is_admin: user.is_admin })
       .setProtectedHeader({ alg: 'HS256' })
-      .setExpirationTime('30d')
+      .setExpirationTime('7d')
       .sign(JWT_SECRET);
 
     const safeUser = {

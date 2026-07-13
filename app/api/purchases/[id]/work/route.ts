@@ -52,13 +52,24 @@ export async function POST(
   }).eq('id', purchaseId);
 
   // Update user balance
-  const { data: user } = await db
-    .from('users')
-    .select('balance_cents')
-    .eq('id', payload.sub)
-    .single();
-  const newBalance = (user?.balance_cents || 0) + earned;
-  await db.from('users').update({ balance_cents: newBalance }).eq('id', payload.sub);
+  let newBalance = 0;
+  const { data: rpcBalance, error: rpcError } = await db.rpc('increment_balance', {
+    user_id: payload.sub,
+    amount_cents: earned
+  });
+
+  if (!rpcError && rpcBalance !== null) {
+    newBalance = rpcBalance;
+  } else {
+    // Fallback
+    const { data: user } = await db
+      .from('users')
+      .select('balance_cents')
+      .eq('id', payload.sub)
+      .single();
+    newBalance = (user?.balance_cents || 0) + earned;
+    await db.from('users').update({ balance_cents: newBalance }).eq('id', payload.sub);
+  }
 
   // Transaction
   await db.from('transactions').insert({

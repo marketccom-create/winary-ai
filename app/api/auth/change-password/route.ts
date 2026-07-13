@@ -1,11 +1,9 @@
 import { NextResponse } from 'next/server';
 import { createAdminClient } from '@/lib/supabase';
+import { JWT_SECRET } from '@/lib/auth';
 import bcrypt from 'bcryptjs';
 import * as jose from 'jose';
 
-const JWT_SECRET = new TextEncoder().encode(
-  process.env.JWT_SECRET || 'winary-ai-secret-change-in-production-32chars'
-);
 
 export async function POST(req: Request) {
   try {

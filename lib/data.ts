@@ -135,3 +135,26 @@ export type Announcement = {
   isActive: boolean;
   createdAt: Date;
 };
+
+// Supported countries for phone registration/login
+export const COUNTRIES = [
+  { code: 'BJ', name: 'Bénin', prefix: '+229', flag: '🇧🇯' },
+  { code: 'BF', name: 'Burkina Faso', prefix: '+226', flag: '🇧🇫' },
+  { code: 'CI', name: "Côte d'Ivoire", prefix: '+225', flag: '🇨🇮' },
+  { code: 'GN', name: 'Guinée', prefix: '+224', flag: '🇬🇳' },
+  { code: 'ML', name: 'Mali', prefix: '+223', flag: '🇲🇱' },
+  { code: 'NE', name: 'Niger', prefix: '+227', flag: '🇳🇪' },
+  { code: 'SN', name: 'Sénégal', prefix: '+221', flag: '🇸🇳' },
+  { code: 'TG', name: 'Togo', prefix: '+228', flag: '🇹🇬' },
+] as const;
+
+export type Country = typeof COUNTRIES[number];
+
+// Detect country from a full phone number
+export function detectCountryFromPhone(phone: string): Country {
+  for (const country of COUNTRIES) {
+    if (phone.startsWith(country.prefix)) return country;
+  }
+  return COUNTRIES[0]; // Default to Bénin
+}
+

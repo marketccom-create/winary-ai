@@ -60,21 +60,30 @@ export async function POST(req: Request) {
         }
 
         // Credit user balance
-        const { data: user, error: userErr } = await db
-          .from('users')
-          .select('balance_cents')
-          .eq('id', tx.user_id)
-          .single();
+        // Try using the atomic RPC function
+        const { error: rpcError } = await db.rpc('increment_balance', {
+          user_id: tx.user_id,
+          amount_cents: tx.amount_cents
+        });
 
-        if (userErr || !user) {
-          return NextResponse.json({ error: 'Utilisateur introuvable' }, { status: 404 });
+        if (rpcError) {
+          // Fallback if RPC is not yet installed
+          const { data: user, error: userErr } = await db
+            .from('users')
+            .select('balance_cents')
+            .eq('id', tx.user_id)
+            .single();
+
+          if (userErr || !user) {
+            return NextResponse.json({ error: 'Utilisateur introuvable' }, { status: 404 });
+          }
+
+          const newBalance = user.balance_cents + tx.amount_cents;
+          await db
+            .from('users')
+            .update({ balance_cents: newBalance })
+            .eq('id', tx.user_id);
         }
-
-        const newBalance = user.balance_cents + tx.amount_cents;
-        await db
-          .from('users')
-          .update({ balance_cents: newBalance })
-          .eq('id', tx.user_id);
 
         return NextResponse.json({ received: true, message: 'Dépôt crédité' });
       }
@@ -126,27 +135,34 @@ export async function POST(req: Request) {
         const buyer = purchase.users as any;
         if (buyer?.referred_by_id) {
           const commission = Math.floor(purchase.price_paid_cents * REFERRAL_RATE);
-          
-          const { data: sponsor } = await db
-            .from('users')
-            .select('id, balance_cents')
-            .eq('id', buyer.referred_by_id)
-            .single();
+          const { error: rpcError } = await db.rpc('increment_balance', {
+            user_id: buyer.referred_by_id,
+            amount_cents: commission
+          });
 
-          if (sponsor) {
-            await db
+          if (rpcError) {
+            // Fallback
+            const { data: sponsor } = await db
               .from('users')
-              .update({ balance_cents: sponsor.balance_cents + commission })
-              .eq('id', sponsor.id);
+              .select('id, balance_cents')
+              .eq('id', buyer.referred_by_id)
+              .single();
 
-            await db.from('transactions').insert({
-              user_id: sponsor.id,
-              type: 'REFERRAL_BONUS',
-              status: 'COMPLETED',
-              amount_cents: commission,
-              description: `Commission parrainage (${buyer.phone})`,
-            });
+            if (sponsor) {
+              await db
+                .from('users')
+                .update({ balance_cents: sponsor.balance_cents + commission })
+                .eq('id', sponsor.id);
+            }
           }
+
+          await db.from('transactions').insert({
+            user_id: buyer.referred_by_id,
+            type: 'REFERRAL_BONUS',
+            status: 'COMPLETED',
+            amount_cents: commission,
+            description: `Commission parrainage (${buyer.phone})`,
+          });
         }
 
         return NextResponse.json({ received: true, message: 'Achat activé et parrainage traité' });

@@ -44,6 +44,38 @@ export async function POST(req: Request) {
   // OPTION 1: PAYMENT WITH ACCOUNT BALANCE
   // ════════════════════════════════════════════════════════════════
   if (operator === 'BALANCE') {
+    // Try using the atomic RPC function first
+    const { data: buyer } = await db
+      .from('users')
+      .select('referred_by_id, phone')
+      .eq('id', payload.sub)
+      .single();
+
+    const commission = Math.floor(bot.priceCents * REFERRAL_RATE);
+    
+    const { data: rpcData, error: rpcError } = await db.rpc('purchase_bot_with_balance', {
+      p_user_id: payload.sub,
+      p_bot_id: bot.id,
+      p_bot_name: bot.name,
+      p_price_cents: bot.priceCents,
+      p_expires_at: expiresAt.toISOString(),
+      p_sponsor_id: buyer?.referred_by_id || null,
+      p_commission_cents: commission
+    });
+
+    if (!rpcError && rpcData && rpcData.length > 0) {
+      const purchaseId = rpcData[0].purchase_id;
+      const newBalance = rpcData[0].new_balance_cents;
+      
+      const { data: newPurchase } = await db.from('purchases').select('*').eq('id', purchaseId).single();
+      
+      return NextResponse.json({
+        purchase: mapPurchase(newPurchase),
+        newBalanceCents: newBalance,
+      }, { status: 201 });
+    }
+
+    // Fallback if RPC is not yet installed
     // Check user balance
     const { data: user, error: userErr } = await db
       .from('users')
@@ -101,14 +133,7 @@ export async function POST(req: Request) {
     });
 
     // Handle referral commission
-    const { data: buyer, error: buyerErr } = await db
-      .from('users')
-      .select('referred_by_id, phone')
-      .eq('id', payload.sub)
-      .single();
-
-    if (!buyerErr && buyer?.referred_by_id) {
-      const commission = Math.floor(bot.priceCents * REFERRAL_RATE);
+    if (!buyer?.error && buyer?.referred_by_id) {
       const { data: sponsor } = await db
         .from('users')
         .select('id, balance_cents')
@@ -187,7 +212,7 @@ export async function POST(req: Request) {
 
     // 3. Initiate Sene-Pay Checkout Session
     try {
-      const host = req.headers.get('host') || 'winary-ai.vercel.app';
+      const host = req.headers.get('host') || 'winary.live';
       const protocol = host.includes('localhost') || host.includes('127.0.0.1') ? 'http' : 'https';
       const baseUrl = `${protocol}://${host}`;
 

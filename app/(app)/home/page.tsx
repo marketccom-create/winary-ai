@@ -4,8 +4,8 @@ import { useRouter } from 'next/navigation';
 import Image from 'next/image';
 import { Bell, ArrowUpRight, ArrowDownLeft, UserPlus, ChevronRight, Loader2, X } from 'lucide-react';
 import { useAuthStore, useAppStore, useUIStore } from '@/lib/store';
-import { apiGetBots, apiPurchaseBot, apiDeposit, apiWithdraw, apiGetBotPaymentConfigs, apiInitiateDeposit } from '@/lib/api';
-import { formatXOF, Bot, MIN_WITHDRAWAL_CENTS, BotPaymentConfig } from '@/lib/data';
+import { apiGetBots, apiPurchaseBot, apiWithdraw, apiInitiateDeposit } from '@/lib/api';
+import { formatXOF, Bot, MIN_WITHDRAWAL_CENTS, detectCountryFromPhone } from '@/lib/data';
 
 // ─── Deposit Modal ─────────────────────────────────────────────────────────────
 function DepositModal({ onClose }: { onClose: () => void }) {
@@ -89,29 +89,10 @@ function WithdrawModal({ onClose, balanceCents }: { onClose: () => void; balance
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
-  // Extract country prefix and flag from user's registered phone
   const registeredPhone = user?.phone || '';
-  let countryPrefix = '+229'; // default
-  let countryFlag = '🇧🇯';
-
-  const prefixes = [
-    { prefix: '+229', flag: '🇧🇯' },
-    { prefix: '+226', flag: '🇧🇫' },
-    { prefix: '+225', flag: '🇨🇮' },
-    { prefix: '+224', flag: '🇬🇳' },
-    { prefix: '+223', flag: '🇲🇱' },
-    { prefix: '+227', flag: '🇳🇪' },
-    { prefix: '+221', flag: '🇸🇳' },
-    { prefix: '+228', flag: '🇹🇬' }
-  ];
-
-  for (const item of prefixes) {
-    if (registeredPhone.startsWith(item.prefix)) {
-      countryPrefix = item.prefix;
-      countryFlag = item.flag;
-      break;
-    }
-  }
+  const country = detectCountryFromPhone(registeredPhone);
+  const countryPrefix = country.prefix;
+  const countryFlag = country.flag;
 
   async function handleWithdraw() {
     setError('');

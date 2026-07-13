@@ -6,6 +6,7 @@ import Image from 'next/image';
 import { Eye, EyeOff, Lock, Shield, RefreshCw, Loader2, User } from 'lucide-react';
 import { useAuthStore } from '@/lib/store';
 import { apiRegister } from '@/lib/api';
+import { COUNTRIES } from '@/lib/data';
 
 // Captcha: simple server-generated 4-digit numeric image
 function generateCaptcha(): { answer: string; token: string } {
@@ -34,17 +35,6 @@ function CaptchaDisplay({ code }: { code: string }) {
     </svg>
   );
 }
-
-const COUNTRIES = [
-  { code: 'BJ', name: 'Bénin', prefix: '+229', flag: '🇧🇯' },
-  { code: 'BF', name: 'Burkina Faso', prefix: '+226', flag: '🇧🇫' },
-  { code: 'CI', name: 'Côte d\'Ivoire', prefix: '+225', flag: '🇨🇮' },
-  { code: 'GN', name: 'Guinée', prefix: '+224', flag: '🇬🇳' },
-  { code: 'ML', name: 'Mali', prefix: '+223', flag: '🇲🇱' },
-  { code: 'NE', name: 'Niger', prefix: '+227', flag: '🇳🇪' },
-  { code: 'SN', name: 'Sénégal', prefix: '+221', flag: '🇸🇳' },
-  { code: 'TG', name: 'Togo', prefix: '+228', flag: '🇹🇬' },
-];
 
 export default function RegisterPage() {
   const router = useRouter();

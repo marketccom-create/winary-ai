@@ -21,7 +21,7 @@ export async function POST(req: Request) {
     const amountCents = Math.floor(amountNum * 100);
 
     // Determine the base URL dynamically based on the request host
-    const host = req.headers.get('host') || 'winary-ai.vercel.app';
+    const host = req.headers.get('host') || 'winary.live';
     const protocol = host.includes('localhost') || host.includes('127.0.0.1') ? 'http' : 'https';
     const baseUrl = `${protocol}://${host}`;
 
