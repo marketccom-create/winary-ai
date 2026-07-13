@@ -11,7 +11,7 @@ const MAX_REQUESTS_PER_WINDOW = 10; // Max 10 requests per minute for sensitive 
 
 function getRateLimitKey(req: NextRequest) {
   // Use x-forwarded-for if behind a proxy, otherwise use a generic fallback
-  const ip = req.headers.get('x-forwarded-for') || req.ip || '127.0.0.1';
+  const ip = req.headers.get('x-forwarded-for') || '127.0.0.1';
   return `${ip}_${req.nextUrl.pathname}`;
 }
 
