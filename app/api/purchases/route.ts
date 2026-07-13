@@ -133,7 +133,7 @@ export async function POST(req: Request) {
     });
 
     // Handle referral commission
-    if (!buyer?.error && buyer?.referred_by_id) {
+    if (buyer?.referred_by_id) {
       const { data: sponsor } = await db
         .from('users')
         .select('id, balance_cents')
