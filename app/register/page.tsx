@@ -6,7 +6,7 @@ import Image from 'next/image';
 import { Eye, EyeOff, Lock, Shield, RefreshCw, Loader2, User } from 'lucide-react';
 import { useAuthStore } from '@/lib/store';
 import { apiRegister } from '@/lib/api';
-import { COUNTRIES } from '@/lib/data';
+import { COUNTRIES, Country } from '@/lib/data';
 
 // Captcha: simple server-generated 4-digit numeric image
 function generateCaptcha(): { answer: string; token: string } {
@@ -44,7 +44,7 @@ export default function RegisterPage() {
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
   const [phone, setPhone] = useState('');
-  const [selectedCountry, setSelectedCountry] = useState(COUNTRIES[0]);
+  const [selectedCountry, setSelectedCountry] = useState<Country>(COUNTRIES[0]);
   const [password, setPassword] = useState('');
   const [confirm, setConfirm] = useState('');
   const [refCode, setRefCode] = useState(searchParams.get('ref') || '');

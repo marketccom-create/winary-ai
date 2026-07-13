@@ -6,13 +6,13 @@ import Image from 'next/image';
 import { Eye, EyeOff, Phone, Lock, Loader2 } from 'lucide-react';
 import { useAuthStore } from '@/lib/store';
 import { apiLogin } from '@/lib/api';
-import { COUNTRIES } from '@/lib/data';
+import { COUNTRIES, Country } from '@/lib/data';
 
 export default function LoginPage() {
   const router = useRouter();
   const { login } = useAuthStore();
   const [phone, setPhone] = useState('');
-  const [selectedCountry, setSelectedCountry] = useState(COUNTRIES[0]);
+  const [selectedCountry, setSelectedCountry] = useState<Country>(COUNTRIES[0]);
   const [password, setPassword] = useState('');
   const [showPass, setShowPass] = useState(false);
   const [loading, setLoading] = useState(false);
