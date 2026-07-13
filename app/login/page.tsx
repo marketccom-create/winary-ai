@@ -7,10 +7,22 @@ import { Eye, EyeOff, Phone, Lock, Loader2 } from 'lucide-react';
 import { useAuthStore } from '@/lib/store';
 import { apiLogin } from '@/lib/api';
 
+const COUNTRIES = [
+  { code: 'BJ', name: 'Bénin', prefix: '+229', flag: '🇧🇯' },
+  { code: 'BF', name: 'Burkina Faso', prefix: '+226', flag: '🇧🇫' },
+  { code: 'CI', name: 'Côte d\'Ivoire', prefix: '+225', flag: '🇨🇮' },
+  { code: 'GN', name: 'Guinée', prefix: '+224', flag: '🇬🇳' },
+  { code: 'ML', name: 'Mali', prefix: '+223', flag: '🇲🇱' },
+  { code: 'NE', name: 'Niger', prefix: '+227', flag: '🇳🇪' },
+  { code: 'SN', name: 'Sénégal', prefix: '+221', flag: '🇸🇳' },
+  { code: 'TG', name: 'Togo', prefix: '+228', flag: '🇹🇬' },
+];
+
 export default function LoginPage() {
   const router = useRouter();
   const { login } = useAuthStore();
   const [phone, setPhone] = useState('');
+  const [selectedCountry, setSelectedCountry] = useState(COUNTRIES[0]);
   const [password, setPassword] = useState('');
   const [showPass, setShowPass] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -20,7 +32,7 @@ export default function LoginPage() {
     e.preventDefault();
     setError('');
     if (!phone || !password) { setError('Remplissez tous les champs'); return; }
-    const fullPhone = phone.startsWith('+') ? phone : '+229' + phone.replace(/\s/g, '');
+    const fullPhone = phone.startsWith('+') ? phone : selectedCountry.prefix + phone.replace(/\s/g, '');
     setLoading(true);
     try {
       const { user, token } = await apiLogin(fullPhone, password);
@@ -115,16 +127,45 @@ export default function LoginPage() {
         }}>Se connecter</h1>
 
         <form onSubmit={handleLogin} style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+          {/* Country Selection */}
+          <div>
+            <label style={{ fontSize: 12, fontWeight: 600, color: '#374151', display: 'block', marginBottom: 6 }}>
+              Pays
+            </label>
+            <div style={{ position: 'relative' }}>
+              <select
+                value={selectedCountry.code}
+                onChange={e => {
+                  const found = COUNTRIES.find(c => c.code === e.target.value);
+                  if (found) setSelectedCountry(found);
+                }}
+                className="input-field"
+                style={{
+                  cursor: 'pointer',
+                  fontWeight: 600,
+                  color: '#374151',
+                }}
+              >
+                {COUNTRIES.map(c => (
+                  <option key={c.code} value={c.code}>
+                    {c.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+          </div>
+
           {/* Phone */}
           <div style={{ position: 'relative' }}>
             <div style={{
               position: 'absolute', left: 16, top: '50%', transform: 'translateY(-50%)',
-              display: 'flex', alignItems: 'center', gap: 8, color: '#6B7280',
+              display: 'flex', alignItems: 'center', gap: 6, color: '#6B7280',
               fontSize: 13, fontWeight: 600, pointerEvents: 'none',
+              zIndex: 10,
             }}>
-              <span>🇧🇯</span>
-              <span style={{ color: '#374151' }}>+229</span>
-              <div style={{ width: 1, height: 16, background: '#E5E7EB' }} />
+              <span style={{ fontSize: 16 }}>{selectedCountry.flag}</span>
+              <span style={{ color: '#374151' }}>{selectedCountry.prefix}</span>
+              <div style={{ width: 1, height: 16, background: '#E5E7EB', marginLeft: 2 }} />
             </div>
             <input
               className="input-field"
@@ -132,7 +173,7 @@ export default function LoginPage() {
               placeholder="XX XX XX XX"
               value={phone}
               onChange={e => setPhone(e.target.value)}
-              style={{ paddingLeft: 90 }}
+              style={{ paddingLeft: 95 }}
               inputMode="numeric"
             />
           </div>
