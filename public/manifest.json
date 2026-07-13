@@ -14,25 +14,25 @@
   "scope": "/",
   "icons": [
     {
-      "src": "/icons/icon-192.png",
+      "src": "/icons/WINARY%20ICON.png",
       "sizes": "192x192",
       "type": "image/png",
       "purpose": "any"
     },
     {
-      "src": "/icons/icon-192.png?maskable=1",
+      "src": "/icons/WINARY%20ICON.png?maskable=1",
       "sizes": "192x192",
       "type": "image/png",
       "purpose": "maskable"
     },
     {
-      "src": "/icons/icon-512.png",
+      "src": "/icons/WINARY%20ICON.png",
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "any"
     },
     {
-      "src": "/icons/icon-512.png?maskable=1",
+      "src": "/icons/WINARY%20ICON.png?maskable=1",
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "maskable"
@@ -45,13 +45,13 @@
       "name": "Mon tableau de bord",
       "short_name": "Accueil",
       "url": "/home",
-      "icons": [{ "src": "/icons/icon-192.png", "sizes": "192x192" }]
+      "icons": [{ "src": "/icons/WINARY%20ICON.png", "sizes": "192x192" }]
     },
     {
       "name": "Gérer mes bots",
       "short_name": "Bots",
       "url": "/products",
-      "icons": [{ "src": "/icons/icon-192.png", "sizes": "192x192" }]
+      "icons": [{ "src": "/icons/WINARY%20ICON.png", "sizes": "192x192" }]
     }
   ]
 }
