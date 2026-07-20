@@ -890,6 +890,17 @@ export default function AdminPage() {
                                   const updated = [...botConfigs];
                                   updated[cfgIndex].merchantPhoneMoov = e.target.value;
                                   setBotConfigs(updated);
+                                }}
+                              />
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+
+                {/* Save button */}
                 <div style={{ background: 'white', border: '1.5px solid #E5E7EB', borderRadius: 16, padding: '16px', display: 'flex', justifyContent: 'flex-end' }}>
                   <button
                     onClick={handleSaveBotConfigs}
