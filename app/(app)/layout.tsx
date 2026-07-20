@@ -247,6 +247,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   const { isAuthenticated, _hasHydrated } = useAuthStore();
   const { announcementSeenVersion, markAnnouncementSeen } = useAppStore();
   const router = useRouter();
+  const pathname = usePathname();
   const [activeAnnouncements, setActiveAnnouncements] = useState<any[]>([]);
   const [showAnnouncement, setShowAnnouncement] = useState(false);
 
@@ -285,10 +286,12 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   // Show nothing (not a spinner) while hydrating — avoids flash
   if (!_hasHydrated || !isAuthenticated) return null;
 
+  const hideBottomNav = pathname.startsWith('/chat');
+
   return (
     <div style={{ minHeight: '100dvh', background: '#F9FAFB' }}>
       {children}
-      <BottomNav />
+      {!hideBottomNav && <BottomNav />}
       <Toast />
       {showAnnouncement && activeAnnouncements.length > 0 && (
         <AnnouncementModal announcements={activeAnnouncements} onClose={closeAnnouncement} />
