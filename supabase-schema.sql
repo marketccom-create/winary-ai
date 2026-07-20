@@ -126,3 +126,14 @@ ALTER TABLE bot_payment_configs ENABLE ROW LEVEL SECURITY;
 
 -- Le service_role bypasse le RLS → accès total depuis les API Routes
 -- Les utilisateurs n'accèdent JAMAIS directement à Supabase (tout passe par les API Routes)
+
+-- ─── Table : support_messages ────────────────────────────────
+CREATE TABLE IF NOT EXISTS support_messages (
+  id            UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id       UUID NOT NULL REFERENCES users(id),
+  sender_role   TEXT NOT NULL CHECK (sender_role IN ('USER', 'ADMIN')),
+  content       TEXT NOT NULL,
+  is_read       BOOLEAN NOT NULL DEFAULT false,
+  created_at    TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+ALTER TABLE support_messages ENABLE ROW LEVEL SECURITY;

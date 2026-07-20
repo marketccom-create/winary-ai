@@ -4,7 +4,7 @@ import { useRouter } from 'next/navigation';
 import Image from 'next/image';
 import {
   Users, Bot, CreditCard, Megaphone, Settings, LogOut,
-  Search, TrendingUp, AlertCircle, Check, X, Save, Loader2, ChevronRight, Plus, Trash, Edit, RefreshCw
+  Search, TrendingUp, AlertCircle, Check, X, Save, Loader2, ChevronRight, Plus, Trash, Edit, RefreshCw, MessageCircle, Send
 } from 'lucide-react';
 import { useAuthStore } from '@/lib/store';
 import {
@@ -12,12 +12,13 @@ import {
   apiAdminGetAnnouncements, apiAdminUpdateAnnouncement, apiAdminDeleteAnnouncement,
   apiGetBots, apiGetBotPaymentConfigs, apiAdminUpdateBotPaymentConfigs,
   apiAdminGetPendingPurchases, apiAdminApprovePurchase, apiAdminRejectPurchase,
-  apiAdminGetPendingWithdrawals, apiAdminApproveWithdrawal, apiAdminRejectWithdrawal
+  apiAdminGetPendingWithdrawals, apiAdminApproveWithdrawal, apiAdminRejectWithdrawal,
+  apiAdminGetChatConversations, apiAdminGetChatMessages, apiAdminSendChatMessage
 } from '@/lib/api';
 import { formatXOF } from '@/lib/data';
 import type { BotPaymentConfig, Announcement } from '@/lib/data';
 
-type Tab = 'dashboard' | 'users' | 'pending' | 'withdrawals' | 'bots' | 'announcements';
+type Tab = 'dashboard' | 'users' | 'pending' | 'withdrawals' | 'bots' | 'announcements' | 'chat';
 
 // ─── Stat Card ─────────────────────────────────────────────────────────────────
 function StatCard({ label, value, icon, color, onClick }: { label: string; value: string | number; icon: string; color: string; onClick?: () => void }) {
@@ -67,6 +68,13 @@ export default function AdminPage() {
   // Announcement state
   const [editingAnn, setEditingAnn] = useState<Partial<Announcement> | null>(null);
 
+  // Chat state
+  const [chatConversations, setChatConversations] = useState<any[]>([]);
+  const [selectedChatUser, setSelectedChatUser] = useState<any>(null);
+  const [chatMessages, setChatMessages] = useState<any[]>([]);
+  const [chatInput, setChatInput] = useState('');
+  const [loadingChat, setLoadingChat] = useState(false);
+
   // Auth check
   useEffect(() => {
     if (!user || user.phone !== '+22901010101') {
@@ -78,7 +86,7 @@ export default function AdminPage() {
   async function loadData() {
     setLoading(true);
     try {
-      const [s, u, b, cfg, ann, p, w] = await Promise.all([
+      const [s, u, b, cfg, ann, p, w, c] = await Promise.all([
         apiAdminGetStats(),
         apiAdminGetUsers(),
         apiGetBots(),
@@ -86,6 +94,7 @@ export default function AdminPage() {
         apiAdminGetAnnouncements(),
         apiAdminGetPendingPurchases(),
         apiAdminGetPendingWithdrawals(),
+        apiAdminGetChatConversations(),
       ]);
       setStats(s);
       setUsers(u);
@@ -94,6 +103,7 @@ export default function AdminPage() {
       setAnnouncements(ann);
       setPendingPurchases(p);
       setPendingWithdrawals(w);
+      setChatConversations(c.conversations || []);
     } catch (err: any) {
       alert('Erreur chargement : ' + err.message);
     } finally {
@@ -293,6 +303,65 @@ export default function AdminPage() {
     router.replace('/login');
   }
 
+  // Chat Handlers
+  async function handleSelectChatUser(userId: string) {
+    setSelectedChatUser(userId);
+    setLoadingChat(true);
+    try {
+      const { messages } = await apiAdminGetChatMessages(userId);
+      setChatMessages(messages);
+      
+      setChatConversations(prev => prev.map(c => 
+        c.userId === userId ? { ...c, unreadCount: 0 } : c
+      ));
+      
+      setTimeout(() => {
+        messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+      }, 100);
+    } catch (err: any) {
+      alert(err.message);
+    } finally {
+      setLoadingChat(false);
+    }
+  }
+
+  async function handleSendAdminMessage(e: React.FormEvent) {
+    e.preventDefault();
+    if (!chatInput.trim() || !selectedChatUser || actionLoading === 'send-chat') return;
+    
+    setActionLoading('send-chat');
+    const tempText = chatInput.trim();
+    setChatInput('');
+    
+    const tempMsg = {
+      id: 'temp-' + Date.now(),
+      sender_role: 'ADMIN',
+      content: tempText,
+      created_at: new Date().toISOString(),
+    };
+    setChatMessages(prev => [...prev, tempMsg]);
+    setTimeout(() => {
+      messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    }, 100);
+
+    try {
+      const { message } = await apiAdminSendChatMessage(selectedChatUser, tempText);
+      setChatMessages(prev => prev.map(m => m.id === tempMsg.id ? message : m));
+      
+      setChatConversations(prev => prev.map(c => 
+        c.userId === selectedChatUser 
+          ? { ...c, lastMessage: message.content, lastMessageAt: message.created_at }
+          : c
+      ));
+    } catch (err: any) {
+      alert("Erreur lors de l'envoi.");
+      setChatMessages(prev => prev.filter(m => m.id !== tempMsg.id));
+      setChatInput(tempText);
+    } finally {
+      setActionLoading(null);
+    }
+  }
+
   // Filter
   const filteredUsers = users.filter(u =>
     u.phone?.includes(search) || u.referralCode?.toLowerCase().includes(search.toLowerCase())
@@ -307,6 +376,7 @@ export default function AdminPage() {
     { key: 'withdrawals',   label: 'Retraits en attente', icon: CreditCard },
     { key: 'bots',          label: 'Configuration Bots/SSD', icon: Settings },
     { key: 'announcements', label: 'Annonces Popups', icon: Megaphone },
+    { key: 'chat',          label: 'Support Client', icon: MessageCircle },
   ];
 
   return (
@@ -820,17 +890,6 @@ export default function AdminPage() {
                                   const updated = [...botConfigs];
                                   updated[cfgIndex].merchantPhoneMoov = e.target.value;
                                   setBotConfigs(updated);
-                                }}
-                              />
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-
-                {/* Save button */}
                 <div style={{ background: 'white', border: '1.5px solid #E5E7EB', borderRadius: 16, padding: '16px', display: 'flex', justifyContent: 'flex-end' }}>
                   <button
                     onClick={handleSaveBotConfigs}
@@ -1236,6 +1295,123 @@ export default function AdminPage() {
           </div>
         </div>
       )}
+
+            {/* ── Chat ── */}
+            {activeTab === 'chat' && (
+              <div style={{ display: 'flex', gap: 20, height: 'calc(100dvh - 120px)' }}>
+                {/* Conversation List */}
+                <div style={{ 
+                  width: 320, background: 'white', borderRadius: 16, border: '1.5px solid #E5E7EB',
+                  display: 'flex', flexDirection: 'column', overflow: 'hidden'
+                }}>
+                  <div style={{ padding: '16px', borderBottom: '1px solid #E5E7EB' }}>
+                    <h2 style={{ fontSize: 16, fontWeight: 700, margin: 0, color: '#111827' }}>Conversations</h2>
+                  </div>
+                  <div style={{ flex: 1, overflowY: 'auto' }}>
+                    {chatConversations.length === 0 ? (
+                      <p style={{ padding: 20, textAlign: 'center', color: '#9CA3AF', fontSize: 13, margin: 0 }}>
+                        Aucun message reçu.
+                      </p>
+                    ) : (
+                      chatConversations.map(c => (
+                        <button
+                          key={c.userId}
+                          onClick={() => handleSelectChatUser(c.userId)}
+                          style={{
+                            width: '100%', padding: '16px', border: 'none',
+                            borderBottom: '1px solid #F3F4F6', background: selectedChatUser === c.userId ? '#EFF6FF' : 'white',
+                            textAlign: 'left', cursor: 'pointer', transition: 'background 0.2s',
+                            display: 'flex', flexDirection: 'column', gap: 4
+                          }}
+                        >
+                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                            <span style={{ fontSize: 14, fontWeight: 700, color: '#111827' }}>
+                              {c.userName || c.userPhone}
+                            </span>
+                            {c.unreadCount > 0 && (
+                              <span style={{ background: '#EF4444', color: 'white', fontSize: 10, fontWeight: 700, borderRadius: 99, padding: '2px 6px' }}>
+                                {c.unreadCount}
+                              </span>
+                            )}
+                          </div>
+                          <p style={{ margin: 0, fontSize: 13, color: '#6B7280', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                            {c.lastMessage}
+                          </p>
+                        </button>
+                      ))
+                    )}
+                  </div>
+                </div>
+
+                {/* Chat Area */}
+                <div style={{ 
+                  flex: 1, background: 'white', borderRadius: 16, border: '1.5px solid #E5E7EB',
+                  display: 'flex', flexDirection: 'column', overflow: 'hidden'
+                }}>
+                  {selectedChatUser ? (
+                    <>
+                      <div style={{ padding: '16px', borderBottom: '1px solid #E5E7EB', background: '#F9FAFB' }}>
+                        <h2 style={{ fontSize: 16, fontWeight: 700, margin: 0, color: '#111827' }}>
+                          {chatConversations.find(c => c.userId === selectedChatUser)?.userName || chatConversations.find(c => c.userId === selectedChatUser)?.userPhone || 'Utilisateur'}
+                        </h2>
+                      </div>
+                      <div style={{ flex: 1, padding: 20, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 12 }}>
+                        {loadingChat ? (
+                          <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100%' }}>
+                            <Loader2 size={24} color="#1A56DB" style={{ animation: 'spin 0.8s linear infinite' }} />
+                          </div>
+                        ) : (
+                          chatMessages.map(msg => {
+                            const isAdmin = msg.sender_role === 'ADMIN';
+                            return (
+                              <div key={msg.id} style={{
+                                display: 'flex', flexDirection: 'column',
+                                alignItems: isAdmin ? 'flex-end' : 'flex-start',
+                                maxWidth: '75%', alignSelf: isAdmin ? 'flex-end' : 'flex-start'
+                              }}>
+                                <div style={{
+                                  background: isAdmin ? '#1A56DB' : '#F3F4F6',
+                                  color: isAdmin ? 'white' : '#111827',
+                                  padding: '10px 14px',
+                                  borderRadius: isAdmin ? '16px 16px 4px 16px' : '16px 16px 16px 4px',
+                                  fontSize: 14, lineHeight: 1.5
+                                }}>
+                                  {msg.content}
+                                </div>
+                                <span style={{ fontSize: 11, color: '#9CA3AF', marginTop: 4 }}>
+                                  {new Date(msg.created_at).toLocaleTimeString('fr-BJ', { hour: '2-digit', minute: '2-digit' })}
+                                </span>
+                              </div>
+                            );
+                          })
+                        )}
+                        <div ref={messagesEndRef} />
+                      </div>
+                      <div style={{ padding: 16, borderTop: '1px solid #E5E7EB' }}>
+                        <form onSubmit={handleSendAdminMessage} style={{ display: 'flex', gap: 10 }}>
+                          <input
+                            type="text" value={chatInput} onChange={e => setChatInput(e.target.value)}
+                            placeholder="Tapez votre réponse..."
+                            style={{ flex: 1, padding: '0 16px', borderRadius: 24, border: '1px solid #E5E7EB', outline: 'none' }}
+                          />
+                          <button type="submit" disabled={!chatInput.trim()} style={{
+                            width: 44, height: 44, borderRadius: '50%', background: chatInput.trim() ? '#1A56DB' : '#E5E7EB',
+                            color: 'white', border: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                            cursor: chatInput.trim() ? 'pointer' : 'default'
+                          }}>
+                            {actionLoading === 'send-chat' ? <Loader2 size={18} style={{ animation: 'spin 0.8s linear infinite' }} /> : <Send size={18} />}
+                          </button>
+                        </form>
+                      </div>
+                    </>
+                  ) : (
+                    <div style={{ display: 'flex', flex: 1, alignItems: 'center', justifyContent: 'center', color: '#9CA3AF', fontSize: 14 }}>
+                      Sélectionnez une conversation pour afficher les messages.
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
 
       </div>
 

@@ -2,7 +2,7 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Image from 'next/image';
-import { Bell, ArrowUpRight, ArrowDownLeft, UserPlus, ChevronRight, Loader2, X } from 'lucide-react';
+import { Bell, ArrowUpRight, ArrowDownLeft, BookOpen, MessageCircle, ChevronRight, Loader2, X } from 'lucide-react';
 import { useAuthStore, useAppStore, useUIStore } from '@/lib/store';
 import { apiGetBots, apiPurchaseBot, apiWithdraw, apiInitiateDeposit } from '@/lib/api';
 import { formatXOF, Bot, MIN_WITHDRAWAL_CENTS, detectCountryFromPhone } from '@/lib/data';
@@ -79,20 +79,35 @@ function DepositModal({ onClose }: { onClose: () => void }) {
 }
 
 // ─── Withdraw Modal ────────────────────────────────────────────────────────────
+function getOperatorLabel(op: string) {
+  switch (op.toUpperCase()) {
+    case 'MTN': return '🟡 MTN';
+    case 'MOOV': return '🔵 Moov';
+    case 'ORANGE': return '🟠 Orange';
+    case 'WAVE': return '🌊 Wave';
+    case 'FLOOZ': return '🟢 Flooz';
+    case 'TMONEY': return '🔴 TMoney';
+    case 'AIRTEL': return '🔴 Airtel';
+    case 'MALI': return '🇲🇱 MALI';
+    default: return op;
+  }
+}
+
 function WithdrawModal({ onClose, balanceCents }: { onClose: () => void; balanceCents: number }) {
   const { user, updateBalance } = useAuthStore();
   const { addTransaction } = useAppStore();
   const { showToast } = useUIStore();
-  const [provider, setProvider] = useState<'mtn' | 'moov'>('mtn');
-  const [amount, setAmount] = useState('');
-  const [phone, setPhone] = useState('');
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
-
+  
   const registeredPhone = user?.phone || '';
   const country = detectCountryFromPhone(registeredPhone);
   const countryPrefix = country.prefix;
   const countryFlag = country.flag;
+
+  const [provider, setProvider] = useState<string>(country.operators?.[0] || 'MTN');
+  const [amount, setAmount] = useState('');
+  const [phone, setPhone] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
 
   async function handleWithdraw() {
     setError('');
@@ -129,16 +144,16 @@ function WithdrawModal({ onClose, balanceCents }: { onClose: () => void; balance
         </p>
 
         {/* Provider */}
-        <div style={{ display: 'flex', gap: 10, marginBottom: 16 }}>
-          {(['mtn', 'moov'] as const).map(p => (
+        <div style={{ display: 'flex', gap: 10, marginBottom: 16, flexWrap: 'wrap' }}>
+          {(country.operators || ['MTN', 'MOOV']).map(p => (
             <button key={p} onClick={() => setProvider(p)} style={{
-              flex: 1, height: 48,
+              flex: '1 1 calc(50% - 5px)', height: 48,
               background: provider === p ? '#EFF6FF' : '#F9FAFB',
               border: `2px solid ${provider === p ? '#1A56DB' : '#E5E7EB'}`,
               borderRadius: 12, cursor: 'pointer', fontSize: 13, fontWeight: 700,
               color: provider === p ? '#1A56DB' : '#374151',
             }}>
-              {p === 'mtn' ? '🟡 MTN' : '🔵 Moov'}
+              {getOperatorLabel(p)}
             </button>
           ))}
         </div>
@@ -433,8 +448,8 @@ export default function HomePage() {
       </div>
 
       {/* Quick Actions */}
-      <div style={{ display: 'flex', gap: 10, margin: '0 16px 24px' }}>
-        <button className="action-btn" onClick={() => setModal('deposit')}>
+      <div style={{ display: 'flex', gap: 10, margin: '0 16px 24px', overflowX: 'auto', paddingBottom: 4 }}>
+        <button className="action-btn" onClick={() => setModal('deposit')} style={{ minWidth: 70 }}>
           <div style={{
             width: 40, height: 40, borderRadius: 12,
             background: '#EFF6FF', display: 'flex', alignItems: 'center', justifyContent: 'center',
@@ -443,7 +458,7 @@ export default function HomePage() {
           </div>
           <span style={{ fontSize: 12, fontWeight: 600, color: '#374151' }}>Recharger</span>
         </button>
-        <button className="action-btn" onClick={() => setModal('withdraw')}>
+        <button className="action-btn" onClick={() => setModal('withdraw')} style={{ minWidth: 70 }}>
           <div style={{
             width: 40, height: 40, borderRadius: 12,
             background: '#F0FDF4', display: 'flex', alignItems: 'center', justifyContent: 'center',
@@ -452,14 +467,23 @@ export default function HomePage() {
           </div>
           <span style={{ fontSize: 12, fontWeight: 600, color: '#374151' }}>Retrait</span>
         </button>
-        <button className="action-btn" onClick={() => router.push('/invite')}>
+        <button className="action-btn" onClick={() => router.push('/guide')} style={{ minWidth: 70 }}>
           <div style={{
             width: 40, height: 40, borderRadius: 12,
             background: '#FEF3C7', display: 'flex', alignItems: 'center', justifyContent: 'center',
           }}>
-            <UserPlus size={20} color="#D97706" />
+            <BookOpen size={20} color="#D97706" />
           </div>
-          <span style={{ fontSize: 12, fontWeight: 600, color: '#374151' }}>Inviter</span>
+          <span style={{ fontSize: 12, fontWeight: 600, color: '#374151' }}>Guide</span>
+        </button>
+        <button className="action-btn" onClick={() => router.push('/chat')} style={{ minWidth: 70 }}>
+          <div style={{
+            width: 40, height: 40, borderRadius: 12,
+            background: '#F5F3FF', display: 'flex', alignItems: 'center', justifyContent: 'center',
+          }}>
+            <MessageCircle size={20} color="#7C3AED" />
+          </div>
+          <span style={{ fontSize: 12, fontWeight: 600, color: '#374151' }}>Support</span>
         </button>
       </div>
 

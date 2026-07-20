@@ -289,3 +289,30 @@ function normalizePurchase(p: any) {
     nextAllowedAt: p.nextAllowedAt ? new Date(p.nextAllowedAt) : null,
   };
 }
+
+// ─── Chat ──────────────────────────────────────────────────────────────────
+export async function apiGetChatMessages() {
+  return apiFetch<{ messages: any[] }>('/api/chat');
+}
+
+export async function apiSendChatMessage(content: string) {
+  return apiFetch<{ message: any }>('/api/chat', {
+    method: 'POST',
+    body: JSON.stringify({ content }),
+  });
+}
+
+export async function apiAdminGetChatConversations() {
+  return apiFetch<{ conversations: any[] }>('/api/admin/chat');
+}
+
+export async function apiAdminGetChatMessages(userId: string) {
+  return apiFetch<{ messages: any[] }>(`/api/admin/chat/${userId}`);
+}
+
+export async function apiAdminSendChatMessage(userId: string, content: string) {
+  return apiFetch<{ message: any }>(`/api/admin/chat/${userId}`, {
+    method: 'POST',
+    body: JSON.stringify({ content }),
+  });
+}

@@ -138,14 +138,17 @@ export type Announcement = {
 
 // Supported countries for phone registration/login
 export const COUNTRIES = [
-  { code: 'BJ', name: 'Bénin', prefix: '+229', flag: '🇧🇯' },
-  { code: 'BF', name: 'Burkina Faso', prefix: '+226', flag: '🇧🇫' },
-  { code: 'CI', name: "Côte d'Ivoire", prefix: '+225', flag: '🇨🇮' },
-  { code: 'GN', name: 'Guinée', prefix: '+224', flag: '🇬🇳' },
-  { code: 'ML', name: 'Mali', prefix: '+223', flag: '🇲🇱' },
-  { code: 'NE', name: 'Niger', prefix: '+227', flag: '🇳🇪' },
-  { code: 'SN', name: 'Sénégal', prefix: '+221', flag: '🇸🇳' },
-  { code: 'TG', name: 'Togo', prefix: '+228', flag: '🇹🇬' },
+  { code: 'BJ', name: 'Bénin', prefix: '+229', flag: '🇧🇯', operators: ['MTN', 'MOOV'] },
+  { code: 'TG', name: 'Togo', prefix: '+228', flag: '🇹🇬', operators: ['FLOOZ', 'TMONEY'] },
+  { code: 'SN', name: 'Sénégal', prefix: '+221', flag: '🇸🇳', operators: ['ORANGE', 'WAVE'] },
+  { code: 'BF', name: 'Burkina Faso', prefix: '+226', flag: '🇧🇫', operators: ['MOOV', 'ORANGE', 'WAVE'] },
+  { code: 'ML', name: 'Mali', prefix: '+223', flag: '🇲🇱', operators: ['MOOV', 'ORANGE', 'MALI'] },
+  { code: 'CI', name: "Côte d'Ivoire", prefix: '+225', flag: '🇨🇮', operators: ['MOOV', 'MTN', 'WAVE'] },
+  { code: 'GN', name: 'Guinée', prefix: '+224', flag: '🇬🇳', operators: ['ORANGE', 'MTN', 'WAVE'] },
+  { code: 'NE', name: 'Niger', prefix: '+227', flag: '🇳🇪', operators: ['MOOV', 'AIRTEL', 'ORANGE'] },
+  { code: 'CG', name: 'Congo', prefix: '+242', flag: '🇨🇬', operators: ['MTN', 'AIRTEL'] },
+  { code: 'GA', name: 'Gabon', prefix: '+241', flag: '🇬🇦', operators: ['MOOV', 'AIRTEL'] },
+  { code: 'TD', name: 'Tchad', prefix: '+235', flag: '🇹🇩', operators: ['MOOV', 'AIRTEL'] },
 ] as const;
 
 export type Country = typeof COUNTRIES[number];
