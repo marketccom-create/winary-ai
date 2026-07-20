@@ -4,7 +4,7 @@ import { useRouter } from 'next/navigation';
 import Image from 'next/image';
 import {
   Users, Bot, CreditCard, Megaphone, Settings, LogOut,
-  Search, TrendingUp, AlertCircle, Check, X, Save, Loader2, ChevronRight, Plus, Trash, Edit, RefreshCw, MessageCircle, Send
+  Search, TrendingUp, AlertCircle, Check, X, Save, Loader2, ChevronRight, ChevronLeft, Plus, Trash, Edit, RefreshCw, MessageCircle, Send
 } from 'lucide-react';
 import { useAuthStore } from '@/lib/store';
 import {
@@ -1312,7 +1312,7 @@ export default function AdminPage() {
             {activeTab === 'chat' && (
               <div style={{ display: 'flex', gap: 20, height: 'calc(100dvh - 120px)' }}>
                 {/* Conversation List */}
-                <div style={{ 
+                <div className={`chat-list-panel ${selectedChatUser ? 'mobile-chat-list-hidden' : 'mobile-chat-full-width'}`} style={{ 
                   width: 320, background: 'white', borderRadius: 16, border: '1.5px solid #E5E7EB',
                   display: 'flex', flexDirection: 'column', overflow: 'hidden'
                 }}>
@@ -1356,13 +1356,19 @@ export default function AdminPage() {
                 </div>
 
                 {/* Chat Area */}
-                <div style={{ 
+                <div className={`chat-area-panel ${!selectedChatUser ? 'mobile-chat-area-hidden' : 'mobile-chat-full-width'}`} style={{ 
                   flex: 1, background: 'white', borderRadius: 16, border: '1.5px solid #E5E7EB',
                   display: 'flex', flexDirection: 'column', overflow: 'hidden'
                 }}>
                   {selectedChatUser ? (
                     <>
-                      <div style={{ padding: '16px', borderBottom: '1px solid #E5E7EB', background: '#F9FAFB' }}>
+                      <div style={{ padding: '16px', borderBottom: '1px solid #E5E7EB', background: '#F9FAFB', display: 'flex', alignItems: 'center', gap: 12 }}>
+                        <button className="mobile-only-inline-flex" onClick={() => setSelectedChatUser(null)} style={{ 
+                          background: 'white', border: '1px solid #E5E7EB', borderRadius: '50%', width: 36, height: 36, 
+                          alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: '#111827'
+                        }}>
+                          <ChevronLeft size={20} />
+                        </button>
                         <h2 style={{ fontSize: 16, fontWeight: 700, margin: 0, color: '#111827' }}>
                           {chatConversations.find(c => c.userId === selectedChatUser)?.userName || chatConversations.find(c => c.userId === selectedChatUser)?.userPhone || 'Utilisateur'}
                         </h2>

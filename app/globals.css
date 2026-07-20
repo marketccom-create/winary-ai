@@ -329,3 +329,25 @@ html, body {
   border-radius: 99px;
   margin: 0 auto 20px;
 }
+
+/* Admin Chat Responsive */
+.mobile-only-inline-flex {
+  display: none !important;
+}
+
+@media (max-width: 768px) {
+  .mobile-only-inline-flex {
+    display: inline-flex !important;
+  }
+  .mobile-chat-list-hidden {
+    display: none !important;
+  }
+  .mobile-chat-area-hidden {
+    display: none !important;
+  }
+  .mobile-chat-full-width {
+    width: 100% !important;
+    max-width: 100% !important;
+    flex: 1 !important;
+  }
+}
