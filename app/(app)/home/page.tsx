@@ -449,15 +449,7 @@ export default function HomePage() {
 
       {/* Quick Actions */}
       <div style={{ display: 'flex', gap: 10, margin: '0 16px 24px', overflowX: 'auto', paddingBottom: 4 }}>
-        <button className="action-btn" onClick={() => setModal('deposit')} style={{ minWidth: 70 }}>
-          <div style={{
-            width: 40, height: 40, borderRadius: 12,
-            background: '#EFF6FF', display: 'flex', alignItems: 'center', justifyContent: 'center',
-          }}>
-            <ArrowUpRight size={20} color="#1A56DB" />
-          </div>
-          <span style={{ fontSize: 12, fontWeight: 600, color: '#374151' }}>Recharger</span>
-        </button>
+
         <button className="action-btn" onClick={() => setModal('withdraw')} style={{ minWidth: 70 }}>
           <div style={{
             width: 40, height: 40, borderRadius: 12,
