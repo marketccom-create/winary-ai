@@ -766,31 +766,43 @@ export default function AdminPage() {
                             <td style={{ padding: '12px 16px', fontSize: 12, color: '#9CA3AF' }}>
                               {new Date(w.createdAt).toLocaleString('fr-BJ')}
                             </td>
-                            <td style={{ padding: '12px 16px', display: 'flex', gap: 8 }}>
-                              <button
-                                onClick={() => handleApproveWithdrawal(w.id)}
-                                disabled={actionLoading === w.id}
-                                style={{
-                                  background: '#EFF6FF', border: '1px solid #BFDBFE', borderRadius: 8,
-                                  padding: '6px 12px', fontSize: 12, fontWeight: 700,
-                                  cursor: 'pointer', color: '#1A56DB', display: 'flex', alignItems: 'center', gap: 4,
-                                }}
-                              >
-                                {actionLoading === w.id ? <Loader2 size={12} style={{ animation: 'spin 0.8s linear' }} /> : <Check size={12} />}
-                                Approuver
-                              </button>
-                              <button
-                                onClick={() => handleRejectWithdrawal(w.id)}
-                                disabled={actionLoading === w.id}
-                                style={{
-                                  background: '#FFF1F2', border: '1px solid #FECACA', borderRadius: 8,
-                                  padding: '6px 12px', fontSize: 12, fontWeight: 700,
-                                  cursor: 'pointer', color: '#B91C1C', display: 'flex', alignItems: 'center', gap: 4,
-                                }}
-                              >
-                                <X size={12} />
-                                Rejeter
-                              </button>
+                            <td style={{ padding: '12px 16px', display: 'flex', gap: 8, alignItems: 'center' }}>
+                              {w.status === 'PENDING' ? (
+                                <>
+                                  <button
+                                    onClick={() => handleApproveWithdrawal(w.id)}
+                                    disabled={actionLoading === w.id}
+                                    style={{
+                                      background: '#EFF6FF', border: '1px solid #BFDBFE', borderRadius: 8,
+                                      padding: '6px 12px', fontSize: 12, fontWeight: 700,
+                                      cursor: 'pointer', color: '#1A56DB', display: 'flex', alignItems: 'center', gap: 4,
+                                    }}
+                                  >
+                                    {actionLoading === w.id ? <Loader2 size={12} style={{ animation: 'spin 0.8s linear' }} /> : <Check size={12} />}
+                                    Approuver
+                                  </button>
+                                  <button
+                                    onClick={() => handleRejectWithdrawal(w.id)}
+                                    disabled={actionLoading === w.id}
+                                    style={{
+                                      background: '#FFF1F2', border: '1px solid #FECACA', borderRadius: 8,
+                                      padding: '6px 12px', fontSize: 12, fontWeight: 700,
+                                      cursor: 'pointer', color: '#B91C1C', display: 'flex', alignItems: 'center', gap: 4,
+                                    }}
+                                  >
+                                    <X size={12} />
+                                    Rejeter
+                                  </button>
+                                </>
+                              ) : (
+                                <span style={{
+                                  padding: '4px 10px', borderRadius: 99, fontSize: 11, fontWeight: 700,
+                                  background: w.status === 'COMPLETED' ? '#DCFCE7' : '#FEE2E2',
+                                  color: w.status === 'COMPLETED' ? '#15803D' : '#B91C1C',
+                                }}>
+                                  {w.status === 'COMPLETED' ? 'Approuvé' : 'Rejeté'}
+                                </span>
+                              )}
                             </td>
                           </tr>
                         ))}

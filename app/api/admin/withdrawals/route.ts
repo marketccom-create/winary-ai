@@ -19,7 +19,6 @@ export async function GET(req: Request) {
     .from('transactions')
     .select(`*, users(phone, first_name, last_name)`)
     .eq('type', 'WITHDRAWAL')
-    .eq('status', 'PENDING')
     .order('created_at', { ascending: false });
 
   if (dbErr) return NextResponse.json({ error: dbErr.message }, { status: 500 });
