@@ -14,7 +14,8 @@ import {
   apiAdminGetPendingPurchases, apiAdminApprovePurchase, apiAdminRejectPurchase,
   apiAdminGetPendingWithdrawals, apiAdminApproveWithdrawal, apiAdminRejectWithdrawal,
   apiAdminGetChatConversations, apiAdminGetChatMessages, apiAdminSendChatMessage,
-  apiAdminGrantBot, apiAdminEditChatMessage, apiAdminDeleteChatMessage, apiAdminRevokePurchase
+  apiAdminGrantBot, apiAdminEditChatMessage, apiAdminDeleteChatMessage, apiAdminRevokePurchase,
+  apiAdminGetAiSettings, apiAdminUpdateAiSettings
 } from '@/lib/api';
 import { formatXOF } from '@/lib/data';
 import type { BotPaymentConfig, Announcement } from '@/lib/data';
@@ -80,6 +81,10 @@ export default function AdminPage() {
   const [editingMessageContent, setEditingMessageContent] = useState('');
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
+  // AI state
+  const [aiSettings, setAiSettings] = useState<{ knowledge_base: string; is_active: boolean } | null>(null);
+  const [savingAi, setSavingAi] = useState(false);
+
   // Auth check
   useEffect(() => {
     if (!user || user.phone !== '+22901010101') {
@@ -91,7 +96,7 @@ export default function AdminPage() {
   async function loadData() {
     setLoading(true);
     try {
-      const [s, u, b, cfg, ann, p, w, c] = await Promise.all([
+      const [s, u, b, cfg, ann, p, w, c, ai] = await Promise.all([
         apiAdminGetStats(),
         apiAdminGetUsers(),
         apiGetBots(),
@@ -100,6 +105,7 @@ export default function AdminPage() {
         apiAdminGetPendingPurchases(),
         apiAdminGetPendingWithdrawals(),
         apiAdminGetChatConversations(),
+        apiAdminGetAiSettings(),
       ]);
       setStats(s);
       setUsers(u);
@@ -109,6 +115,7 @@ export default function AdminPage() {
       setPendingPurchases(p);
       setPendingWithdrawals(w);
       setChatConversations(c.conversations || []);
+      setAiSettings(ai);
     } catch (err: any) {
       alert('Erreur chargement : ' + err.message);
     } finally {
@@ -449,6 +456,23 @@ export default function AdminPage() {
     setActiveTab('chat');
   }
 
+  // AI Handler
+  async function handleSaveAiSettings() {
+    if (!aiSettings) return;
+    setSavingAi(true);
+    try {
+      await apiAdminUpdateAiSettings({
+        knowledge_base: aiSettings.knowledge_base,
+        is_active: aiSettings.is_active
+      });
+      alert('Configuration IA sauvegardée avec succès !');
+    } catch (err: any) {
+      alert('Erreur: ' + err.message);
+    } finally {
+      setSavingAi(false);
+    }
+  }
+
   // Filter
   const filteredUsers = users.filter(u => {
     const term = search.toLowerCase();
@@ -614,6 +638,61 @@ export default function AdminPage() {
                   <StatCard label="Total Retraits Approuvés" value={formatXOF(stats?.totalWithdrawalsCents || 0)} icon="💸" color="#10B981" />
                   <StatCard label="Achats en attente SSD" value={pendingPurchasesOnly.length} icon="🤖" color="#7C3AED" onClick={() => setActiveTab('pending')} />
                   <StatCard label="Retraits en attente" value={stats?.pendingWithdrawals || 0} icon="⏳" color="#D97706" onClick={() => setActiveTab('withdrawals')} />
+                </div>
+
+                {/* AI Config Block */}
+                <div style={{
+                  background: 'white', borderRadius: 16, border: '1.5px solid #E5E7EB', padding: 24, marginBottom: 24,
+                  boxShadow: '0 1px 2px rgba(0,0,0,0.05)'
+                }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+                    <h2 style={{ fontSize: 18, fontWeight: 700, margin: 0, color: '#111827' }}>Configuration Intelligence Artificielle</h2>
+                    <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer' }}>
+                      <span style={{ fontSize: 14, fontWeight: 600, color: '#4B5563' }}>Activer l'IA Globale</span>
+                      <div style={{
+                        width: 44, height: 24, borderRadius: 12, position: 'relative', transition: 'background 0.3s',
+                        background: aiSettings?.is_active ? '#10B981' : '#D1D5DB'
+                      }} onClick={() => aiSettings && setAiSettings({ ...aiSettings, is_active: !aiSettings.is_active })}>
+                        <div style={{
+                          width: 20, height: 20, borderRadius: '50%', background: 'white',
+                          position: 'absolute', top: 2, left: aiSettings?.is_active ? 22 : 2,
+                          transition: 'left 0.3s', boxShadow: '0 1px 3px rgba(0,0,0,0.1)'
+                        }} />
+                      </div>
+                    </label>
+                  </div>
+                  <div style={{ marginBottom: 16 }}>
+                    <label style={{ display: 'block', fontSize: 14, fontWeight: 600, color: '#374151', marginBottom: 8 }}>
+                      Base de connaissances (Instructions pour l'IA)
+                    </label>
+                    <textarea
+                      value={aiSettings?.knowledge_base || ''}
+                      onChange={e => aiSettings && setAiSettings({ ...aiSettings, knowledge_base: e.target.value })}
+                      style={{
+                        width: '100%', minHeight: 150, padding: 16, borderRadius: 12, border: '1px solid #D1D5DB',
+                        fontSize: 14, outline: 'none', resize: 'vertical', fontFamily: 'monospace'
+                      }}
+                      placeholder="Décrivez les règles, prix, et le rôle de l'IA ici..."
+                    />
+                    <p style={{ fontSize: 12, color: '#6B7280', margin: '8px 0 0' }}>
+                      Cette base sera lue par l'IA à chaque fois qu'un utilisateur enverra un message. 
+                      Ne dites pas à l'IA d'inventer des informations, dites-lui de demander de l'aide si elle ne sait pas.
+                    </p>
+                  </div>
+                  <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+                    <button
+                      onClick={handleSaveAiSettings}
+                      disabled={savingAi}
+                      style={{
+                        background: '#1A56DB', color: 'white', border: 'none', borderRadius: 8,
+                        padding: '10px 20px', fontSize: 14, fontWeight: 600, cursor: savingAi ? 'not-allowed' : 'pointer',
+                        display: 'flex', alignItems: 'center', gap: 8
+                      }}
+                    >
+                      {savingAi && <Loader2 size={16} style={{ animation: 'spin 0.8s linear' }} />}
+                      Enregistrer la configuration IA
+                    </button>
+                  </div>
                 </div>
 
                 {pendingPurchasesOnly.length > 0 && (
@@ -1538,9 +1617,41 @@ export default function AdminPage() {
                         }}>
                           <ChevronLeft size={20} />
                         </button>
-                        <h2 style={{ fontSize: 16, fontWeight: 700, margin: 0, color: '#111827' }}>
-                          {chatConversations.find(c => c.userId === selectedChatUser)?.userName || chatConversations.find(c => c.userId === selectedChatUser)?.userPhone || 'Utilisateur'}
-                        </h2>
+                        <div style={{ flex: 1 }}>
+                          <h2 style={{ fontSize: 16, fontWeight: 700, margin: 0, color: '#111827' }}>
+                            {chatConversations.find(c => c.userId === selectedChatUser)?.userName || chatConversations.find(c => c.userId === selectedChatUser)?.userPhone || 'Utilisateur'}
+                          </h2>
+                        </div>
+                        {selectedChatUser && (
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                            <span style={{ fontSize: 13, color: '#4B5563' }}>IA Activable</span>
+                            <button
+                              onClick={() => {
+                                const userObj = users.find(u => u.id === selectedChatUser);
+                                const currentAiState = userObj?.ai_support_enabled ?? true; // Defaults to true in DB
+                                const newAiState = !currentAiState;
+                                
+                                apiAdminUpdateUser(selectedChatUser, { aiSupportEnabled: newAiState }).then(() => {
+                                  setUsers(prev => prev.map(u => u.id === selectedChatUser ? { ...u, ai_support_enabled: newAiState } : u));
+                                  if (selectedUserDetail?.user?.id === selectedChatUser) {
+                                    setSelectedUserDetail((prev: any) => ({ ...prev, user: { ...prev.user, aiSupportEnabled: newAiState } }));
+                                  }
+                                });
+                              }}
+                              style={{
+                                width: 44, height: 24, borderRadius: 12, border: 'none', cursor: 'pointer',
+                                background: (users.find(u => u.id === selectedChatUser)?.ai_support_enabled ?? true) ? '#10B981' : '#D1D5DB',
+                                position: 'relative', transition: 'background 0.3s'
+                              }}
+                            >
+                              <div style={{
+                                width: 20, height: 20, borderRadius: '50%', background: 'white',
+                                position: 'absolute', top: 2, left: (users.find(u => u.id === selectedChatUser)?.ai_support_enabled ?? true) ? 22 : 2,
+                                transition: 'left 0.3s', boxShadow: '0 1px 3px rgba(0,0,0,0.1)'
+                              }} />
+                            </button>
+                          </div>
+                        )}
                       </div>
                       <div style={{ flex: 1, padding: 20, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 12 }}>
                         {loadingChat ? (

@@ -47,5 +47,73 @@ export async function POST(req: Request) {
     .single();
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+
+  // ─── AI Responder ───
+  try {
+    const { data: aiSettings } = await db.from('ai_settings').select('*').eq('id', 1).single();
+    const { data: user } = await db.from('users').select('ai_support_enabled').eq('id', payload.sub).single();
+
+    let shouldAiRespond = false;
+    if (user?.ai_support_enabled === true) {
+      shouldAiRespond = true; // Forcé activé (surcharge)
+    } else if (user?.ai_support_enabled === false) {
+      shouldAiRespond = false; // Forcé désactivé (surcharge)
+    } else {
+      shouldAiRespond = !!aiSettings?.is_active; // Suit le statut global par défaut
+    }
+
+    if (shouldAiRespond) {
+      const { data: history } = await db
+        .from('support_messages')
+        .select('sender_role, content')
+        .eq('user_id', payload.sub)
+        .order('created_at', { ascending: false })
+        .limit(10);
+        
+      const chatHistory = history ? history.reverse().map(m => ({
+        role: m.sender_role === 'ADMIN' ? 'assistant' : 'user',
+        content: m.content
+      })) : [];
+
+      const openRouterApiKey = process.env.OPENROUTER_API_KEY;
+      if (openRouterApiKey) {
+        const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${openRouterApiKey}`,
+            'HTTP-Referer': process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000',
+            'X-Title': 'WINARY AI Support',
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            model: 'google/gemini-2.0-flash-exp:free',
+            messages: [
+              { role: 'system', content: aiSettings.knowledge_base || 'Tu es un assistant.' },
+              ...chatHistory
+            ]
+          })
+        });
+
+        if (response.ok) {
+          const aiData = await response.json();
+          const aiReply = aiData.choices?.[0]?.message?.content;
+          if (aiReply) {
+            await db.from('support_messages').insert({
+              user_id: payload.sub,
+              sender_role: 'ADMIN',
+              content: aiReply.trim(),
+              is_read: false,
+            });
+          }
+        } else {
+          console.error("OpenRouter API Error:", await response.text());
+        }
+      }
+    }
+  } catch (err) {
+    console.error("AI Logic Error:", err);
+  }
+  // ────────────────────
+
   return NextResponse.json({ message: data });
 }

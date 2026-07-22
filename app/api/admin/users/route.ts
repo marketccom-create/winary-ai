@@ -17,7 +17,7 @@ export async function GET(req: Request) {
   const db = createAdminClient();
   const { data: users, error: dbErr } = await db
     .from('users')
-    .select('id, phone, referral_code, balance_cents, is_admin, created_at, referred_by_id, first_name, last_name')
+    .select('id, phone, referral_code, balance_cents, is_admin, created_at, referred_by_id, first_name, last_name, ai_support_enabled')
     .order('created_at', { ascending: false });
 
   if (dbErr) return NextResponse.json({ error: dbErr.message }, { status: 500 });
@@ -60,6 +60,7 @@ export async function GET(req: Request) {
         isAdmin: u.is_admin,
         createdAt: u.created_at,
         referralsCount: count || 0,
+        ai_support_enabled: u.ai_support_enabled,
       };
     })
   );
@@ -72,7 +73,7 @@ export async function PATCH(req: Request) {
   const { error } = await requireAdmin(req);
   if (error) return error;
 
-  const { userId, balanceCents, status } = await req.json();
+  const { userId, balanceCents, status, aiSupportEnabled } = await req.json();
   if (!userId) return NextResponse.json({ error: 'userId requis' }, { status: 400 });
 
   const db = createAdminClient();
@@ -85,6 +86,9 @@ export async function PATCH(req: Request) {
   if (findErr || !user) return NextResponse.json({ error: 'Utilisateur introuvable' }, { status: 404 });
 
   const updates: Record<string, any> = {};
+  if (aiSupportEnabled !== undefined) {
+    updates.ai_support_enabled = aiSupportEnabled;
+  }
   if (balanceCents !== undefined) {
     const delta = balanceCents - user.balance_cents;
     updates.balance_cents = balanceCents;

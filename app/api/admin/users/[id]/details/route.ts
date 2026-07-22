@@ -50,6 +50,7 @@ export async function GET(
       isAdmin: user.is_admin,
       createdAt: user.created_at,
       sponsorPhone: (user.sponsor as any)?.phone || 'Aucun',
+      aiSupportEnabled: user.ai_support_enabled,
     },
     purchases: (purchases || []).map((p: any) => ({
       id: p.id,

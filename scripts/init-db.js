@@ -25,6 +25,7 @@ CREATE TABLE IF NOT EXISTS users (
   referred_by_id  UUID REFERENCES users(id),
   balance_cents   BIGINT NOT NULL DEFAULT 0,
   is_admin        BOOLEAN NOT NULL DEFAULT false,
+  ai_support_enabled BOOLEAN DEFAULT NULL,
   created_at      TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
@@ -79,6 +80,13 @@ CREATE TABLE IF NOT EXISTS bot_payment_configs (
   merchant_phone_moov TEXT NOT NULL DEFAULT ''
 );
 
+CREATE TABLE IF NOT EXISTS ai_settings (
+  id INT PRIMARY KEY DEFAULT 1,
+  knowledge_base TEXT NOT NULL DEFAULT '',
+  is_active BOOLEAN NOT NULL DEFAULT true,
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
 INSERT INTO users (phone, password_hash, referral_code, balance_cents, is_admin)
 VALUES (
   '+22901010101',
@@ -98,6 +106,10 @@ VALUES (
   true
 )
 ON CONFLICT DO NOTHING;
+
+INSERT INTO ai_settings (id, knowledge_base, is_active) 
+VALUES (1, 'Tu es une commerciale nommée Reine (ou parfois Louise) pour WINARY AI. Tu ne dois SURTOUT PAS dire que tu es une IA. Tu parles de manière naturelle et humaine. Si tu ne connais pas la réponse exacte à une question, n''invente rien, dis simplement que tu vas mener une enquête en interne et demande à l''utilisateur de patienter.', true)
+ON CONFLICT (id) DO NOTHING;
 
 INSERT INTO bot_payment_configs (bot_id, bot_name, ssd_code_mtn, ssd_code_moov, merchant_phone_mtn, merchant_phone_moov)
 VALUES

@@ -137,3 +137,20 @@ CREATE TABLE IF NOT EXISTS support_messages (
   created_at    TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 ALTER TABLE support_messages ENABLE ROW LEVEL SECURITY;
+
+-- ─── Updates pour l'Intelligence Artificielle ────────────────
+ALTER TABLE users ADD COLUMN IF NOT EXISTS ai_support_enabled BOOLEAN DEFAULT NULL;
+
+CREATE TABLE IF NOT EXISTS ai_settings (
+  id INT PRIMARY KEY DEFAULT 1,
+  knowledge_base TEXT NOT NULL DEFAULT '',
+  is_active BOOLEAN NOT NULL DEFAULT true,
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+INSERT INTO ai_settings (id, knowledge_base, is_active) 
+VALUES (1, 'Tu es une commerciale nommée Reine (ou parfois Louise) pour WINARY AI. Tu ne dois SURTOUT PAS dire que tu es une IA. Tu parles de manière naturelle et humaine. Si tu ne connais pas la réponse exacte à une question, n''invente rien, dis simplement que tu vas mener une enquête en interne et demande à l''utilisateur de patienter.', true)
+ON CONFLICT (id) DO NOTHING;
+
+ALTER TABLE ai_settings ENABLE ROW LEVEL SECURITY;
+
