@@ -106,12 +106,32 @@ export async function POST(req: Request) {
             });
           }
         } else {
-          console.error("OpenRouter API Error:", await response.text());
+          const errText = await response.text();
+          console.error("OpenRouter API Error:", errText);
+          await db.from('support_messages').insert({
+            user_id: payload.sub,
+            sender_role: 'ADMIN',
+            content: "⚠️ [DEBUG IA] Erreur OpenRouter: " + errText.substring(0, 200),
+            is_read: false,
+          });
         }
+      } else {
+        await db.from('support_messages').insert({
+            user_id: payload.sub,
+            sender_role: 'ADMIN',
+            content: "⚠️ [DEBUG IA] La clé API OPENROUTER_API_KEY n'est pas configurée.",
+            is_read: false,
+        });
       }
     }
-  } catch (err) {
+  } catch (err: any) {
     console.error("AI Logic Error:", err);
+    await db.from('support_messages').insert({
+        user_id: payload.sub,
+        sender_role: 'ADMIN',
+        content: "⚠️ [DEBUG IA] Exception dans le code IA: " + err.message,
+        is_read: false,
+    });
   }
   // ────────────────────
 
