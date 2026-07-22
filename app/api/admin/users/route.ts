@@ -36,7 +36,16 @@ export async function GET(req: Request) {
         .eq('user_id', u.id)
         .eq('type', 'REFERRAL_BONUS');
         
+      const { data: withdrawals } = await db
+        .from('transactions')
+        .select('amount_cents')
+        .eq('user_id', u.id)
+        .eq('type', 'WITHDRAWAL')
+        .eq('status', 'COMPLETED');
+        
       const totalCommissions = (commissions || []).reduce((acc: number, curr: any) => acc + curr.amount_cents, 0);
+      const totalWithdrawals = (withdrawals || []).reduce((acc: number, curr: any) => acc + Math.abs(curr.amount_cents), 0);
+      const withdrawalsCount = (withdrawals || []).length;
 
       return {
         id: u.id,
@@ -46,6 +55,8 @@ export async function GET(req: Request) {
         referralCode: u.referral_code,
         balanceCents: u.balance_cents,
         commissionsCents: totalCommissions,
+        withdrawalsTotalCents: totalWithdrawals,
+        withdrawalsCount: withdrawalsCount,
         isAdmin: u.is_admin,
         createdAt: u.created_at,
         referralsCount: count || 0,
