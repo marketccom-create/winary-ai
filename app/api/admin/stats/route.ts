@@ -21,16 +21,24 @@ export async function GET(req: Request) {
     { count: pendingPurchases },
     { data: activePurchases },
     { count: pendingWithdrawals },
+    { data: completedWithdrawals },
   ] = await Promise.all([
     db.from('users').select('id', { count: 'exact', head: true }),
     db.from('purchases').select('id', { count: 'exact', head: true }).eq('status', 'PENDING'),
     db.from('purchases').select('price_paid_cents').eq('status', 'ACTIVE'),
     db.from('transactions').select('id', { count: 'exact', head: true })
       .eq('type', 'WITHDRAWAL').eq('status', 'PENDING'),
+    db.from('transactions').select('amount_cents')
+      .eq('type', 'WITHDRAWAL').eq('status', 'COMPLETED'),
   ]);
 
   const totalRevenueCents = (activePurchases || []).reduce(
     (sum: number, p: any) => sum + p.price_paid_cents,
+    0
+  );
+
+  const totalWithdrawalsCents = (completedWithdrawals || []).reduce(
+    (sum: number, t: any) => sum + Math.abs(t.amount_cents),
     0
   );
 
@@ -40,5 +48,6 @@ export async function GET(req: Request) {
     pendingPurchases: pendingPurchases || 0,
     totalRevenueCents,
     pendingWithdrawals: pendingWithdrawals || 0,
+    totalWithdrawalsCents,
   });
 }

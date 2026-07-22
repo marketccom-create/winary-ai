@@ -279,6 +279,13 @@ export async function apiAdminUpdateBotPaymentConfigs(configs: BotPaymentConfig[
   });
 }
 
+export async function apiAdminGrantBot(userId: string, botId: string, reason: string) {
+  return apiFetch<{ success: boolean, purchase: any }>(`/api/admin/users/${userId}/grant-bot`, {
+    method: 'POST',
+    body: JSON.stringify({ botId, reason }),
+  });
+}
+
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 function normalizePurchase(p: any) {
   return {

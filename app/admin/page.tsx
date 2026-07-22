@@ -13,7 +13,8 @@ import {
   apiGetBots, apiGetBotPaymentConfigs, apiAdminUpdateBotPaymentConfigs,
   apiAdminGetPendingPurchases, apiAdminApprovePurchase, apiAdminRejectPurchase,
   apiAdminGetPendingWithdrawals, apiAdminApproveWithdrawal, apiAdminRejectWithdrawal,
-  apiAdminGetChatConversations, apiAdminGetChatMessages, apiAdminSendChatMessage
+  apiAdminGetChatConversations, apiAdminGetChatMessages, apiAdminSendChatMessage,
+  apiAdminGrantBot
 } from '@/lib/api';
 import { formatXOF } from '@/lib/data';
 import type { BotPaymentConfig, Announcement } from '@/lib/data';
@@ -64,6 +65,7 @@ export default function AdminPage() {
   const [selectedUserDetail, setSelectedUserDetail] = useState<any>(null);
   const [loadingDetail, setLoadingDetail] = useState(false);
   const [adjAmount, setAdjAmount] = useState('');
+  const [grantBotId, setGrantBotId] = useState('');
 
   // Announcement state
   const [editingAnn, setEditingAnn] = useState<Partial<Announcement> | null>(null);
@@ -145,6 +147,26 @@ export default function AdminPage() {
       }
       setAdjAmount('');
       alert('Solde ajusté avec succès !');
+    } catch (err: any) {
+      alert(err.message);
+    } finally {
+      setActionLoading(null);
+    }
+  }
+
+  async function handleGrantBot(uid: string) {
+    if (!grantBotId) return;
+    const reason = prompt("Raison de l'octroi (ex: Problème SenePay) :");
+    if (reason === null) return;
+    
+    setActionLoading('grant_bot');
+    try {
+      await apiAdminGrantBot(uid, grantBotId, reason.trim());
+      alert('Bot octroyé avec succès !');
+      // Refresh detail
+      const details = await apiAdminGetUserDetails(uid);
+      setSelectedUserDetail(details);
+      setGrantBotId('');
     } catch (err: any) {
       alert(err.message);
     } finally {
@@ -1209,6 +1231,35 @@ export default function AdminPage() {
                   >
                     {actionLoading === 'adjust' && <Loader2 size={12} style={{ animation: 'spin 0.8s linear' }} />}
                     Ajuster
+                  </button>
+                </div>
+              </div>
+
+              {/* Grant Bot section */}
+              <div style={{ background: '#F5F3FF', border: '1px solid #DDD6FE', borderRadius: 12, padding: 16 }}>
+                <h4 style={{ fontSize: 13, fontWeight: 700, margin: '0 0 12px', color: '#6D28D9' }}>Octroyer un Bot</h4>
+                <div style={{ display: 'flex', gap: 10 }}>
+                  <select
+                    className="input-field"
+                    value={grantBotId}
+                    onChange={e => setGrantBotId(e.target.value)}
+                    style={{ background: 'white', flex: 1 }}
+                  >
+                    <option value="">Sélectionner un bot...</option>
+                    {bots.map(b => <option key={b.id} value={b.id}>{b.name} - {formatXOF(b.priceCents)}</option>)}
+                  </select>
+                  <button
+                    onClick={() => handleGrantBot(selectedUserDetail.user.id)}
+                    disabled={actionLoading === 'grant_bot' || !grantBotId}
+                    className="btn-press"
+                    style={{
+                      background: '#7C3AED', color: 'white', border: 'none', borderRadius: 10,
+                      padding: '0 16px', fontSize: 12, fontWeight: 700, cursor: (!grantBotId || actionLoading === 'grant_bot') ? 'not-allowed' : 'pointer',
+                      display: 'flex', alignItems: 'center', gap: 4, whiteSpace: 'nowrap',
+                    }}
+                  >
+                    {actionLoading === 'grant_bot' && <Loader2 size={12} style={{ animation: 'spin 0.8s linear' }} />}
+                    Octroyer
                   </button>
                 </div>
               </div>
