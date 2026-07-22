@@ -8,8 +8,8 @@ export async function DELETE(
 ) {
   const { id } = await params;
   const payload = await verifyAuth(req);
-  if (!payload) return { error: unauthorized() };
-  if (!payload.is_admin) return { error: forbidden() };
+  if (!payload) return unauthorized();
+  if (!payload.is_admin) return forbidden();
 
   const db = createAdminClient();
   
