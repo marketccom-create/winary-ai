@@ -22,13 +22,22 @@ export async function GET(req: Request) {
 
   if (dbErr) return NextResponse.json({ error: dbErr.message }, { status: 500 });
 
-  // Enrich with referral count
+  // Enrich with referral count and commissions earned
   const enriched = await Promise.all(
     (users || []).map(async (u: any) => {
       const { count } = await db
         .from('users')
         .select('id', { count: 'exact', head: true })
         .eq('referred_by_id', u.id);
+        
+      const { data: commissions } = await db
+        .from('transactions')
+        .select('amount_cents')
+        .eq('user_id', u.id)
+        .eq('type', 'REFERRAL_BONUS');
+        
+      const totalCommissions = (commissions || []).reduce((acc: number, curr: any) => acc + curr.amount_cents, 0);
+
       return {
         id: u.id,
         phone: u.phone,
@@ -36,6 +45,7 @@ export async function GET(req: Request) {
         lastName: u.last_name,
         referralCode: u.referral_code,
         balanceCents: u.balance_cents,
+        commissionsCents: totalCommissions,
         isAdmin: u.is_admin,
         createdAt: u.created_at,
         referralsCount: count || 0,

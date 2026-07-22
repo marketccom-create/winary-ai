@@ -364,9 +364,11 @@ export default function AdminPage() {
   }
 
   // Filter
-  const filteredUsers = users.filter(u =>
-    u.phone?.includes(search) || u.referralCode?.toLowerCase().includes(search.toLowerCase())
-  );
+  const filteredUsers = users.filter(u => {
+    const term = search.toLowerCase();
+    const fullName = `${u.firstName || ''} ${u.lastName || ''}`.toLowerCase();
+    return u.phone?.includes(term) || u.referralCode?.toLowerCase().includes(term) || fullName.includes(term);
+  });
 
   const pendingPurchasesOnly = pendingPurchases.filter(p => p.status === 'PENDING');
 
@@ -559,7 +561,7 @@ export default function AdminPage() {
                   <Search size={16} style={{ position: 'absolute', left: 14, top: '50%', transform: 'translateY(-50%)', color: '#9CA3AF' }} />
                   <input
                     className="input-field"
-                    placeholder="Rechercher par téléphone ou code..."
+                    placeholder="Rechercher par nom, téléphone ou code..."
                     value={search} onChange={e => setSearch(e.target.value)}
                     style={{ paddingLeft: 40 }}
                   />
@@ -569,7 +571,7 @@ export default function AdminPage() {
                   <table style={{ width: '100%', minWidth: 700, borderCollapse: 'collapse' }}>
                     <thead>
                       <tr style={{ background: '#F9FAFB', borderBottom: '1px solid #E5E7EB' }}>
-                        {['Utilisateur', 'Code Parrainage', 'Filleuls', 'Solde', 'Statut', 'Actions'].map(h => (
+                        {['Utilisateur', 'Code Parrainage', 'Filleuls', 'Solde', 'Commissions', 'Statut', 'Actions'].map(h => (
                           <th key={h} style={{ padding: '12px 16px', textAlign: 'left', fontSize: 12, fontWeight: 700, color: '#6B7280' }}>
                             {h}
                           </th>
@@ -591,6 +593,9 @@ export default function AdminPage() {
                           </td>
                           <td style={{ padding: '12px 16px', fontSize: 13, fontWeight: 700, color: '#1A56DB' }}>
                             {formatXOF(u.balanceCents || 0)}
+                          </td>
+                          <td style={{ padding: '12px 16px', fontSize: 13, fontWeight: 700, color: '#10B981' }}>
+                            {formatXOF(u.commissionsCents || 0)}
                           </td>
                           <td style={{ padding: '12px 16px' }}>
                             <span className={u.status === 'BLOCKED' ? 'badge-expired' : 'badge-active'} style={{
