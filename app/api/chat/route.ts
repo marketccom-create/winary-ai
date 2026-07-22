@@ -13,6 +13,14 @@ export async function GET(req: Request) {
     .eq('user_id', payload.sub)
     .order('created_at', { ascending: true });
 
+  // Marquer les messages de l'admin comme lus
+  await db
+    .from('support_messages')
+    .update({ is_read: true })
+    .eq('user_id', payload.sub)
+    .eq('sender_role', 'ADMIN')
+    .eq('is_read', false);
+
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
   return NextResponse.json({ messages: data });
 }

@@ -22,6 +22,7 @@ export async function GET(req: Request) {
     { data: activePurchases },
     { count: pendingWithdrawals },
     { data: completedWithdrawals },
+    { count: pendingSupportMessages },
   ] = await Promise.all([
     db.from('users').select('id', { count: 'exact', head: true }),
     db.from('purchases').select('id', { count: 'exact', head: true }).eq('status', 'PENDING'),
@@ -30,6 +31,8 @@ export async function GET(req: Request) {
       .eq('type', 'WITHDRAWAL').eq('status', 'PENDING'),
     db.from('transactions').select('amount_cents')
       .eq('type', 'WITHDRAWAL').eq('status', 'COMPLETED'),
+    db.from('support_messages').select('id', { count: 'exact', head: true })
+      .eq('sender_role', 'USER').eq('is_read', false),
   ]);
 
   const totalRevenueCents = (activePurchases || []).reduce(
@@ -49,5 +52,6 @@ export async function GET(req: Request) {
     totalRevenueCents,
     pendingWithdrawals: pendingWithdrawals || 0,
     totalWithdrawalsCents,
+    pendingSupportMessages: pendingSupportMessages || 0,
   });
 }

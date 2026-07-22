@@ -558,6 +558,12 @@ export default function AdminPage() {
                       fontWeight: 700, borderRadius: 99, padding: '2px 6px',
                     }}>{pendingWithdrawals.length}</span>
                   )}
+                  {key === 'chat' && stats?.pendingSupportMessages > 0 && (
+                    <span style={{
+                      background: '#EF4444', color: 'white', fontSize: 10,
+                      fontWeight: 700, borderRadius: 99, padding: '2px 6px',
+                    }}>{stats.pendingSupportMessages}</span>
+                  )}
                 </div>
               </button>
             ))}

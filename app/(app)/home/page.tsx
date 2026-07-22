@@ -4,7 +4,7 @@ import { useRouter } from 'next/navigation';
 import Image from 'next/image';
 import { Bell, ArrowUpRight, ArrowDownLeft, BookOpen, MessageCircle, ChevronRight, Loader2, X } from 'lucide-react';
 import { useAuthStore, useAppStore, useUIStore } from '@/lib/store';
-import { apiGetBots, apiPurchaseBot, apiWithdraw, apiInitiateDeposit } from '@/lib/api';
+import { apiGetBots, apiPurchaseBot, apiWithdraw, apiInitiateDeposit, apiGetUnreadChatCount } from '@/lib/api';
 import { formatXOF, Bot, MIN_WITHDRAWAL_CENTS, detectCountryFromPhone } from '@/lib/data';
 
 // ─── Deposit Modal ─────────────────────────────────────────────────────────────
@@ -358,10 +358,14 @@ export default function HomePage() {
   const [loadingBots, setLoadingBots] = useState(true);
   const [modal, setModal] = useState<null | 'deposit' | 'withdraw' | { type: 'buy'; bot: Bot }>(null);
   const [buying, setBuying] = useState(false);
+  const [unreadCount, setUnreadCount] = useState(0);
 
   useEffect(() => {
+    if (user) {
+      apiGetUnreadChatCount().then(c => setUnreadCount(c)).catch(() => {});
+    }
     apiGetBots().then(b => { setBots(b as Bot[]); setLoadingBots(false); });
-  }, []);
+  }, [user]);
 
   async function handleBuy(bot: Bot, method: 'BALANCE' | 'SENEPAY') {
     if (!user) return;
@@ -403,13 +407,28 @@ export default function HomePage() {
             WINARY AI
           </span>
         </div>
-        <button style={{
-          background: '#F3F4F6', border: '1px solid #E5E7EB',
-          borderRadius: '50%', width: 38, height: 38,
-          display: 'flex', alignItems: 'center', justifyContent: 'center',
-          cursor: 'pointer', color: '#374151',
-        }}>
+        <button 
+          onClick={() => router.push('/chat')}
+          style={{
+            background: '#F3F4F6', border: '1px solid #E5E7EB',
+            borderRadius: '50%', width: 38, height: 38,
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            cursor: 'pointer', color: '#374151', position: 'relative'
+          }}
+        >
           <Bell size={18} />
+          {unreadCount > 0 && (
+            <span style={{
+              position: 'absolute', top: -2, right: -2,
+              background: '#EF4444', color: 'white',
+              fontSize: 10, fontWeight: 'bold',
+              minWidth: 16, height: 16, borderRadius: '50%',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              padding: '0 4px',
+            }}>
+              {unreadCount}
+            </span>
+          )}
         </button>
       </header>
 

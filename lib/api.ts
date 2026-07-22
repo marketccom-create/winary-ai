@@ -304,6 +304,11 @@ function normalizePurchase(p: any) {
 }
 
 // ─── Chat ──────────────────────────────────────────────────────────────────
+export async function apiGetUnreadChatCount() {
+  const data = await apiFetch<{ count: number }>('/api/chat/unread');
+  return data.count;
+}
+
 export async function apiGetChatMessages() {
   return apiFetch<{ messages: any[] }>('/api/chat');
 }
