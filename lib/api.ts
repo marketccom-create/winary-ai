@@ -353,7 +353,7 @@ export async function apiAdminGetAiSettings() {
   return apiFetch<any>('/api/admin/ai-settings');
 }
 
-export async function apiAdminUpdateAiSettings(data: { knowledge_base: string; is_active: boolean }) {
+export async function apiAdminUpdateAiSettings(data: { knowledge_base: string; is_active: boolean; last_error?: string | null }) {
   return apiFetch<any>('/api/admin/ai-settings', {
     method: 'PUT',
     body: JSON.stringify(data),

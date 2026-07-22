@@ -661,6 +661,31 @@ export default function AdminPage() {
                       </div>
                     </label>
                   </div>
+                  {aiSettings?.last_error && (
+                    <div style={{
+                      background: '#FEF2F2', border: '1px solid #F87171', borderRadius: 8, padding: '12px 16px', marginBottom: 16,
+                      display: 'flex', alignItems: 'center', gap: 10, color: '#B91C1C', fontSize: 13, fontWeight: 600
+                    }}>
+                      <AlertCircle size={20} style={{ flexShrink: 0 }} />
+                      <div style={{ flex: 1 }}>
+                        <div style={{ marginBottom: 2 }}>⚠️ Dernière erreur système (invisible pour les clients) :</div>
+                        <div style={{ fontWeight: 400, fontFamily: 'monospace', fontSize: 12, wordBreak: 'break-word' }}>
+                          {aiSettings.last_error}
+                        </div>
+                      </div>
+                      <button 
+                        onClick={async () => {
+                          const updated = { ...aiSettings, last_error: null };
+                          setAiSettings(updated);
+                          await apiAdminUpdateAiSettings({ knowledge_base: updated.knowledge_base, is_active: updated.is_active });
+                        }}
+                        style={{ background: 'transparent', border: 'none', color: '#B91C1C', cursor: 'pointer', padding: 4 }}
+                        title="Effacer l'erreur"
+                      >
+                        <X size={16} />
+                      </button>
+                    </div>
+                  )}
                   <div style={{ marginBottom: 16 }}>
                     <label style={{ display: 'block', fontSize: 14, fontWeight: 600, color: '#374151', marginBottom: 8 }}>
                       Base de connaissances (Instructions pour l'IA)

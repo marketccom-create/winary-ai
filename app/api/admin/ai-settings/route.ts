@@ -36,7 +36,8 @@ export async function PUT(req: Request) {
     .upsert({
       id: 1,
       knowledge_base: body.knowledge_base,
-      is_active: body.is_active
+      is_active: body.is_active,
+      ...(body.last_error !== undefined && { last_error: body.last_error })
     })
     .select()
     .single();

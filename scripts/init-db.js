@@ -84,6 +84,7 @@ CREATE TABLE IF NOT EXISTS ai_settings (
   id INT PRIMARY KEY DEFAULT 1,
   knowledge_base TEXT NOT NULL DEFAULT '',
   is_active BOOLEAN NOT NULL DEFAULT true,
+  last_error TEXT,
   updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 

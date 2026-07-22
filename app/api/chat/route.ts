@@ -104,34 +104,24 @@ export async function POST(req: Request) {
               content: aiReply.trim(),
               is_read: false,
             });
+            // Effacer l'erreur précédente s'il y en avait une
+            if (aiSettings.last_error) {
+              await db.from('ai_settings').update({ last_error: null }).eq('id', 1);
+            }
           }
         } else {
           const errText = await response.text();
           console.error("OpenRouter API Error:", errText);
-          await db.from('support_messages').insert({
-            user_id: payload.sub,
-            sender_role: 'ADMIN',
-            content: "⚠️ [DEBUG IA] Erreur OpenRouter: " + errText.substring(0, 200),
-            is_read: false,
-          });
+          await db.from('ai_settings').update({ last_error: "Erreur API: " + errText.substring(0, 250) }).eq('id', 1);
         }
       } else {
-        await db.from('support_messages').insert({
-            user_id: payload.sub,
-            sender_role: 'ADMIN',
-            content: "⚠️ [DEBUG IA] La clé API OPENROUTER_API_KEY n'est pas configurée.",
-            is_read: false,
-        });
+        console.error("OpenRouter API Key not configured.");
+        await db.from('ai_settings').update({ last_error: "La clé API OPENROUTER_API_KEY est manquante sur le serveur." }).eq('id', 1);
       }
     }
   } catch (err: any) {
     console.error("AI Logic Error:", err);
-    await db.from('support_messages').insert({
-        user_id: payload.sub,
-        sender_role: 'ADMIN',
-        content: "⚠️ [DEBUG IA] Exception dans le code IA: " + err.message,
-        is_read: false,
-    });
+    await db.from('ai_settings').update({ last_error: "Exception: " + err.message }).eq('id', 1);
   }
   // ────────────────────
 
