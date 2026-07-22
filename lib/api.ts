@@ -185,7 +185,7 @@ export async function apiAdminGetUserDetails(userId: string) {
 
 export async function apiAdminUpdateUser(
   userId: string,
-  patch: { status?: string; balanceCents?: number }
+  patch: { status?: string; balanceCents?: number; aiSupportEnabled?: boolean | null }
 ) {
   return apiFetch<{ success: boolean }>('/api/admin/users', {
     method: 'PATCH',
