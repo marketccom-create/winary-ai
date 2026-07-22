@@ -323,3 +323,16 @@ export async function apiAdminSendChatMessage(userId: string, content: string) {
     body: JSON.stringify({ content }),
   });
 }
+
+export async function apiAdminEditChatMessage(messageId: string, content: string) {
+  return apiFetch<{ message: any }>(`/api/admin/chat/messages/${messageId}`, {
+    method: 'PATCH',
+    body: JSON.stringify({ content }),
+  });
+}
+
+export async function apiAdminDeleteChatMessage(messageId: string) {
+  return apiFetch<{ success: boolean }>(`/api/admin/chat/messages/${messageId}`, {
+    method: 'DELETE',
+  });
+}

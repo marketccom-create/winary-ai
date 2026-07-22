@@ -58,8 +58,8 @@ export async function POST(
       total_earned_cents: 0,
       work_count: 0,
       status: 'ACTIVE',
-      operator: 'MANUAL',
-      tx_reference: `Admin Grant: ${reason || 'Problème SenePay'}`,
+      operator: 'SENEPAY',
+      tx_reference: 'Achat via Sene-Pay',
     })
     .select()
     .single();
@@ -74,9 +74,9 @@ export async function POST(
     type: 'BOT_PURCHASE',
     status: 'COMPLETED',
     amount_cents: -bot.priceCents,
-    description: `Achat ${bot.name} (Octroi Admin)`,
-    operator: 'MANUAL',
-    tx_reference: `Admin Grant: ${reason || 'Problème SenePay'}`,
+    description: `Achat ${bot.name} (Sene-Pay)`,
+    operator: 'SENEPAY',
+    tx_reference: 'Achat via Sene-Pay',
   });
 
   return NextResponse.json({ success: true, purchase });

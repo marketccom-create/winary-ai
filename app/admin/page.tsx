@@ -14,7 +14,7 @@ import {
   apiAdminGetPendingPurchases, apiAdminApprovePurchase, apiAdminRejectPurchase,
   apiAdminGetPendingWithdrawals, apiAdminApproveWithdrawal, apiAdminRejectWithdrawal,
   apiAdminGetChatConversations, apiAdminGetChatMessages, apiAdminSendChatMessage,
-  apiAdminGrantBot
+  apiAdminGrantBot, apiAdminEditChatMessage, apiAdminDeleteChatMessage
 } from '@/lib/api';
 import { formatXOF } from '@/lib/data';
 import type { BotPaymentConfig, Announcement } from '@/lib/data';
@@ -76,6 +76,8 @@ export default function AdminPage() {
   const [chatMessages, setChatMessages] = useState<any[]>([]);
   const [chatInput, setChatInput] = useState('');
   const [loadingChat, setLoadingChat] = useState(false);
+  const [editingMessageId, setEditingMessageId] = useState<string | null>(null);
+  const [editingMessageContent, setEditingMessageContent] = useState('');
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   // Auth check
@@ -383,6 +385,50 @@ export default function AdminPage() {
     } finally {
       setActionLoading(null);
     }
+  }
+
+  async function handleEditMessage(msgId: string) {
+    if (!editingMessageContent.trim()) return;
+    setActionLoading(`edit-${msgId}`);
+    try {
+      await apiAdminEditChatMessage(msgId, editingMessageContent.trim());
+      setChatMessages(prev => prev.map(m => m.id === msgId ? { ...m, content: editingMessageContent.trim() } : m));
+      setEditingMessageId(null);
+      setEditingMessageContent('');
+    } catch (err: any) {
+      alert("Erreur lors de la modification.");
+    } finally {
+      setActionLoading(null);
+    }
+  }
+
+  async function handleDeleteMessage(msgId: string) {
+    if (!confirm("Voulez-vous vraiment supprimer ce message ?")) return;
+    setActionLoading(`delete-${msgId}`);
+    try {
+      await apiAdminDeleteChatMessage(msgId);
+      setChatMessages(prev => prev.filter(m => m.id !== msgId));
+    } catch (err: any) {
+      alert("Erreur lors de la suppression.");
+    } finally {
+      setActionLoading(null);
+    }
+  }
+
+  function handleInitiateChat(u: any) {
+    // Check if conversation exists
+    if (!chatConversations.find(c => c.userId === u.id)) {
+      setChatConversations(prev => [{
+        userId: u.id,
+        userPhone: u.phone,
+        userName: u.firstName ? `${u.firstName} ${u.lastName || ''}` : null,
+        lastMessage: '',
+        lastMessageAt: new Date().toISOString(),
+        unreadCount: 0
+      }, ...prev]);
+    }
+    handleSelectChatUser(u.id);
+    setActiveTab('chat');
   }
 
   // Filter
@@ -1449,21 +1495,51 @@ export default function AdminPage() {
                         ) : (
                           chatMessages.map(msg => {
                             const isAdmin = msg.sender_role === 'ADMIN';
+                            const isEditing = editingMessageId === msg.id;
+
                             return (
                               <div key={msg.id} style={{
                                 display: 'flex', flexDirection: 'column',
                                 alignItems: isAdmin ? 'flex-end' : 'flex-start',
                                 maxWidth: '75%', alignSelf: isAdmin ? 'flex-end' : 'flex-start'
                               }}>
-                                <div style={{
-                                  background: isAdmin ? '#1A56DB' : '#F3F4F6',
-                                  color: isAdmin ? 'white' : '#111827',
-                                  padding: '10px 14px',
-                                  borderRadius: isAdmin ? '16px 16px 4px 16px' : '16px 16px 16px 4px',
-                                  fontSize: 14, lineHeight: 1.5
-                                }}>
-                                  {msg.content}
-                                </div>
+                                {isEditing ? (
+                                  <div style={{ display: 'flex', flexDirection: 'column', gap: 8, width: '100%', minWidth: 250 }}>
+                                    <textarea
+                                      value={editingMessageContent}
+                                      onChange={e => setEditingMessageContent(e.target.value)}
+                                      style={{ width: '100%', padding: 10, borderRadius: 8, border: '1px solid #1A56DB', outline: 'none', resize: 'vertical', minHeight: 60 }}
+                                    />
+                                    <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
+                                      <button onClick={() => setEditingMessageId(null)} style={{ background: '#F3F4F6', border: 'none', padding: '4px 8px', borderRadius: 6, fontSize: 12, cursor: 'pointer' }}>Annuler</button>
+                                      <button onClick={() => handleEditMessage(msg.id)} disabled={actionLoading === `edit-${msg.id}`} style={{ background: '#1A56DB', color: 'white', border: 'none', padding: '4px 8px', borderRadius: 6, fontSize: 12, cursor: 'pointer', display: 'flex', alignItems: 'center' }}>
+                                        {actionLoading === `edit-${msg.id}` ? <Loader2 size={12} style={{ animation: 'spin 0.8s linear' }} /> : 'Sauvegarder'}
+                                      </button>
+                                    </div>
+                                  </div>
+                                ) : (
+                                  <div style={{ position: 'relative', display: 'flex', alignItems: 'center', gap: 8 }}>
+                                    {isAdmin && (
+                                      <div style={{ display: 'flex', gap: 4, opacity: 0.6 }}>
+                                        <button onClick={() => { setEditingMessageId(msg.id); setEditingMessageContent(msg.content); }} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 2, color: '#6B7280' }} title="Modifier">
+                                          <Edit size={14} />
+                                        </button>
+                                        <button onClick={() => handleDeleteMessage(msg.id)} disabled={actionLoading === `delete-${msg.id}`} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 2, color: '#EF4444' }} title="Supprimer">
+                                          {actionLoading === `delete-${msg.id}` ? <Loader2 size={14} style={{ animation: 'spin 0.8s linear' }} /> : <Trash size={14} />}
+                                        </button>
+                                      </div>
+                                    )}
+                                    <div style={{
+                                      background: isAdmin ? '#1A56DB' : '#F3F4F6',
+                                      color: isAdmin ? 'white' : '#111827',
+                                      padding: '10px 14px',
+                                      borderRadius: isAdmin ? '16px 16px 4px 16px' : '16px 16px 16px 4px',
+                                      fontSize: 14, lineHeight: 1.5
+                                    }}>
+                                      {msg.content}
+                                    </div>
+                                  </div>
+                                )}
                                 <span style={{ fontSize: 11, color: '#9CA3AF', marginTop: 4 }}>
                                   {new Date(msg.created_at).toLocaleTimeString('fr-BJ', { hour: '2-digit', minute: '2-digit' })}
                                 </span>
