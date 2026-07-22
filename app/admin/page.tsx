@@ -82,7 +82,7 @@ export default function AdminPage() {
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   // AI state
-  const [aiSettings, setAiSettings] = useState<{ knowledge_base: string; is_active: boolean } | null>(null);
+  const [aiSettings, setAiSettings] = useState<{ knowledge_base: string; is_active: boolean; last_error?: string | null } | null>(null);
   const [savingAi, setSavingAi] = useState(false);
 
   // Auth check
