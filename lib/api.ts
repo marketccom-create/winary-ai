@@ -347,3 +347,15 @@ export async function apiAdminDeleteChatMessage(messageId: string) {
     method: 'DELETE',
   });
 }
+
+// ─── AI Settings ──────────────────────────────────────────────────────────────
+export async function apiAdminGetAiSettings() {
+  return apiFetch<any>('/api/admin/ai-settings');
+}
+
+export async function apiAdminUpdateAiSettings(data: { knowledge_base: string; is_active: boolean }) {
+  return apiFetch<any>('/api/admin/ai-settings', {
+    method: 'PUT',
+    body: JSON.stringify(data),
+  });
+}
