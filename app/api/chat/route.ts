@@ -88,7 +88,10 @@ export async function POST(req: Request) {
           body: JSON.stringify({
             model: process.env.OPENROUTER_MODEL || 'mistralai/mistral-7b-instruct:free',
             messages: [
-              { role: 'system', content: aiSettings.knowledge_base || 'Tu es un assistant.' },
+              { 
+                role: 'system', 
+                content: (aiSettings.knowledge_base || 'Tu es un assistant.') + '\n\nIMPORTANT: Tu discutes par chat (SMS). Tes réponses doivent être TRES COURTES et NATURELLES. Maximum 1 ou 2 phrases courtes (pas plus de 30 mots au total). N\'utilise jamais de tableaux, ni de puces, ni de longs textes. Parle comme une vraie commerciale pressée mais polie.' 
+              },
               ...chatHistory
             ]
           })
