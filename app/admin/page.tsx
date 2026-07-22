@@ -605,6 +605,7 @@ export default function AdminPage() {
                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12, marginBottom: 24 }}>
                   <StatCard label="Utilisateurs" value={stats?.totalUsers || 0} icon="👥" color="#1A56DB" />
                   <StatCard label="Total Revenu Approuvé" value={formatXOF(stats?.totalRevenueCents || 0)} icon="💰" color="#15803D" />
+                  <StatCard label="Total Retraits Approuvés" value={formatXOF(stats?.totalWithdrawalsCents || 0)} icon="💸" color="#10B981" />
                   <StatCard label="Achats en attente SSD" value={pendingPurchasesOnly.length} icon="🤖" color="#7C3AED" onClick={() => setActiveTab('pending')} />
                   <StatCard label="Retraits en attente" value={stats?.pendingWithdrawals || 0} icon="⏳" color="#D97706" onClick={() => setActiveTab('withdrawals')} />
                 </div>
@@ -691,6 +692,16 @@ export default function AdminPage() {
                             </span>
                           </td>
                           <td style={{ padding: '12px 16px', display: 'flex', gap: 8 }}>
+                            <button
+                              onClick={() => handleInitiateChat(u)}
+                              style={{
+                                background: '#F3F4F6', border: 'none', borderRadius: 8,
+                                padding: '6px 12px', fontSize: 12, fontWeight: 600,
+                                cursor: 'pointer', color: '#4B5563',
+                              }}
+                            >
+                              Contacter
+                            </button>
                             <button
                               onClick={() => handleOpenUserDetails(u.id)}
                               style={{
