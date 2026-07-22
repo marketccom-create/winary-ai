@@ -254,6 +254,12 @@ export async function apiAdminRejectPurchase(purchaseId: string, reason: string)
   });
 }
 
+export async function apiAdminRevokePurchase(purchaseId: string) {
+  return apiFetch<{ success: boolean }>(`/api/admin/purchases/${purchaseId}/revoke`, {
+    method: 'DELETE',
+  });
+}
+
 export async function apiAdminGetPendingWithdrawals() {
   return apiFetch<any[]>('/api/admin/withdrawals');
 }

@@ -14,7 +14,7 @@ import {
   apiAdminGetPendingPurchases, apiAdminApprovePurchase, apiAdminRejectPurchase,
   apiAdminGetPendingWithdrawals, apiAdminApproveWithdrawal, apiAdminRejectWithdrawal,
   apiAdminGetChatConversations, apiAdminGetChatMessages, apiAdminSendChatMessage,
-  apiAdminGrantBot, apiAdminEditChatMessage, apiAdminDeleteChatMessage
+  apiAdminGrantBot, apiAdminEditChatMessage, apiAdminDeleteChatMessage, apiAdminRevokePurchase
 } from '@/lib/api';
 import { formatXOF } from '@/lib/data';
 import type { BotPaymentConfig, Announcement } from '@/lib/data';
@@ -209,6 +209,24 @@ export default function AdminPage() {
       await loadData();
       if (selectedUserDetail) {
         // Refresh detail
+        const details = await apiAdminGetUserDetails(selectedUserDetail.user.id);
+        setSelectedUserDetail(details);
+      }
+    } catch (err: any) {
+      alert(err.message);
+    } finally {
+      setActionLoading(null);
+    }
+  }
+
+  async function handleRevokePurchase(pid: string) {
+    if (!confirm("Voulez-vous vraiment révoquer ce bot ? Cela le supprimera définitivement.")) return;
+    setActionLoading(pid);
+    try {
+      await apiAdminRevokePurchase(pid);
+      alert('Bot révoqué avec succès !');
+      await loadData();
+      if (selectedUserDetail) {
         const details = await apiAdminGetUserDetails(selectedUserDetail.user.id);
         setSelectedUserDetail(details);
       }
@@ -1396,6 +1414,18 @@ export default function AdminPage() {
                                     Rejeter
                                   </button>
                                 </div>
+                              )}
+                              {p.status === 'ACTIVE' && (
+                                <button
+                                  onClick={() => handleRevokePurchase(p.id)}
+                                  disabled={actionLoading === p.id}
+                                  style={{
+                                    background: '#FFF1F2', border: '1px solid #FECACA', borderRadius: 6,
+                                    padding: '3px 8px', fontSize: 10, fontWeight: 700, cursor: 'pointer', color: '#B91C1C',
+                                  }}
+                                >
+                                  {actionLoading === p.id ? '...' : 'Révoquer'}
+                                </button>
                               )}
                             </td>
                           </tr>
