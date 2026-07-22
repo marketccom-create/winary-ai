@@ -86,7 +86,7 @@ export async function POST(req: Request) {
             'Content-Type': 'application/json'
           },
           body: JSON.stringify({
-            model: 'google/gemma-2-9b-it:free',
+            model: process.env.OPENROUTER_MODEL || 'mistralai/mistral-7b-instruct:free',
             messages: [
               { role: 'system', content: aiSettings.knowledge_base || 'Tu es un assistant.' },
               ...chatHistory
