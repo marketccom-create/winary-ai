@@ -35,6 +35,26 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: 'Minimum 3 000 XOF' }, { status: 400 });
   }
 
+  // Schedule restriction (Monday to Friday, 8h to 21h)
+  const now = new Date();
+  const formatter = new Intl.DateTimeFormat('en-US', {
+    timeZone: 'Africa/Porto-Novo',
+    weekday: 'short',
+    hour: 'numeric',
+    hour12: false,
+  });
+  const parts = formatter.formatToParts(now);
+  const weekday = parts.find(p => p.type === 'weekday')?.value; // 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'
+  const hourStr = parts.find(p => p.type === 'hour')?.value;
+  const hour = parseInt(hourStr || '0', 10);
+
+  if (weekday === 'Sat' || weekday === 'Sun') {
+    return NextResponse.json({ error: 'Les retraits ne sont pas possibles les week-ends.' }, { status: 400 });
+  }
+  if (hour < 8 || hour >= 21) {
+    return NextResponse.json({ error: 'Les retraits sont uniquement ouverts du Lundi au Vendredi, de 08h à 21h.' }, { status: 400 });
+  }
+
   const db = createAdminClient();
   const { data: user } = await db
     .from('users')

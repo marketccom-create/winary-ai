@@ -51,13 +51,21 @@ export async function POST(
   }
 
   // Fallback if RPC is not yet installed
-  // Update purchase to IDLE state (null next_allowed_at)
-  await db.from('purchases').update({
+  // Atomic update using optimistic locking to prevent double-claiming
+  const { data: updatedPurchase, error: updateErr } = await db.from('purchases').update({
     last_worked_at: null,
     next_allowed_at: null,
     total_earned_cents: purchase.total_earned_cents + earned,
     work_count: purchase.work_count + 1,
-  }).eq('id', purchaseId);
+  })
+    .eq('id', purchaseId)
+    .eq('next_allowed_at', purchase.next_allowed_at)
+    .select()
+    .single();
+
+  if (updateErr || !updatedPurchase) {
+    return NextResponse.json({ error: 'Déjà récolté ou conflit.' }, { status: 400 });
+  }
 
   // Update user balance
   const { data: user } = await db

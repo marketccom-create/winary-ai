@@ -61,7 +61,7 @@ export default function GuidePage() {
           </p>
           <ul style={{ margin: 0, paddingLeft: 18, display: 'flex', flexDirection: 'column', gap: 6 }}>
             <li><strong>Recharge</strong> : Paiement instantané via code SSD ou vers un numéro marchand. Validation automatique après achat.</li>
-            <li><strong>Retrait</strong> : Le minimum de retrait est fixé à <strong>3 000 XOF</strong>. Les retraits sont traités par l'administration dans un délai très court.</li>
+            <li><strong>Retrait</strong> : Le minimum de retrait est fixé à <strong>3 000 XOF</strong>. Les retraits sont uniquement possibles <strong>du Lundi au Vendredi, de 08h à 21h</strong>.</li>
           </ul>
         </div>
       )
