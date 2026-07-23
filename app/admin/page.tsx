@@ -12,7 +12,7 @@ import {
   apiAdminGetAnnouncements, apiAdminUpdateAnnouncement, apiAdminDeleteAnnouncement,
   apiGetBots, apiGetBotPaymentConfigs, apiAdminUpdateBotPaymentConfigs,
   apiAdminGetPendingPurchases, apiAdminApprovePurchase, apiAdminRejectPurchase,
-  apiAdminGetPendingWithdrawals, apiAdminApproveWithdrawal, apiAdminRejectWithdrawal,
+  apiAdminGetPendingWithdrawals, apiAdminApproveWithdrawal, apiAdminRejectWithdrawal, apiAdminDeleteWithdrawal,
   apiAdminGetChatConversations, apiAdminGetChatMessages, apiAdminSendChatMessage,
   apiAdminGrantBot, apiAdminEditChatMessage, apiAdminDeleteChatMessage, apiAdminRevokePurchase,
   apiAdminGetAiSettings, apiAdminUpdateAiSettings
@@ -270,6 +270,19 @@ export default function AdminPage() {
       await apiAdminRejectWithdrawal(txId, reason.trim());
       alert('Retrait rejeté.');
       await loadData();
+    } catch (err: any) {
+      alert(err.message);
+    } finally {
+      setActionLoading(null);
+    }
+  }
+
+  async function handleDeleteWithdrawal(txId: string) {
+    if (!confirm('Supprimer définitivement ce retrait rejeté de l\'historique ?')) return;
+    setActionLoading('del_' + txId);
+    try {
+      await apiAdminDeleteWithdrawal(txId);
+      setPendingWithdrawals(prev => prev.filter(w => w.id !== txId));
     } catch (err: any) {
       alert(err.message);
     } finally {
@@ -1015,13 +1028,33 @@ export default function AdminPage() {
                                   </button>
                                 </>
                               ) : (
-                                <span style={{
-                                  padding: '4px 10px', borderRadius: 99, fontSize: 11, fontWeight: 700,
-                                  background: w.status === 'COMPLETED' ? '#DCFCE7' : '#FEE2E2',
-                                  color: w.status === 'COMPLETED' ? '#15803D' : '#B91C1C',
-                                }}>
-                                  {w.status === 'COMPLETED' ? 'Approuvé' : 'Rejeté'}
-                                </span>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                                  <span style={{
+                                    padding: '4px 10px', borderRadius: 99, fontSize: 11, fontWeight: 700,
+                                    background: w.status === 'COMPLETED' ? '#DCFCE7' : '#FEE2E2',
+                                    color: w.status === 'COMPLETED' ? '#15803D' : '#B91C1C',
+                                  }}>
+                                    {w.status === 'COMPLETED' ? 'Approuvé' : 'Rejeté'}
+                                  </span>
+                                  {w.status === 'FAILED' && (
+                                    <button
+                                      onClick={() => handleDeleteWithdrawal(w.id)}
+                                      disabled={actionLoading === 'del_' + w.id}
+                                      title="Supprimer de l'historique"
+                                      style={{
+                                        background: '#FEE2E2', border: 'none', borderRadius: 6,
+                                        padding: '4px 8px', fontSize: 11, fontWeight: 700,
+                                        cursor: 'pointer', color: '#DC2626',
+                                        display: 'flex', alignItems: 'center', gap: 3,
+                                      }}
+                                    >
+                                      {actionLoading === 'del_' + w.id
+                                        ? <Loader2 size={10} style={{ animation: 'spin 0.8s linear infinite' }} />
+                                        : <Trash size={10} />}
+                                      Supprimer
+                                    </button>
+                                  )}
+                                </div>
                               )}
                             </td>
                           </tr>

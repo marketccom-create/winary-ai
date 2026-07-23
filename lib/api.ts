@@ -289,6 +289,14 @@ export async function apiAdminRejectWithdrawal(transactionId: string, reason: st
   });
 }
 
+export async function apiAdminDeleteWithdrawal(transactionId: string) {
+  return apiFetch<{ success: boolean }>('/api/admin/withdrawals', {
+    method: 'DELETE',
+    body: JSON.stringify({ transactionId }),
+  });
+}
+
+
 export async function apiAdminUpdateBotPaymentConfigs(configs: BotPaymentConfig[]) {
   return apiFetch<{ success: boolean }>('/api/admin/bots', {
     method: 'PUT',

@@ -118,3 +118,41 @@ export async function POST(req: Request) {
 
   return NextResponse.json({ success: true });
 }
+
+// DELETE /api/admin/withdrawals — supprimer un retrait rejeté de l'historique
+export async function DELETE(req: Request) {
+  const { error } = await requireAdmin(req);
+  if (error) return error;
+
+  const { transactionId } = await req.json();
+  if (!transactionId) {
+    return NextResponse.json({ error: 'transactionId manquant' }, { status: 400 });
+  }
+
+  const db = createAdminClient();
+
+  // Vérifier que c'est bien un retrait FAILED avant suppression
+  const { data: tx, error: findErr } = await db
+    .from('transactions')
+    .select('id, type, status')
+    .eq('id', transactionId)
+    .single();
+
+  if (findErr || !tx) {
+    return NextResponse.json({ error: 'Transaction introuvable' }, { status: 404 });
+  }
+
+  if (tx.type !== 'WITHDRAWAL' || tx.status !== 'FAILED') {
+    return NextResponse.json({ error: 'Seuls les retraits rejetés peuvent être supprimés' }, { status: 400 });
+  }
+
+  const { error: deleteErr } = await db
+    .from('transactions')
+    .delete()
+    .eq('id', transactionId);
+
+  if (deleteErr) return NextResponse.json({ error: deleteErr.message }, { status: 500 });
+
+  return NextResponse.json({ success: true });
+}
+
