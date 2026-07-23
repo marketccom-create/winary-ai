@@ -11,7 +11,7 @@ export async function GET(req: Request) {
   const db = createAdminClient();
   const { data: configs } = await db.from('bot_payment_configs').select('*');
 
-  const bots = BOTS.map(enrichBot);
+  const bots = BOTS.map(bot => enrichBot(bot));
 
   return NextResponse.json({ bots, configs: configs || [] });
 }
