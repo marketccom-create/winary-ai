@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { createAdminClient } from '@/lib/supabase';
 import { verifyAuth, unauthorized } from '@/lib/auth';
-import { BOTS, VALIDITY_DAYS, REFERRAL_RATE } from '@/lib/data';
+import { BOTS, VALIDITY_DAYS, REFERRAL_RATE, enrichBot } from '@/lib/data';
 import { createCheckoutSession } from '@/lib/senepay';
 
 // GET /api/purchases — mes achats
@@ -18,12 +18,26 @@ export async function GET(req: Request) {
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
 
-  // Map snake_case → camelCase
-  const purchases = (data || []).map(mapPurchase);
+  const purchases = (data || []).map(p => ({
+    id: p.id,
+    botId: p.bot_id,
+    botName: p.bot_name,
+    pricePaidCents: p.price_paid_cents,
+    purchasedAt: p.purchased_at,
+    expiresAt: p.expires_at,
+    lastWorkedAt: p.last_worked_at,
+    nextAllowedAt: p.next_allowed_at,
+    totalEarnedCents: p.total_earned_cents,
+    workCount: p.work_count,
+    status: p.status,
+    operator: p.operator,
+    txReference: p.tx_reference,
+  }));
+
   return NextResponse.json({ purchases });
 }
 
-// POST /api/purchases — créer un achat (solde ou Sene-Pay)
+// POST /api/purchases — acheter un bot
 export async function POST(req: Request) {
   const payload = await verifyAuth(req);
   if (!payload) return unauthorized();
@@ -33,8 +47,9 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: 'Champs manquants' }, { status: 400 });
   }
 
-  const bot = BOTS.find(b => b.id === botId);
-  if (!bot) return NextResponse.json({ error: 'Bot introuvable' }, { status: 404 });
+  const rawBot = BOTS.find(b => b.id === botId);
+  if (!rawBot) return NextResponse.json({ error: 'Bot introuvable' }, { status: 404 });
+  const bot = enrichBot(rawBot);
 
   const db = createAdminClient();
   const now = new Date();

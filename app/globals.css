@@ -351,3 +351,71 @@ html, body {
     flex: 1 !important;
   }
 }
+
+/* ════════════════════════════════════════════════════════════════
+   PROMOTION FLASH VISUAL & ANIMATIONS
+   ════════════════════════════════════════════════════════════════ */
+@keyframes pulseGlow {
+  0% { box-shadow: 0 0 12px rgba(239, 68, 68, 0.35), 0 0 24px rgba(249, 115, 22, 0.2); }
+  50% { box-shadow: 0 0 22px rgba(239, 68, 68, 0.65), 0 0 36px rgba(245, 158, 11, 0.45); }
+  100% { box-shadow: 0 0 12px rgba(239, 68, 68, 0.35), 0 0 24px rgba(249, 115, 22, 0.2); }
+}
+
+@keyframes flameBounce {
+  0%, 100% { transform: translateY(0) scale(1); }
+  50% { transform: translateY(-3px) scale(1.1); }
+}
+
+@keyframes discountPulse {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.05); }
+}
+
+@keyframes shimmerBanner {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+.promo-banner {
+  position: relative;
+  background: linear-gradient(135deg, #DC2626 0%, #EA580C 50%, #D97706 100%);
+  border-radius: 18px;
+  padding: 18px 20px;
+  margin: 0 16px 20px;
+  color: white;
+  overflow: hidden;
+  border: 1.5px solid rgba(255, 255, 255, 0.3);
+  animation: pulseGlow 3s infinite ease-in-out;
+}
+
+.promo-banner::before {
+  content: '';
+  position: absolute;
+  top: 0; left: -100%; width: 50%; height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.25), transparent);
+  transform: skewX(-20deg);
+  animation: shimmerBanner 4s infinite;
+}
+
+.promo-flame-icon {
+  display: inline-block;
+  animation: flameBounce 1.5s infinite ease-in-out;
+}
+
+.promo-badge-pulse {
+  animation: discountPulse 2s infinite ease-in-out;
+}
+
+.promo-card-glow {
+  border: 2px solid #F87171 !important;
+  background: linear-gradient(180deg, #FEF2F2 0%, #FFFFFF 100%) !important;
+  animation: pulseGlow 3s infinite ease-in-out;
+}
+
+.strike-price {
+  text-decoration: line-through;
+  color: #9CA3AF;
+  font-size: 13px;
+  font-weight: 600;
+}
+

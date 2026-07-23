@@ -23,13 +23,24 @@ function authHeaders(): HeadersInit {
   };
 }
 
+import { useAuthStore } from './store';
+
 async function apiFetch<T>(url: string, options?: RequestInit): Promise<T> {
   const res = await fetch(url, {
     ...options,
     headers: { ...authHeaders(), ...(options?.headers || {}) },
   });
   const json = await res.json();
-  if (!res.ok) throw new Error(json.error || 'Erreur serveur');
+  if (!res.ok) {
+    if (res.status === 401) {
+      // Clear token globally if we are unauthorized
+      useAuthStore.getState().logout();
+      if (typeof window !== 'undefined') {
+        window.location.href = '/login';
+      }
+    }
+    throw new Error(json.error || 'Erreur serveur');
+  }
   return json as T;
 }
 

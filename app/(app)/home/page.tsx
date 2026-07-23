@@ -5,7 +5,334 @@ import Image from 'next/image';
 import { Bell, ArrowUpRight, ArrowDownLeft, BookOpen, MessageCircle, ChevronRight, Loader2, X } from 'lucide-react';
 import { useAuthStore, useAppStore, useUIStore } from '@/lib/store';
 import { apiGetBots, apiPurchaseBot, apiWithdraw, apiInitiateDeposit, apiGetUnreadChatCount } from '@/lib/api';
-import { formatXOF, Bot, MIN_WITHDRAWAL_CENTS, detectCountryFromPhone } from '@/lib/data';
+import { formatXOF, Bot, MIN_WITHDRAWAL_CENTS, detectCountryFromPhone, getBotPromo, formatCountdown, GAM_4_PROMO } from '@/lib/data';
+
+// ─── Promo Countdown Hook ───────────────────────────────────────────────────────
+function usePromoTimer(targetTimeIso: string | null | undefined) {
+  const [remainingMs, setRemainingMs] = useState(0);
+
+  useEffect(() => {
+    if (!targetTimeIso) {
+      setRemainingMs(0);
+      return;
+    }
+    const targetMs = new Date(targetTimeIso).getTime();
+    const update = () => {
+      setRemainingMs(Math.max(0, targetMs - Date.now()));
+    };
+    update();
+    const interval = setInterval(update, 1000);
+    return () => clearInterval(interval);
+  }, [targetTimeIso]);
+
+  return remainingMs;
+}
+
+// ─── Gam 4 Promo Banner ─────────────────────────────────────────────────────────
+function Gam4PromoBanner({ bot, onBuy }: { bot?: Bot; onBuy: (bot: Bot) => void }) {
+  const promo = getBotPromo('gam-4');
+  const isActive = promo?.status === 'ACTIVE';
+  const isUpcoming = promo?.status === 'UPCOMING';
+
+  const targetIso = isActive ? promo?.endTime : (isUpcoming ? promo?.startTime : null);
+  const remainingMs = usePromoTimer(targetIso);
+
+  if (!isActive && !isUpcoming) return null;
+
+  return (
+    <div className="promo-banner fade-in">
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+          <span className="promo-flame-icon" style={{ fontSize: 24 }}>🔥</span>
+          <span style={{ fontSize: 14, fontWeight: 800, textTransform: 'uppercase', letterSpacing: 0.5, fontFamily: 'Space Grotesk, sans-serif' }}>
+            {isActive ? 'VENTE FLASH : GAM 4' : 'PROMO GAM 4 BIENTÔT !'}
+          </span>
+        </div>
+        <div className="promo-badge-pulse" style={{
+          background: '#FEF08A', color: '#854D0E',
+          padding: '3px 10px', borderRadius: 99,
+          fontSize: 11, fontWeight: 800, border: '1px solid #FDE047'
+        }}>
+          -37.5% OFF
+        </div>
+      </div>
+
+      <p style={{ fontSize: 12, opacity: 0.95, margin: '0 0 12px', lineHeight: 1.4 }}>
+        {isActive
+          ? 'Profitez d\'une réduction exceptionnelle sur le bot Gam 4 avant la fin du temps imparti !'
+          : 'La promotion sur le bot Gam 4 commence très bientôt à 08h00 !'}
+      </p>
+
+      {/* Pricing & Countdown Row */}
+      <div style={{
+        background: 'rgba(0, 0, 0, 0.25)',
+        backdropFilter: 'blur(8px)',
+        borderRadius: 14,
+        padding: '12px 14px',
+        display: 'flex',
+        alignItems: 'center',
+        justify: 'space-between',
+        marginBottom: 14,
+        border: '1px solid rgba(255, 255, 255, 0.2)'
+      }}>
+        <div>
+          <div style={{ fontSize: 11, textTransform: 'uppercase', opacity: 0.8, fontWeight: 600 }}>Prix promotionnel</div>
+          <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, marginTop: 2 }}>
+            <span className="strike-price" style={{ color: 'rgba(255, 255, 255, 0.7)', fontSize: 13, textDecoration: 'line-through' }}>
+              80 000 XOF
+            </span>
+            <span style={{ fontSize: 20, fontWeight: 900, color: '#FEF08A', fontFamily: 'Space Grotesk, sans-serif' }}>
+              50 000 XOF
+            </span>
+          </div>
+        </div>
+
+        <div style={{ textAlign: 'right' }}>
+          <div style={{ fontSize: 10, textTransform: 'uppercase', opacity: 0.8, fontWeight: 700 }}>
+            {isActive ? 'Temps restant' : 'Démarre dans'}
+          </div>
+          <div style={{
+            fontSize: 18, fontWeight: 900, fontFamily: 'monospace',
+            letterSpacing: 1, color: '#FFFFFF', marginTop: 2,
+            background: 'rgba(0,0,0,0.3)', padding: '2px 8px', borderRadius: 6
+          }}>
+            {formatCountdown(remainingMs)}
+          </div>
+        </div>
+      </div>
+
+      {bot && (
+        <button
+          onClick={() => onBuy(bot)}
+          className="btn-press"
+          style={{
+            width: '100%', height: 44,
+            background: 'linear-gradient(135deg, #FEF08A, #FACC15)',
+            color: '#713F12', border: 'none', borderRadius: 12,
+            fontSize: 14, fontWeight: 800, cursor: 'pointer',
+            display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
+            fontFamily: 'Space Grotesk, sans-serif',
+            boxShadow: '0 4px 14px rgba(0,0,0,0.2)'
+          }}
+        >
+          <span>🔥 PROFITER DE L'OFFRE (50 000 XOF)</span>
+        </button>
+      )}
+    </div>
+  );
+}
+
+// ─── Deposit Modal ─────────────────────────────────────────────────────────────
+// (DepositModal unchanged)
+
+// ─── Purchase Confirm Modal (SSD Codes) ──────────────────────────────────────────
+function PurchaseModal({ bot, balanceCents, onClose, onConfirm, buying }: {
+  bot: Bot;
+  balanceCents: number;
+  onClose: () => void;
+  onConfirm: (bot: Bot, method: 'BALANCE' | 'SENEPAY') => void;
+  buying: boolean;
+}) {
+  const [method, setMethod] = useState<'balance' | 'senepay'>(
+    balanceCents >= bot.priceCents ? 'balance' : 'senepay'
+  );
+
+  return (
+    <div className="modal-overlay" onClick={onClose}>
+      <div className="modal-sheet slide-up" onClick={e => e.stopPropagation()} style={{ maxHeight: '90dvh', overflowY: 'auto' }}>
+        <div className="modal-handle" />
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4 }}>
+          <h2 style={{ fontSize: 18, fontWeight: 700, margin: 0, fontFamily: 'Space Grotesk, sans-serif' }}>
+            Activer {bot.name}
+          </h2>
+          {bot.isPromo && (
+            <span style={{ background: '#FEE2E2', color: '#DC2626', fontSize: 11, fontWeight: 800, padding: '2px 8px', borderRadius: 99, border: '1px solid #FCA5A5' }}>
+              🔥 PROMO FLASH
+            </span>
+          )}
+        </div>
+
+        <p style={{ color: '#6B7280', fontSize: 12, margin: '0 0 16px' }}>
+          {bot.isPromo ? (
+            <span>
+              Offre Flash : <span style={{ textDecoration: 'line-through', color: '#9CA3AF' }}>{formatXOF(bot.originalPriceCents!)}</span>{' '}
+              <strong style={{ color: '#DC2626', fontSize: 14 }}>{formatXOF(bot.priceCents)}</strong>
+            </span>
+          ) : (
+            `Sélectionnez votre mode de paiement pour ${formatXOF(bot.priceCents)}`
+          )}
+        </p>
+
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginBottom: 20 }}>
+          {/* Balance Payment (if user has enough) */}
+          <button
+            onClick={() => setMethod('balance')}
+            disabled={balanceCents < bot.priceCents}
+            style={{
+              width: '100%', height: 56,
+              background: method === 'balance' ? '#EFF6FF' : '#F9FAFB',
+              border: `2px solid ${method === 'balance' ? '#1A56DB' : '#E5E7EB'}`,
+              borderRadius: 12, cursor: balanceCents < bot.priceCents ? 'not-allowed' : 'pointer',
+              display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 16px',
+              opacity: balanceCents < bot.priceCents ? 0.6 : 1,
+            }}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+              <span style={{ fontSize: 20 }}>💳</span>
+              <div style={{ textAlign: 'left' }}>
+                <div style={{ fontSize: 13, fontWeight: 700, color: '#374151' }}>Payer avec mon solde</div>
+                <div style={{ fontSize: 11, color: '#6B7280' }}>Disponible: {formatXOF(balanceCents)}</div>
+              </div>
+            </div>
+            {method === 'balance' && <span style={{ color: '#1A56DB', fontWeight: 'bold' }}>✓</span>}
+          </button>
+
+          {/* Sene-Pay Checkout */}
+          <button
+            onClick={() => setMethod('senepay')}
+            style={{
+              width: '100%', height: 56,
+              background: method === 'senepay' ? '#EFF6FF' : '#F9FAFB',
+              border: `2px solid ${method === 'senepay' ? '#1A56DB' : '#E5E7EB'}`,
+              borderRadius: 12, cursor: 'pointer',
+              display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 16px',
+            }}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+              <span style={{ fontSize: 20 }}>⚡</span>
+              <div style={{ textAlign: 'left' }}>
+                <div style={{ fontSize: 13, fontWeight: 700, color: '#374151' }}>Sene-Pay (Mobile Money)</div>
+                <div style={{ fontSize: 11, color: '#6B7280' }}>Wave, Orange, MTN, Moov, etc.</div>
+              </div>
+            </div>
+            {method === 'senepay' && <span style={{ color: '#1A56DB', fontWeight: 'bold' }}>✓</span>}
+          </button>
+        </div>
+
+        <div style={{ display: 'flex', gap: 10 }}>
+          <button onClick={onClose} style={{
+            flex: 1, height: 48, background: '#F3F4F6', border: '1px solid #E5E7EB',
+            borderRadius: 12, fontSize: 13, fontWeight: 600, cursor: 'pointer', color: '#374151',
+          }}>Annuler</button>
+          <button
+            onClick={() => onConfirm(bot, method.toUpperCase() as 'BALANCE' | 'SENEPAY')}
+            className="btn-press"
+            disabled={buying}
+            style={{
+              flex: 2, height: 48,
+              background: buying ? '#93C5FD' : (bot.isPromo ? 'linear-gradient(135deg, #DC2626, #EA580C)' : 'linear-gradient(135deg, #1A56DB, #1D4ED8)'),
+              color: 'white', border: 'none', borderRadius: 12,
+              fontSize: 13, fontWeight: 700, cursor: buying ? 'not-allowed' : 'pointer',
+              display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8
+            }}
+          >
+            {buying ? <Loader2 size={16} style={{ animation: 'spin 0.8s linear infinite' }} /> : `Payer ${formatXOF(bot.priceCents)}`}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── Bot Card ──────────────────────────────────────────────────────────────────
+function BotCard({ bot, onBuy }: { bot: Bot; onBuy: () => void }) {
+  const isPromo = bot.isPromo || (bot.id === 'gam-4' && getBotPromo('gam-4')?.status === 'ACTIVE');
+  const promo = getBotPromo(bot.id);
+  const remainingMs = usePromoTimer(isPromo ? promo?.endTime : null);
+
+  return (
+    <div className={`bot-card card-hover fade-in ${isPromo ? 'promo-card-glow' : ''}`} style={{ position: 'relative' }}>
+      {isPromo && (
+        <div className="promo-badge-pulse" style={{
+          position: 'absolute', top: 12, right: 12,
+          background: 'linear-gradient(135deg, #DC2626, #EA580C)',
+          color: 'white', fontSize: 10, fontWeight: 800,
+          padding: '4px 10px', borderRadius: 99,
+          boxShadow: '0 2px 8px rgba(220, 38, 38, 0.4)',
+          display: 'flex', alignItems: 'center', gap: 4
+        }}>
+          <span>🔥</span> PROMO -37.5%
+        </div>
+      )}
+
+      <div style={{ display: 'flex', gap: 14, marginBottom: 14 }}>
+        {/* Robot image */}
+        <div style={{
+          width: 72, height: 72, borderRadius: 12, overflow: 'hidden',
+          background: isPromo ? 'linear-gradient(135deg, #FEF2F2, #FEE2E2)' : 'linear-gradient(135deg, #EFF6FF, #DBEAFE)',
+          flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center',
+          border: isPromo ? '1.5px solid #FCA5A5' : '1.5px solid #BFDBFE', fontSize: 36,
+        }}>🤖</div>
+
+        {/* Stats */}
+        <div style={{ flex: 1, paddingRight: isPromo ? 60 : 0 }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 3 }}>
+            <span style={{ fontSize: 12, color: '#9CA3AF' }}>Revenu du travail</span>
+            <span style={{ fontSize: 12, fontWeight: 700, color: '#1A56DB' }}>{formatXOF(bot.workRevenueCents)}</span>
+          </div>
+          <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 3 }}>
+            <span style={{ fontSize: 12, color: '#9CA3AF' }}>Revenus quotidiens</span>
+            <span style={{ fontSize: 12, fontWeight: 700, color: '#1A56DB' }}>{formatXOF(bot.dailyRevenueCents)}</span>
+          </div>
+          <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 3 }}>
+            <span style={{ fontSize: 12, color: '#9CA3AF' }}>Période de validité</span>
+            <span style={{ fontSize: 12, fontWeight: 700, color: '#374151' }}>45 jours</span>
+          </div>
+          <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 3 }}>
+            <span style={{ fontSize: 12, color: '#9CA3AF' }}>Prix</span>
+            <div>
+              {isPromo && bot.originalPriceCents && (
+                <span className="strike-price" style={{ marginRight: 6 }}>
+                  {formatXOF(bot.originalPriceCents)}
+                </span>
+              )}
+              <span style={{ fontSize: 13, fontWeight: 800, color: isPromo ? '#DC2626' : '#374151' }}>
+                {formatXOF(bot.priceCents)}
+              </span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Countdown sub-bar inside card if promo is active */}
+      {isPromo && (
+        <div style={{
+          background: '#FEF2F2', border: '1px solid #FCA5A5',
+          borderRadius: 8, padding: '6px 10px', marginBottom: 12,
+          display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: 11
+        }}>
+          <span style={{ color: '#991B1B', fontWeight: 700, display: 'flex', alignItems: 'center', gap: 4 }}>
+            <span>⏳</span> Fin de l'offre dans :
+          </span>
+          <span style={{ color: '#DC2626', fontWeight: 900, fontFamily: 'monospace', fontSize: 12 }}>
+            {formatCountdown(remainingMs)}
+          </span>
+        </div>
+      )}
+
+      {/* Footer row */}
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+        <div style={{
+          background: isPromo ? '#FEF2F2' : '#EFF6FF',
+          color: isPromo ? '#DC2626' : '#1A56DB',
+          padding: '4px 12px', borderRadius: 99, fontSize: 13, fontWeight: 800,
+          border: isPromo ? '1.5px solid #FCA5A5' : '1.5px solid #BFDBFE',
+          fontFamily: 'Space Grotesk, sans-serif',
+        }}>{bot.name}</div>
+        <button onClick={onBuy} className="btn-press" style={{
+          flex: 1, marginLeft: 10, height: 40,
+          background: isPromo ? 'linear-gradient(135deg, #DC2626, #EA580C)' : 'linear-gradient(135deg, #1A56DB, #2563EB)',
+          color: 'white', border: 'none', borderRadius: 10,
+          fontSize: 14, fontWeight: 700, cursor: 'pointer',
+          fontFamily: 'Space Grotesk, sans-serif',
+          boxShadow: isPromo ? '0 4px 12px rgba(220, 38, 38, 0.3)' : undefined,
+        }}>
+          {isPromo ? 'Acheter en Promo' : 'Acheter'}
+        </button>
+      </div>
+    </div>
+  );
+}
 
 // ─── Deposit Modal ─────────────────────────────────────────────────────────────
 function DepositModal({ onClose }: { onClose: () => void }) {
@@ -467,7 +794,7 @@ export default function HomePage() {
       </div>
 
       {/* Quick Actions */}
-      <div style={{ display: 'flex', gap: 10, margin: '0 16px 24px', overflowX: 'auto', paddingBottom: 4 }}>
+      <div style={{ display: 'flex', gap: 10, margin: '0 16px 20px', overflowX: 'auto', paddingBottom: 4 }}>
 
         <button className="action-btn" onClick={() => setModal('withdraw')} style={{ minWidth: 70 }}>
           <div style={{
@@ -497,6 +824,12 @@ export default function HomePage() {
           <span style={{ fontSize: 12, fontWeight: 600, color: '#374151' }}>Support</span>
         </button>
       </div>
+
+      {/* Promo Flash Gam 4 Banner */}
+      <Gam4PromoBanner
+        bot={bots.find(b => b.id === 'gam-4')}
+        onBuy={(bot) => setModal({ type: 'buy', bot })}
+      />
 
       {/* Bots Section */}
       <div style={{ margin: '0 16px 16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>

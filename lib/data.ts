@@ -4,10 +4,56 @@ export const BOTS = [
   { id: 'gam-1', name: 'Gam 1', level: 1, priceCents: 400000,   imageUrl: '/bots/robot.png' },
   { id: 'gam-2', name: 'Gam 2', level: 2, priceCents: 1000000,  imageUrl: '/bots/robot.png' },
   { id: 'gam-3', name: 'Gam 3', level: 3, priceCents: 3000000,  imageUrl: '/bots/robot.png' },
-  { id: 'gam-4', name: 'Gam 4', level: 4, priceCents: 8500000,  imageUrl: '/bots/robot.png' },
+  { id: 'gam-4', name: 'Gam 4', level: 4, priceCents: 8000000,  imageUrl: '/bots/robot.png' },
   { id: 'gam-5', name: 'Gam 5', level: 5, priceCents: 20000000, imageUrl: '/bots/robot.png' },
   { id: 'gam-6', name: 'Gam 6', level: 6, priceCents: 60000000, imageUrl: '/bots/robot.png' },
 ];
+
+// Promotion Gam 4 Config
+export const GAM_4_PROMO = {
+  botId: 'gam-4',
+  normalPriceCents: 8000000, // 80 000 XOF
+  promoPriceCents: 5000000,  // 50 000 XOF
+  startTime: '2026-07-23T08:00:00+02:00',
+  endTime: '2026-07-24T08:00:00+02:00',
+};
+
+export function getBotPromo(botId: string, now: Date = new Date()) {
+  if (botId !== GAM_4_PROMO.botId) return null;
+
+  const startMs = new Date(GAM_4_PROMO.startTime).getTime();
+  const endMs = new Date(GAM_4_PROMO.endTime).getTime();
+  const currentMs = now.getTime();
+
+  if (currentMs < startMs) {
+    return {
+      status: 'UPCOMING' as const,
+      startTime: GAM_4_PROMO.startTime,
+      endTime: GAM_4_PROMO.endTime,
+      startsInMs: Math.max(0, startMs - currentMs),
+      endsInMs: Math.max(0, endMs - currentMs),
+      normalPriceCents: GAM_4_PROMO.normalPriceCents,
+      promoPriceCents: GAM_4_PROMO.promoPriceCents,
+    };
+  } else if (currentMs >= startMs && currentMs < endMs) {
+    return {
+      status: 'ACTIVE' as const,
+      startTime: GAM_4_PROMO.startTime,
+      endTime: GAM_4_PROMO.endTime,
+      endsInMs: Math.max(0, endMs - currentMs),
+      normalPriceCents: GAM_4_PROMO.normalPriceCents,
+      promoPriceCents: GAM_4_PROMO.promoPriceCents,
+    };
+  } else {
+    return {
+      status: 'EXPIRED' as const,
+      startTime: GAM_4_PROMO.startTime,
+      endTime: GAM_4_PROMO.endTime,
+      normalPriceCents: GAM_4_PROMO.normalPriceCents,
+      promoPriceCents: GAM_4_PROMO.promoPriceCents,
+    };
+  }
+}
 
 // Financial constants
 export const VALIDITY_DAYS = 45;
@@ -48,13 +94,24 @@ export function formatCountdown(ms: number): string {
   return [h, m, s].map(v => String(v).padStart(2, '0')).join(':');
 }
 
-export function enrichBot(bot: typeof BOTS[0]) {
+export function enrichBot(bot: typeof BOTS[0], now: Date = new Date()) {
+  const promo = getBotPromo(bot.id, now);
+  const isPromoActive = promo?.status === 'ACTIVE';
+  const effectivePriceCents = isPromoActive ? promo.promoPriceCents : bot.priceCents;
+
   return {
     ...bot,
-    dailyRevenueCents: dailyRevenueCents(bot.priceCents),
-    workRevenueCents: workRevenueCents(bot.priceCents),
-    totalRevenueCents: totalRevenueCents(bot.priceCents),
-    referralCommissionCents: referralCommissionCents(bot.priceCents),
+    priceCents: effectivePriceCents,
+    originalPriceCents: isPromoActive ? promo.normalPriceCents : (promo ? promo.normalPriceCents : undefined),
+    isPromo: isPromoActive,
+    promoStatus: promo?.status || null,
+    promoEndsAt: promo?.status === 'ACTIVE' ? promo.endTime : null,
+    promoStartsAt: promo?.status === 'UPCOMING' ? promo.startTime : null,
+    promoRemainingMs: promo?.status === 'ACTIVE' ? promo.endsInMs : (promo?.status === 'UPCOMING' ? promo.startsInMs : 0),
+    dailyRevenueCents: dailyRevenueCents(effectivePriceCents),
+    workRevenueCents: workRevenueCents(effectivePriceCents),
+    totalRevenueCents: totalRevenueCents(effectivePriceCents),
+    referralCommissionCents: referralCommissionCents(effectivePriceCents),
   };
 }
 
@@ -64,6 +121,12 @@ export type Bot = typeof BOTS[0] & {
   workRevenueCents: number;
   totalRevenueCents: number;
   referralCommissionCents: number;
+  originalPriceCents?: number;
+  isPromo?: boolean;
+  promoStatus?: 'UPCOMING' | 'ACTIVE' | 'EXPIRED' | null;
+  promoEndsAt?: string | null;
+  promoStartsAt?: string | null;
+  promoRemainingMs?: number;
 };
 
 export type UserPurchase = {
