@@ -101,7 +101,7 @@ function Gam4PromoBanner({ bot, onBuy }: { bot?: Bot; onBuy: (bot: Bot) => void 
         </div>
       </div>
 
-      {bot && (
+      {bot && isActive && (
         <button
           onClick={() => onBuy(bot)}
           className="btn-press"
@@ -118,6 +118,22 @@ function Gam4PromoBanner({ bot, onBuy }: { bot?: Bot; onBuy: (bot: Bot) => void 
           <span>🔥 PROFITER DE L'OFFRE (50 000 XOF)</span>
         </button>
       )}
+
+      {isUpcoming && (
+        <div style={{
+          width: '100%', height: 44,
+          background: 'rgba(0,0,0,0.25)',
+          border: '1.5px dashed rgba(255,255,255,0.4)',
+          borderRadius: 12,
+          display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
+          color: 'rgba(255,255,255,0.65)', fontSize: 13, fontWeight: 700,
+          fontFamily: 'Space Grotesk, sans-serif',
+          cursor: 'not-allowed',
+        }}>
+          ⏳ Disponible dès 08h00 — encore {formatCountdown(remainingMs)}
+        </div>
+      )}
+
     </div>
   );
 }
