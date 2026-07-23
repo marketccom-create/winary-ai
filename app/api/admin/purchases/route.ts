@@ -121,3 +121,52 @@ export async function POST(req: Request) {
 
   return NextResponse.json({ success: true });
 }
+
+// DELETE /api/admin/purchases — rejeter les demandes PENDING en attente (sauf les 3 plus récentes)
+export async function DELETE(req: Request) {
+  const { error } = await requireAdmin(req);
+  if (error) return error;
+
+  const PROTECTED_COUNT = 3; // Les N plus récents sont protégés du rejet en masse
+
+  const db = createAdminClient();
+
+  // Récupérer tous les achats en attente, triés du plus récent au plus ancien
+  const { data: pending, error: fetchErr } = await db
+    .from('purchases')
+    .select('id, user_id, bot_name, operator, tx_reference, purchased_at')
+    .eq('status', 'PENDING')
+    .order('purchased_at', { ascending: false }); // Plus récents en premier
+
+  if (fetchErr) return NextResponse.json({ error: fetchErr.message }, { status: 500 });
+  if (!pending || pending.length === 0) {
+    return NextResponse.json({ success: true, count: 0, protected: 0 });
+  }
+
+  // Séparer : les PROTECTED_COUNT premiers sont protégés, le reste est rejeté
+  const toProtect = pending.slice(0, PROTECTED_COUNT);
+  const toReject  = pending.slice(PROTECTED_COUNT);
+
+  if (toReject.length === 0) {
+    return NextResponse.json({ success: true, count: 0, protected: toProtect.length });
+  }
+
+  const rejectNote = ' (Rejeté : Non abouti)';
+  for (const p of toReject) {
+    await db.from('purchases')
+      .update({ status: 'EXPIRED', tx_reference: (p.tx_reference || '') + rejectNote })
+      .eq('id', p.id);
+
+    await db.from('transactions')
+      .update({
+        status: 'FAILED',
+        description: `Achat ${p.bot_name} (${p.operator}) - Non abouti`,
+      })
+      .eq('user_id', p.user_id)
+      .eq('type', 'BOT_PURCHASE')
+      .eq('tx_reference', p.tx_reference);
+  }
+
+  return NextResponse.json({ success: true, count: toReject.length, protected: toProtect.length });
+}
+

@@ -11,7 +11,7 @@ import {
   apiAdminGetStats, apiAdminGetUsers, apiAdminGetUserDetails, apiAdminUpdateUser,
   apiAdminGetAnnouncements, apiAdminUpdateAnnouncement, apiAdminDeleteAnnouncement,
   apiGetBots, apiGetBotPaymentConfigs, apiAdminUpdateBotPaymentConfigs,
-  apiAdminGetPendingPurchases, apiAdminApprovePurchase, apiAdminRejectPurchase,
+  apiAdminGetPendingPurchases, apiAdminApprovePurchase, apiAdminRejectPurchase, apiAdminRejectAllPurchases,
   apiAdminGetPendingWithdrawals, apiAdminApproveWithdrawal, apiAdminRejectWithdrawal, apiAdminDeleteWithdrawal,
   apiAdminGetChatConversations, apiAdminGetChatMessages, apiAdminSendChatMessage,
   apiAdminGrantBot, apiAdminEditChatMessage, apiAdminDeleteChatMessage, apiAdminRevokePurchase,
@@ -215,10 +215,30 @@ export default function AdminPage() {
       alert('Achat rejeté.');
       await loadData();
       if (selectedUserDetail) {
-        // Refresh detail
         const details = await apiAdminGetUserDetails(selectedUserDetail.user.id);
         setSelectedUserDetail(details);
       }
+    } catch (err: any) {
+      alert(err.message);
+    } finally {
+      setActionLoading(null);
+    }
+  }
+
+  async function handleRejectAllPurchases() {
+    const count = pendingPurchasesOnly.length;
+    if (count === 0) { alert('Aucune demande en attente.'); return; }
+    if (count <= 3) {
+      alert(`Il n'y a que ${count} demande(s) en attente — toutes sont protégées (les 3 plus récentes ne sont jamais rejetées en masse).`);
+      return;
+    }
+    const rejectCount = count - 3;
+    if (!confirm(`Rejeter ${rejectCount} demande(s) non aboutie(s) ?\n\n⚠️ Les 3 plus récentes seront conservées (protection anti-erreur).\n\nCette action est irréversible.`)) return;
+    setActionLoading('reject_all');
+    try {
+      const result = await apiAdminRejectAllPurchases();
+      alert(`✅ ${result.count} demande(s) rejetée(s).\n🛡️ ${result.protected} demande(s) conservée(s) (les plus récentes).`);
+      await loadData();
     } catch (err: any) {
       alert(err.message);
     } finally {
@@ -866,12 +886,35 @@ export default function AdminPage() {
             {/* ── Pending Purchases Approval ── */}
             {activeTab === 'pending' && (
               <div>
-                <h1 style={{ fontSize: 20, fontWeight: 800, margin: '0 0 6px', fontFamily: 'Space Grotesk, sans-serif', color: '#111827' }}>
-                  Demandes d'achats SSD
-                </h1>
-                <p style={{ color: '#9CA3AF', fontSize: 13, margin: '0 0 20px' }}>
-                  Vérifiez la transaction Mobile Money reçue sur votre téléphone et validez l'achat du bot.
-                </p>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 20 }}>
+                  <div>
+                    <h1 style={{ fontSize: 20, fontWeight: 800, margin: '0 0 4px', fontFamily: 'Space Grotesk, sans-serif', color: '#111827' }}>
+                      Demandes d'achats SSD
+                    </h1>
+                    <p style={{ color: '#9CA3AF', fontSize: 13, margin: 0 }}>
+                      Vérifiez la transaction Mobile Money reçue sur votre téléphone et validez l'achat du bot.
+                    </p>
+                  </div>
+                  {pendingPurchasesOnly.length > 0 && (
+                    <button
+                      onClick={handleRejectAllPurchases}
+                      disabled={actionLoading === 'reject_all'}
+                      style={{
+                        background: 'linear-gradient(135deg, #DC2626, #B91C1C)',
+                        color: 'white', border: 'none', borderRadius: 10,
+                        padding: '10px 18px', fontSize: 13, fontWeight: 700,
+                        cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 8,
+                        boxShadow: '0 4px 12px rgba(185,28,28,0.3)',
+                        flexShrink: 0,
+                      }}
+                    >
+                      {actionLoading === 'reject_all'
+                        ? <Loader2 size={14} style={{ animation: 'spin 0.8s linear infinite' }} />
+                        : <X size={14} />}
+                      Tout rejeter ({pendingPurchasesOnly.length})
+                    </button>
+                  )}
+                </div>
 
                 {pendingPurchasesOnly.length === 0 ? (
                   <div style={{
