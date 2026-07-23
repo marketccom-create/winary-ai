@@ -71,7 +71,7 @@ function Gam4PromoBanner({ bot, onBuy }: { bot?: Bot; onBuy: (bot: Bot) => void 
         padding: '12px 14px',
         display: 'flex',
         alignItems: 'center',
-        justify: 'space-between',
+        justifyContent: 'space-between',
         marginBottom: 14,
         border: '1px solid rgba(255, 255, 255, 0.2)'
       }}>
