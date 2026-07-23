@@ -9,7 +9,7 @@ async function requireAdmin(req: Request) {
   return { payload };
 }
 
-// GET /api/admin/withdrawals — lister les retraits en attente
+// GET /api/admin/withdrawals — lister tous les retraits avec éligibilité parrainage
 export async function GET(req: Request) {
   const { error } = await requireAdmin(req);
   if (error) return error;
@@ -17,28 +17,52 @@ export async function GET(req: Request) {
   const db = createAdminClient();
   const { data, error: dbErr } = await db
     .from('transactions')
-    .select(`*, users(phone, first_name, last_name)`)
+    .select(`*, users(id, phone, first_name, last_name)`)
     .eq('type', 'WITHDRAWAL')
     .order('created_at', { ascending: false });
 
   if (dbErr) return NextResponse.json({ error: dbErr.message }, { status: 500 });
 
-  return NextResponse.json(
-    (data || []).map((t: any) => ({
-      id: t.id,
-      userId: t.user_id,
-      userPhone: t.users?.phone || 'Inconnu',
-      userName: t.users?.first_name ? `${t.users.first_name} ${t.users.last_name || ''}`.trim() : '',
-      type: t.type,
-      status: t.status,
-      amountCents: t.amount_cents,
-      description: t.description,
-      operator: t.operator,
-      txReference: t.tx_reference,
-      createdAt: t.created_at,
-    }))
+  // Pour chaque retrait, calculer le total des commissions de parrainage du user
+  const enriched = await Promise.all(
+    (data || []).map(async (t: any) => {
+      const userId = t.user_id;
+
+      const { data: commissions } = await db
+        .from('transactions')
+        .select('amount_cents')
+        .eq('user_id', userId)
+        .eq('type', 'REFERRAL_BONUS')
+        .eq('status', 'COMPLETED');
+
+      const commissionsCents = (commissions || []).reduce(
+        (sum: number, c: any) => sum + (c.amount_cents || 0),
+        0
+      );
+
+      return {
+        id: t.id,
+        userId,
+        userPhone: t.users?.phone || 'Inconnu',
+        userName: t.users?.first_name
+          ? `${t.users.first_name} ${t.users.last_name || ''}`.trim()
+          : '',
+        type: t.type,
+        status: t.status,
+        amountCents: t.amount_cents,
+        description: t.description,
+        operator: t.operator,
+        txReference: t.tx_reference,
+        createdAt: t.created_at,
+        commissionsCents,                    // Total commissions de parrainage
+        isEligible: commissionsCents > 0,    // Éligible si au moins 1 filleul a acheté
+      };
+    })
   );
+
+  return NextResponse.json(enriched);
 }
+
 
 // POST /api/admin/withdrawals — approuver ou rejeter un retrait
 export async function POST(req: Request) {

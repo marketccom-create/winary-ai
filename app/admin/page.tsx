@@ -1019,7 +1019,7 @@ export default function AdminPage() {
                     <table style={{ width: '100%', minWidth: 700, borderCollapse: 'collapse' }}>
                       <thead>
                         <tr style={{ background: '#F9FAFB', borderBottom: '1px solid #E5E7EB' }}>
-                          {['Utilisateur', 'Description', 'Montant', 'Date de demande', 'Actions'].map(h => (
+                          {['Utilisateur', 'Éligibilité', 'Description', 'Montant', 'Date de demande', 'Actions'].map(h => (
                             <th key={h} style={{ padding: '12px 16px', textAlign: 'left', fontSize: 12, fontWeight: 700, color: '#6B7280' }}>
                               {h}
                             </th>
@@ -1032,6 +1032,31 @@ export default function AdminPage() {
                             <td style={{ padding: '12px 16px', fontSize: 13, color: '#111827' }}>
                               <div style={{ fontWeight: 600 }}>{w.userName || '—'}</div>
                               <div style={{ fontSize: 12, color: '#6B7280' }}>{w.userPhone}</div>
+                            </td>
+                            {/* ── Badge éligibilité parrainage ── */}
+                            <td style={{ padding: '12px 16px' }}>
+                              {w.isEligible ? (
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                                  <span style={{
+                                    display: 'inline-flex', alignItems: 'center', gap: 4,
+                                    padding: '4px 10px', borderRadius: 99, fontSize: 11, fontWeight: 700,
+                                    background: '#DCFCE7', color: '#15803D', width: 'fit-content',
+                                  }}>
+                                    ✅ Parrain actif
+                                  </span>
+                                  <span style={{ fontSize: 11, color: '#6B7280' }}>
+                                    {formatXOF(w.commissionsCents)} gagné(s)
+                                  </span>
+                                </div>
+                              ) : (
+                                <span style={{
+                                  display: 'inline-flex', alignItems: 'center', gap: 4,
+                                  padding: '4px 10px', borderRadius: 99, fontSize: 11, fontWeight: 700,
+                                  background: '#FEE2E2', color: '#B91C1C', width: 'fit-content',
+                                }}>
+                                  ⛔ Non éligible
+                                </span>
+                              )}
                             </td>
                             <td style={{ padding: '12px 16px', fontSize: 13, color: '#374151' }}>
                               {w.description}
