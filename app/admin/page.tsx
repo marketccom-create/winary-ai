@@ -670,7 +670,13 @@ export default function AdminPage() {
                   <StatCard label="Total Revenu Approuvé" value={formatXOF(stats?.totalRevenueCents || 0)} icon="💰" color="#15803D" />
                   <StatCard label="Total Retraits Approuvés" value={formatXOF(stats?.totalWithdrawalsCents || 0)} icon="💸" color="#10B981" />
                   <StatCard label="Achats en attente SSD" value={pendingPurchasesOnly.length} icon="🤖" color="#7C3AED" onClick={() => setActiveTab('pending')} />
-                  <StatCard label="Retraits en attente" value={stats?.pendingWithdrawals || 0} icon="⏳" color="#D97706" onClick={() => setActiveTab('withdrawals')} />
+                  <StatCard
+                    label={`Retraits en attente (${stats?.pendingWithdrawals || 0})`}
+                    value={formatXOF(stats?.pendingWithdrawalsTotalCents || 0)}
+                    icon="⏳"
+                    color="#D97706"
+                    onClick={() => setActiveTab('withdrawals')}
+                  />
                 </div>
 
                 {/* AI Config Block */}

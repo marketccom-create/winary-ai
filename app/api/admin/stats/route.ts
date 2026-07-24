@@ -21,6 +21,7 @@ export async function GET(req: Request) {
     { count: pendingPurchases },
     { data: activePurchases },
     { count: pendingWithdrawals },
+    { data: pendingWithdrawalsData },
     { data: completedWithdrawals },
     { count: pendingSupportMessages },
   ] = await Promise.all([
@@ -28,6 +29,8 @@ export async function GET(req: Request) {
     db.from('purchases').select('id', { count: 'exact', head: true }).eq('status', 'PENDING'),
     db.from('purchases').select('price_paid_cents').eq('status', 'ACTIVE'),
     db.from('transactions').select('id', { count: 'exact', head: true })
+      .eq('type', 'WITHDRAWAL').eq('status', 'PENDING'),
+    db.from('transactions').select('amount_cents')
       .eq('type', 'WITHDRAWAL').eq('status', 'PENDING'),
     db.from('transactions').select('amount_cents')
       .eq('type', 'WITHDRAWAL').eq('status', 'COMPLETED'),
@@ -45,12 +48,19 @@ export async function GET(req: Request) {
     0
   );
 
+  // Total montant des retraits PENDING (non encore approuvés)
+  const pendingWithdrawalsTotalCents = (pendingWithdrawalsData || []).reduce(
+    (sum: number, t: any) => sum + Math.abs(t.amount_cents),
+    0
+  );
+
   return NextResponse.json({
     totalUsers: totalUsers || 0,
     activeUsers: totalUsers || 0,
     pendingPurchases: pendingPurchases || 0,
     totalRevenueCents,
     pendingWithdrawals: pendingWithdrawals || 0,
+    pendingWithdrawalsTotalCents,
     totalWithdrawalsCents,
     pendingSupportMessages: pendingSupportMessages || 0,
   });
