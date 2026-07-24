@@ -61,6 +61,12 @@ export default function AdminPage() {
   const [search, setSearch] = useState('');
   const [loading, setLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
+  const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' | 'info' } | null>(null);
+
+  function notify(message: string, type: 'success' | 'error' | 'info' = 'success') {
+    setToast({ message, type });
+    setTimeout(() => setToast(null), 3500);
+  }
 
   // User detail state
   const [selectedUserDetail, setSelectedUserDetail] = useState<any>(null);
@@ -184,18 +190,25 @@ export default function AdminPage() {
   }
 
   async function handleApprovePurchase(pid: string) {
+    const target = pendingPurchases.find(p => p.id === pid);
     setActionLoading(pid);
     try {
       await apiAdminApprovePurchase(pid);
-      alert('Achat approuvé avec succès !');
-      await loadData();
+      setPendingPurchases(prev => prev.filter(p => p.id !== pid));
+      if (target) {
+        setStats((prev: any) => prev ? ({
+          ...prev,
+          pendingPurchases: Math.max(0, (prev.pendingPurchases || 0) - 1),
+          totalRevenueCents: (prev.totalRevenueCents || 0) + (target.pricePaidCents || 0),
+        }) : prev);
+      }
+      notify('Achat approuvé avec succès !', 'success');
       if (selectedUserDetail) {
-        // Refresh detail
         const details = await apiAdminGetUserDetails(selectedUserDetail.user.id);
         setSelectedUserDetail(details);
       }
     } catch (err: any) {
-      alert(err.message);
+      notify(err.message || 'Erreur lors de l\'approbation', 'error');
     } finally {
       setActionLoading(null);
     }
@@ -205,21 +218,27 @@ export default function AdminPage() {
     const reason = prompt("Veuillez saisir la raison du rejet pour cet achat (obligatoire) :");
     if (reason === null) return;
     if (!reason.trim()) {
-      alert("La raison du rejet est obligatoire.");
+      notify("La raison du rejet est obligatoire.", 'error');
       return;
     }
 
     setActionLoading(pid);
     try {
       await apiAdminRejectPurchase(pid, reason.trim());
-      alert('Achat rejeté.');
-      await loadData();
+      setPendingPurchases(prev => prev.filter(p => p.id !== pid));
+      if (stats) {
+        setStats((prev: any) => prev ? ({
+          ...prev,
+          pendingPurchases: Math.max(0, (prev.pendingPurchases || 0) - 1),
+        }) : prev);
+      }
+      notify('Achat rejeté.', 'info');
       if (selectedUserDetail) {
         const details = await apiAdminGetUserDetails(selectedUserDetail.user.id);
         setSelectedUserDetail(details);
       }
     } catch (err: any) {
-      alert(err.message);
+      notify(err.message || 'Erreur lors du rejet', 'error');
     } finally {
       setActionLoading(null);
     }
@@ -227,9 +246,9 @@ export default function AdminPage() {
 
   async function handleRejectAllPurchases() {
     const count = pendingPurchasesOnly.length;
-    if (count === 0) { alert('Aucune demande en attente.'); return; }
+    if (count === 0) { notify('Aucune demande en attente.', 'info'); return; }
     if (count <= 3) {
-      alert(`Il n'y a que ${count} demande(s) en attente — toutes sont protégées (les 3 plus récentes ne sont jamais rejetées en masse).`);
+      notify(`Les ${count} demande(s) les plus récentes sont protégées contre le rejet en masse.`, 'info');
       return;
     }
     const rejectCount = count - 3;
@@ -237,10 +256,10 @@ export default function AdminPage() {
     setActionLoading('reject_all');
     try {
       const result = await apiAdminRejectAllPurchases();
-      alert(`✅ ${result.count} demande(s) rejetée(s).\n🛡️ ${result.protected} demande(s) conservée(s) (les plus récentes).`);
+      notify(`✅ ${result.count} demande(s) rejetée(s). 🛡️ ${result.protected} conservée(s).`, 'success');
       await loadData();
     } catch (err: any) {
-      alert(err.message);
+      notify(err.message || 'Erreur lors du rejet en masse', 'error');
     } finally {
       setActionLoading(null);
     }
@@ -251,27 +270,49 @@ export default function AdminPage() {
     setActionLoading(pid);
     try {
       await apiAdminRevokePurchase(pid);
-      alert('Bot révoqué avec succès !');
+      notify('Bot révoqué avec succès !', 'success');
       await loadData();
       if (selectedUserDetail) {
         const details = await apiAdminGetUserDetails(selectedUserDetail.user.id);
         setSelectedUserDetail(details);
       }
     } catch (err: any) {
-      alert(err.message);
+      notify(err.message || 'Erreur lors de la révocation', 'error');
     } finally {
       setActionLoading(null);
     }
   }
 
   async function handleApproveWithdrawal(txId: string) {
+    const target = pendingWithdrawals.find(w => w.id === txId);
     setActionLoading(txId);
     try {
       await apiAdminApproveWithdrawal(txId);
-      alert('Retrait approuvé avec succès !');
-      await loadData();
+      
+      // Update pendingWithdrawals state locally instantly without reloading whole page
+      setPendingWithdrawals(prev => prev.filter(w => w.id !== txId));
+
+      // Update stats locally
+      if (target) {
+        const amount = Math.abs(target.amountCents || 0);
+        const isEligible = target.isEligible;
+        setStats((prev: any) => prev ? ({
+          ...prev,
+          pendingWithdrawals: Math.max(0, (prev.pendingWithdrawals || 0) - 1),
+          pendingWithdrawalsTotalCents: Math.max(0, (prev.pendingWithdrawalsTotalCents || 0) - amount),
+          eligiblePendingWithdrawalsTotalCents: isEligible 
+            ? Math.max(0, (prev.eligiblePendingWithdrawalsTotalCents || 0) - amount)
+            : (prev.eligiblePendingWithdrawalsTotalCents || 0),
+          ineligiblePendingWithdrawalsTotalCents: !isEligible 
+            ? Math.max(0, (prev.ineligiblePendingWithdrawalsTotalCents || 0) - amount)
+            : (prev.ineligiblePendingWithdrawalsTotalCents || 0),
+          totalWithdrawalsCents: (prev.totalWithdrawalsCents || 0) + amount,
+        }) : prev);
+      }
+
+      notify(`Retrait de ${formatXOF(Math.abs(target?.amountCents || 0))} approuvé avec succès !`, 'success');
     } catch (err: any) {
-      alert(err.message);
+      notify(err.message || 'Erreur lors de l\'approbation du retrait', 'error');
     } finally {
       setActionLoading(null);
     }
@@ -281,17 +322,38 @@ export default function AdminPage() {
     const reason = prompt("Veuillez saisir la raison du rejet pour ce retrait (obligatoire) :");
     if (reason === null) return;
     if (!reason.trim()) {
-      alert("La raison du rejet est obligatoire.");
+      notify("La raison du rejet est obligatoire.", 'error');
       return;
     }
 
+    const target = pendingWithdrawals.find(w => w.id === txId);
     setActionLoading(txId);
     try {
       await apiAdminRejectWithdrawal(txId, reason.trim());
-      alert('Retrait rejeté.');
-      await loadData();
+      
+      // Update pendingWithdrawals state locally instantly without reloading whole page
+      setPendingWithdrawals(prev => prev.filter(w => w.id !== txId));
+
+      // Update stats locally
+      if (target) {
+        const amount = Math.abs(target.amountCents || 0);
+        const isEligible = target.isEligible;
+        setStats((prev: any) => prev ? ({
+          ...prev,
+          pendingWithdrawals: Math.max(0, (prev.pendingWithdrawals || 0) - 1),
+          pendingWithdrawalsTotalCents: Math.max(0, (prev.pendingWithdrawalsTotalCents || 0) - amount),
+          eligiblePendingWithdrawalsTotalCents: isEligible 
+            ? Math.max(0, (prev.eligiblePendingWithdrawalsTotalCents || 0) - amount)
+            : (prev.eligiblePendingWithdrawalsTotalCents || 0),
+          ineligiblePendingWithdrawalsTotalCents: !isEligible 
+            ? Math.max(0, (prev.ineligiblePendingWithdrawalsTotalCents || 0) - amount)
+            : (prev.ineligiblePendingWithdrawalsTotalCents || 0),
+        }) : prev);
+      }
+
+      notify('Retrait rejeté.', 'info');
     } catch (err: any) {
-      alert(err.message);
+      notify(err.message || 'Erreur lors du rejet du retrait', 'error');
     } finally {
       setActionLoading(null);
     }
@@ -303,8 +365,9 @@ export default function AdminPage() {
     try {
       await apiAdminDeleteWithdrawal(txId);
       setPendingWithdrawals(prev => prev.filter(w => w.id !== txId));
+      notify('Retrait supprimé de l\'historique.', 'info');
     } catch (err: any) {
-      alert(err.message);
+      notify(err.message || 'Erreur lors de la suppression', 'error');
     } finally {
       setActionLoading(null);
     }
@@ -526,8 +589,23 @@ export default function AdminPage() {
   ];
 
   return (
-    <div style={{ minHeight: '100dvh', background: '#F9FAFB', display: 'flex', flexDirection: 'column' }}>
+    <div style={{ minHeight: '100dvh', background: '#F9FAFB', display: 'flex', flexDirection: 'column', position: 'relative' }}>
       
+      {/* Toast Notification Banner */}
+      {toast && (
+        <div style={{
+          position: 'fixed', top: 24, right: 24, zIndex: 99999,
+          background: toast.type === 'success' ? '#059669' : toast.type === 'error' ? '#DC2626' : '#2563EB',
+          color: 'white', padding: '14px 22px', borderRadius: 14,
+          boxShadow: '0 10px 30px rgba(0,0,0,0.2)',
+          fontWeight: 700, fontSize: 14, display: 'flex', alignItems: 'center', gap: 10,
+          border: '1px solid rgba(255,255,255,0.2)'
+        }}>
+          <span>{toast.type === 'success' ? '✅' : toast.type === 'error' ? '❌' : 'ℹ️'}</span>
+          <span>{toast.message}</span>
+        </div>
+      )}
+
       {/* Mobile Top Bar */}
       <div className="mobile-header" style={{
         alignItems: 'center',
