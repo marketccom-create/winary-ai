@@ -82,8 +82,8 @@ export async function POST(req: Request) {
         .eq('id', tx.id);
 
       return NextResponse.json(
-        { error: `Erreur Sene-Pay: ${senepayErr.message}` },
-        { status: 500 }
+        { error: 'Le système de recharge directe Mobile Money est actuellement en cours de maintenance temporaire. Veuillez recharger votre solde via le Support Client.' },
+        { status: 503 }
       );
     }
   } catch (err: any) {

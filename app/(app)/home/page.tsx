@@ -217,7 +217,12 @@ function PurchaseModal({ bot, balanceCents, onClose, onConfirm, buying }: {
             <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
               <span style={{ fontSize: 20 }}>⚡</span>
               <div style={{ textAlign: 'left' }}>
-                <div style={{ fontSize: 13, fontWeight: 700, color: '#374151' }}>Sene-Pay (Mobile Money)</div>
+                <div style={{ fontSize: 13, fontWeight: 700, color: '#374151', display: 'flex', alignItems: 'center', gap: 6 }}>
+                  Sene-Pay (Mobile Money)
+                  <span style={{ fontSize: 10, background: '#FEF3C7', color: '#D97706', padding: '2px 6px', borderRadius: 6, fontWeight: 700 }}>
+                    🛠️ Maintenance
+                  </span>
+                </div>
                 <div style={{ fontSize: 11, color: '#6B7280' }}>Wave, Orange, MTN, Moov, etc.</div>
               </div>
             </div>
