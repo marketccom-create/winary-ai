@@ -677,6 +677,20 @@ export default function AdminPage() {
                     color="#D97706"
                     onClick={() => setActiveTab('withdrawals')}
                   />
+                  <StatCard
+                    label="Retraits Éligibles"
+                    value={formatXOF(stats?.eligiblePendingWithdrawalsTotalCents || 0)}
+                    icon="✅"
+                    color="#16A34A"
+                    onClick={() => setActiveTab('withdrawals')}
+                  />
+                  <StatCard
+                    label="Retraits Non Éligibles"
+                    value={formatXOF(stats?.ineligiblePendingWithdrawalsTotalCents || 0)}
+                    icon="⛔"
+                    color="#DC2626"
+                    onClick={() => setActiveTab('withdrawals')}
+                  />
                 </div>
 
                 {/* AI Config Block */}
@@ -1010,6 +1024,39 @@ export default function AdminPage() {
                 <p style={{ color: '#9CA3AF', fontSize: 13, margin: '0 0 20px' }}>
                   Vérifiez le numéro bénéficiaire Mobile Money et validez ou rejetez le retrait.
                 </p>
+
+                {/* Synthèse des retraits en attente */}
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12, marginBottom: 20 }}>
+                  <div style={{ background: '#FFFBEB', border: '1.5px solid #FCD34D', borderRadius: 14, padding: '14px 18px', flex: 1, minWidth: 200 }}>
+                    <div style={{ fontSize: 11, fontWeight: 700, color: '#B45309', textTransform: 'uppercase', letterSpacing: 0.5 }}>Total En Attente</div>
+                    <div style={{ fontSize: 20, fontWeight: 800, color: '#92400E', fontFamily: 'Space Grotesk, sans-serif', marginTop: 2 }}>
+                      {formatXOF(stats?.pendingWithdrawalsTotalCents || 0)}
+                    </div>
+                    <div style={{ fontSize: 12, color: '#B45309', marginTop: 4, fontWeight: 600 }}>
+                      {pendingWithdrawals.filter(w => w.status === 'PENDING').length} demande(s) au total
+                    </div>
+                  </div>
+
+                  <div style={{ background: '#F0FDF4', border: '1.5px solid #86EFAC', borderRadius: 14, padding: '14px 18px', flex: 1, minWidth: 200 }}>
+                    <div style={{ fontSize: 11, fontWeight: 700, color: '#15803D', textTransform: 'uppercase', letterSpacing: 0.5 }}>✅ Retraits Éligibles</div>
+                    <div style={{ fontSize: 20, fontWeight: 800, color: '#166534', fontFamily: 'Space Grotesk, sans-serif', marginTop: 2 }}>
+                      {formatXOF(pendingWithdrawals.filter(w => w.status === 'PENDING' && w.isEligible).reduce((sum, w) => sum + Math.abs(w.amountCents), 0))}
+                    </div>
+                    <div style={{ fontSize: 12, color: '#15803D', marginTop: 4, fontWeight: 600 }}>
+                      {pendingWithdrawals.filter(w => w.status === 'PENDING' && w.isEligible).length} demande(s) (Parrain actif)
+                    </div>
+                  </div>
+
+                  <div style={{ background: '#FEF2F2', border: '1.5px solid #FCA5A5', borderRadius: 14, padding: '14px 18px', flex: 1, minWidth: 200 }}>
+                    <div style={{ fontSize: 11, fontWeight: 700, color: '#B91C1C', textTransform: 'uppercase', letterSpacing: 0.5 }}>⛔ Retraits Non Éligibles</div>
+                    <div style={{ fontSize: 20, fontWeight: 800, color: '#991B1B', fontFamily: 'Space Grotesk, sans-serif', marginTop: 2 }}>
+                      {formatXOF(pendingWithdrawals.filter(w => w.status === 'PENDING' && !w.isEligible).reduce((sum, w) => sum + Math.abs(w.amountCents), 0))}
+                    </div>
+                    <div style={{ fontSize: 12, color: '#B91C1C', marginTop: 4, fontWeight: 600 }}>
+                      {pendingWithdrawals.filter(w => w.status === 'PENDING' && !w.isEligible).length} demande(s) (Sans parrainage)
+                    </div>
+                  </div>
+                </div>
 
                 {pendingWithdrawals.length === 0 ? (
                   <div style={{
