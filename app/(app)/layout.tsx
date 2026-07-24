@@ -161,30 +161,87 @@ function AnnouncementModal({ announcements, onClose }: { announcements: any[]; o
 // ─── Toast ────────────────────────────────────────────────────────────────────
 function Toast() {
   const { toastMessage, toastType, clearToast } = useUIStore();
+
   useEffect(() => {
     if (toastMessage) {
-      const t = setTimeout(clearToast, 3500);
+      // 8 secondes pour laisser largement le temps de lire 2 à 3 fois
+      const t = setTimeout(clearToast, 8000);
       return () => clearTimeout(t);
     }
   }, [toastMessage, clearToast]);
+
   if (!toastMessage) return null;
-  const colors = {
-    success: { bg: '#DCFCE7', border: '#86EFAC', text: '#15803D', icon: '✅' },
-    error:   { bg: '#FEE2E2', border: '#FCA5A5', text: '#B91C1C', icon: '❌' },
-    info:    { bg: '#EFF6FF', border: '#BFDBFE', text: '#1D4ED8', icon: 'ℹ️' },
+
+  // Design rassurant (vert émeraude apaisant)
+  const isErrorOrMaintenance = toastType === 'error' || toastMessage.includes('maintenance') || toastMessage.includes('Mobile Money');
+
+  const config = isErrorOrMaintenance ? {
+    bg: '#ECFDF5',
+    border: '#6EE7B7',
+    text: '#065F46',
+    icon: '🛡️',
+  } : {
+    success: { bg: '#ECFDF5', border: '#6EE7B7', text: '#065F46', icon: '✅' },
+    error:   { bg: '#ECFDF5', border: '#6EE7B7', text: '#065F46', icon: '🛡️' },
+    info:    { bg: '#EFF6FF', border: '#93C5FD', text: '#1E40AF', icon: '💡' },
   }[toastType];
 
   return (
-    <div className="fade-in" style={{
-      position: 'fixed', top: 70, left: '50%', transform: 'translateX(-50%)',
-      background: colors.bg, border: `1px solid ${colors.border}`,
-      color: colors.text, padding: '10px 16px', borderRadius: 12,
-      fontSize: 14, fontWeight: 600, zIndex: 500,
-      boxShadow: '0 4px 16px rgba(0,0,0,0.12)',
-      maxWidth: 340, textAlign: 'center',
-      display: 'flex', alignItems: 'center', gap: 8,
-    }}>
-      {colors.icon} {toastMessage}
+    <div
+      onClick={clearToast}
+      style={{
+        position: 'fixed',
+        top: '40%',
+        left: '50%',
+        transform: 'translate(-50%, -50%)',
+        zIndex: 99999,
+        width: '90%',
+        maxWidth: 350,
+        background: '#FFFFFF',
+        border: `2px solid ${config.border}`,
+        borderRadius: 20,
+        padding: '20px 20px',
+        boxShadow: '0 20px 40px rgba(0, 0, 0, 0.2), 0 0 0 100vw rgba(0, 0, 0, 0.3)',
+        textAlign: 'center',
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+        gap: 12,
+        cursor: 'pointer',
+      }}
+    >
+      <div style={{
+        width: 52, height: 52, borderRadius: 26,
+        background: config.bg,
+        border: `1px solid ${config.border}`,
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        fontSize: 26, flexShrink: 0
+      }}>
+        {config.icon}
+      </div>
+
+      <div style={{
+        fontSize: 14,
+        lineHeight: 1.5,
+        fontWeight: 600,
+        color: '#1F2937',
+        fontFamily: 'system-ui, -apple-system, sans-serif'
+      }}>
+        {toastMessage}
+      </div>
+
+      <div style={{
+        fontSize: 11,
+        fontWeight: 700,
+        color: '#059669',
+        background: '#ECFDF5',
+        padding: '5px 14px',
+        borderRadius: 99,
+        marginTop: 2,
+        border: '1px solid #A7F3D0'
+      }}>
+        Toucher pour fermer
+      </div>
     </div>
   );
 }
