@@ -1164,30 +1164,45 @@ export default function AdminPage() {
                                 <div style={{ fontWeight: 600 }}>{w.userName || '—'}</div>
                                 <div style={{ fontSize: 12, color: '#6B7280' }}>{w.userPhone}</div>
                               </td>
-                              {/* ── Badge éligibilité parrainage ── */}
+                              {/* ── Badge éligibilité parrainage & Retraits antérieurs ── */}
                               <td style={{ padding: '12px 16px' }}>
-                                {w.isEligible ? (
-                                  <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                                  {w.isEligible ? (
+                                    <>
+                                      <span style={{
+                                        display: 'inline-flex', alignItems: 'center', gap: 4,
+                                        padding: '4px 10px', borderRadius: 99, fontSize: 11, fontWeight: 700,
+                                        background: '#DCFCE7', color: '#15803D', width: 'fit-content',
+                                      }}>
+                                        ✅ Parrain actif
+                                      </span>
+                                      <span style={{ fontSize: 11, color: '#6B7280' }}>
+                                        {formatXOF(w.commissionsCents)} gagné(s)
+                                      </span>
+                                    </>
+                                  ) : (
                                     <span style={{
                                       display: 'inline-flex', alignItems: 'center', gap: 4,
                                       padding: '4px 10px', borderRadius: 99, fontSize: 11, fontWeight: 700,
-                                      background: '#DCFCE7', color: '#15803D', width: 'fit-content',
+                                      background: '#FEE2E2', color: '#B91C1C', width: 'fit-content',
                                     }}>
-                                      ✅ Parrain actif
+                                      ⛔ Non éligible
                                     </span>
-                                    <span style={{ fontSize: 11, color: '#6B7280' }}>
-                                      {formatXOF(w.commissionsCents)} gagné(s)
-                                    </span>
-                                  </div>
-                                ) : (
-                                  <span style={{
-                                    display: 'inline-flex', alignItems: 'center', gap: 4,
-                                    padding: '4px 10px', borderRadius: 99, fontSize: 11, fontWeight: 700,
-                                    background: '#FEE2E2', color: '#B91C1C', width: 'fit-content',
+                                  )}
+
+                                  {/* Badges de retraits déjà effectués */}
+                                  <div style={{
+                                    fontSize: 11, fontWeight: 600,
+                                    color: (w.approvedWithdrawalsCount || 0) > 0 ? '#1D4ED8' : '#6B7280',
+                                    background: (w.approvedWithdrawalsCount || 0) > 0 ? '#EFF6FF' : '#F3F4F6',
+                                    padding: '2px 8px', borderRadius: 6, width: 'fit-content', marginTop: 2,
+                                    border: (w.approvedWithdrawalsCount || 0) > 0 ? '1px solid #BFDBFE' : '1px solid #E5E7EB',
                                   }}>
-                                    ⛔ Non éligible
-                                  </span>
-                                )}
+                                    {(w.approvedWithdrawalsCount || 0) > 0
+                                      ? `💳 ${w.approvedWithdrawalsCount} retrait(s) déjà effectué(s)`
+                                      : `🆕 1er retrait (0 effectué)`}
+                                  </div>
+                                </div>
                               </td>
                               <td style={{ padding: '12px 16px', fontSize: 13, color: '#374151' }}>
                                 {w.description}

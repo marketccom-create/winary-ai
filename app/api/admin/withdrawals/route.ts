@@ -40,6 +40,13 @@ export async function GET(req: Request) {
         0
       );
 
+      const { count: approvedCount } = await db
+        .from('transactions')
+        .select('id', { count: 'exact', head: true })
+        .eq('user_id', userId)
+        .eq('type', 'WITHDRAWAL')
+        .eq('status', 'COMPLETED');
+
       return {
         id: t.id,
         userId,
@@ -56,6 +63,7 @@ export async function GET(req: Request) {
         createdAt: t.created_at,
         commissionsCents,                    // Total commissions de parrainage
         isEligible: commissionsCents > 0,    // Éligible si au moins 1 filleul a acheté
+        approvedWithdrawalsCount: approvedCount || 0, // Nombre de retraits déjà approuvés
       };
     })
   );
