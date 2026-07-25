@@ -2413,23 +2413,34 @@ export default function AdminPage() {
           const activeUserObj = users.find(u => u.id === selectedChatUser);
           const activeUserBotsCount = allPurchases.filter(p => p.userId === selectedChatUser && p.status === 'ACTIVE').length;
 
+          const getInitials = (name?: string | null, phone?: string) => {
+            if (name && name.trim()) {
+              const parts = name.trim().split(' ');
+              if (parts.length >= 2) return (parts[0][0] + parts[1][0]).toUpperCase();
+              return name.substring(0, 2).toUpperCase();
+            }
+            if (phone) return phone.substring(phone.length - 2);
+            return 'CL';
+          };
+
           return (
-            <div style={{ display: 'flex', gap: 20, height: 'calc(100dvh - 120px)' }}>
+            <div style={{ display: 'flex', gap: 16, height: 'calc(100dvh - 110px)', width: '100%' }}>
               {/* Conversation List */}
               <div className={`chat-list-panel ${selectedChatUser ? 'mobile-chat-list-hidden' : 'mobile-chat-full-width'}`} style={{
-                width: 340, background: 'white', borderRadius: 16, border: '1.5px solid #E5E7EB',
-                display: 'flex', flexDirection: 'column', overflow: 'hidden', flexShrink: 0
+                width: 330, background: 'white', borderRadius: 20, border: '1.5px solid #E5E7EB',
+                display: 'flex', flexDirection: 'column', overflow: 'hidden', flexShrink: 0,
+                boxShadow: '0 4px 14px rgba(0,0,0,0.03)'
               }}>
-                <div style={{ padding: '16px', borderBottom: '1px solid #E5E7EB', background: '#F9FAFB', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <h2 style={{ fontSize: 16, fontWeight: 800, margin: 0, color: '#111827', fontFamily: 'Space Grotesk, sans-serif' }}>
-                    💬 Conversations
+                <div style={{ padding: '16px 20px', borderBottom: '1px solid #F1F5F9', background: '#FAFAFA', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <h2 style={{ fontSize: 16, fontWeight: 800, margin: 0, color: '#0F172A', fontFamily: 'Space Grotesk, sans-serif' }}>
+                    💬 Messages Support
                   </h2>
                   {totalUnread > 0 ? (
-                    <span style={{ background: '#DC2626', color: 'white', fontSize: 11, fontWeight: 800, borderRadius: 99, padding: '3px 10px', boxShadow: '0 2px 6px rgba(220, 38, 38, 0.3)' }}>
+                    <span style={{ background: '#EF4444', color: 'white', fontSize: 11, fontWeight: 800, borderRadius: 99, padding: '3px 10px', boxShadow: '0 2px 6px rgba(239, 68, 68, 0.3)' }}>
                       {totalUnread} non lu(s)
                     </span>
                   ) : (
-                    <span style={{ background: '#E5E7EB', color: '#6B7280', fontSize: 11, fontWeight: 700, borderRadius: 99, padding: '3px 8px' }}>
+                    <span style={{ background: '#F1F5F9', color: '#64748B', fontSize: 11, fontWeight: 700, borderRadius: 99, padding: '3px 9px' }}>
                       À jour
                     </span>
                   )}
@@ -2437,79 +2448,114 @@ export default function AdminPage() {
 
                 <div style={{ flex: 1, overflowY: 'auto' }}>
                   {chatConversations.length === 0 ? (
-                    <p style={{ padding: 20, textAlign: 'center', color: '#9CA3AF', fontSize: 13, margin: 0 }}>
+                    <p style={{ padding: 30, textAlign: 'center', color: '#94A3B8', fontSize: 13, margin: 0 }}>
                       Aucun message reçu.
                     </p>
                   ) : (
-                    chatConversations.map(c => (
-                      <button
-                        key={c.userId}
-                        onClick={() => handleSelectChatUser(c.userId)}
-                        style={{
-                          width: '100%', padding: '14px 16px', border: 'none',
-                          borderBottom: '1px solid #F3F4F6', background: selectedChatUser === c.userId ? '#EFF6FF' : 'white',
-                          textAlign: 'left', cursor: 'pointer', transition: 'background 0.2s',
-                          display: 'flex', flexDirection: 'column', gap: 4
-                        }}
-                      >
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                          <span style={{ fontSize: 14, fontWeight: 700, color: '#111827' }}>
-                            {c.userName || c.userPhone}
-                          </span>
-                          {c.unreadCount > 0 && (
-                            <span style={{ background: '#DC2626', color: 'white', fontSize: 11, fontWeight: 800, borderRadius: 99, padding: '2px 8px' }}>
-                              {c.unreadCount} non lu(s)
-                            </span>
-                          )}
-                        </div>
-                        <div style={{ fontSize: 11, color: '#9CA3AF' }}>{c.userPhone}</div>
-                        <p style={{ margin: 0, fontSize: 12, color: '#4B5563', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                          {c.lastMessage}
-                        </p>
-                      </button>
-                    ))
+                    chatConversations.map(c => {
+                      const isSelected = selectedChatUser === c.userId;
+                      const initials = getInitials(c.userName, c.userPhone);
+
+                      return (
+                        <button
+                          key={c.userId}
+                          onClick={() => handleSelectChatUser(c.userId)}
+                          style={{
+                            width: '100%', padding: '14px 16px', border: 'none',
+                            borderBottom: '1px solid #F8FAFC', background: isSelected ? '#EFF6FF' : 'white',
+                            textAlign: 'left', cursor: 'pointer', transition: 'all 0.15s ease',
+                            display: 'flex', alignItems: 'center', gap: 12
+                          }}
+                        >
+                          {/* User Avatar Circle */}
+                          <div style={{
+                            width: 42, height: 42, borderRadius: '50%',
+                            background: isSelected ? 'linear-gradient(135deg, #1D4ED8, #1E40AF)' : '#F1F5F9',
+                            color: isSelected ? 'white' : '#334155',
+                            display: 'flex', alignItems: 'center', justifyContent: 'center',
+                            fontSize: 14, fontWeight: 800, flexShrink: 0,
+                            boxShadow: isSelected ? '0 2px 8px rgba(29, 78, 216, 0.3)' : 'none'
+                          }}>
+                            {initials}
+                          </div>
+
+                          <div style={{ flex: 1, overflow: 'hidden' }}>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 2 }}>
+                              <span style={{ fontSize: 14, fontWeight: 800, color: '#0F172A', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                                {c.userName || c.userPhone}
+                              </span>
+                              {c.unreadCount > 0 && (
+                                <span style={{ background: '#EF4444', color: 'white', fontSize: 10, fontWeight: 800, borderRadius: 99, padding: '2px 7px', flexShrink: 0 }}>
+                                  {c.unreadCount}
+                                </span>
+                              )}
+                            </div>
+                            <div style={{ fontSize: 11, color: '#64748B', fontWeight: 600 }}>{c.userPhone}</div>
+                            <p style={{ margin: '2px 0 0', fontSize: 12, color: '#475569', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                              {c.lastMessage}
+                            </p>
+                          </div>
+                        </button>
+                      );
+                    })
                   )}
                 </div>
               </div>
 
               {/* Chat Area */}
               <div className={`chat-area-panel ${!selectedChatUser ? 'mobile-chat-area-hidden' : 'mobile-chat-full-width'}`} style={{
-                flex: 1, background: 'white', borderRadius: 16, border: '1.5px solid #E5E7EB',
-                display: 'flex', flexDirection: 'column', overflow: 'hidden'
+                flex: 1, background: 'white', borderRadius: 20, border: '1.5px solid #E5E7EB',
+                display: 'flex', flexDirection: 'column', overflow: 'hidden',
+                boxShadow: '0 4px 14px rgba(0,0,0,0.03)'
               }}>
                 {selectedChatUser ? (
                   <>
-                    {/* Header Bar with Live User Daily Metrics Banner */}
-                    <div style={{ padding: '14px 16px', borderBottom: '1px solid #E5E7EB', background: '#F8FAFC', display: 'flex', flexDirection: 'column', gap: 12 }}>
+                    {/* Header Bar with Action Controls */}
+                    <div style={{ padding: '14px 18px', borderBottom: '1px solid #E2E8F0', background: '#F8FAFC', display: 'flex', flexDirection: 'column', gap: 12 }}>
                       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, flexWrap: 'wrap' }}>
+                        
+                        {/* Back Button & Client Avatar/Name */}
                         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                           <button onClick={() => setSelectedChatUser(null)} style={{
-                            background: '#1A56DB', color: 'white', border: 'none', borderRadius: 10,
-                            padding: '6px 12px', fontSize: 12, fontWeight: 700, cursor: 'pointer',
-                            display: 'inline-flex', alignItems: 'center', gap: 4
+                            background: '#1D4ED8', color: 'white', border: 'none', borderRadius: 12,
+                            padding: '8px 14px', fontSize: 13, fontWeight: 700, cursor: 'pointer',
+                            display: 'inline-flex', alignItems: 'center', gap: 6,
+                            boxShadow: '0 2px 8px rgba(29, 78, 216, 0.25)'
                           }}>
-                            <ChevronLeft size={16} /> Retour
+                            <ChevronLeft size={18} /> Conversations
                           </button>
-                          <div>
-                            <h2 style={{ fontSize: 15, fontWeight: 800, margin: 0, color: '#0F172A', fontFamily: 'Space Grotesk, sans-serif' }}>
-                              {chatConversations.find(c => c.userId === selectedChatUser)?.userName || chatConversations.find(c => c.userId === selectedChatUser)?.userPhone || 'Utilisateur'}
-                            </h2>
-                            <div style={{ fontSize: 11, color: '#64748B' }}>
-                              {chatConversations.find(c => c.userId === selectedChatUser)?.userPhone}
+
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                            <div style={{
+                              width: 38, height: 38, borderRadius: '50%',
+                              background: '#DBEAFE', color: '#1D4ED8',
+                              display: 'flex', alignItems: 'center', justifyContent: 'center',
+                              fontSize: 13, fontWeight: 800
+                            }}>
+                              {getInitials(chatConversations.find(c => c.userId === selectedChatUser)?.userName, chatConversations.find(c => c.userId === selectedChatUser)?.userPhone)}
+                            </div>
+                            <div>
+                              <h2 style={{ fontSize: 15, fontWeight: 800, margin: 0, color: '#0F172A', fontFamily: 'Space Grotesk, sans-serif' }}>
+                                {chatConversations.find(c => c.userId === selectedChatUser)?.userName || chatConversations.find(c => c.userId === selectedChatUser)?.userPhone || 'Client'}
+                              </h2>
+                              <div style={{ fontSize: 11, color: '#64748B', fontWeight: 600 }}>
+                                {chatConversations.find(c => c.userId === selectedChatUser)?.userPhone}
+                              </div>
                             </div>
                           </div>
                         </div>
 
-                        {/* Actions & AI Toggle */}
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+                        {/* Top Action Pills (Fiche Client & AI Toggle) */}
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                           <button onClick={() => handleOpenUserDetails(selectedChatUser)} style={{
-                            background: '#EFF6FF', color: '#1D4ED8', border: '1px solid #BFDBFE',
-                            borderRadius: 8, padding: '6px 12px', fontSize: 12, fontWeight: 700, cursor: 'pointer'
+                            background: '#FFFFFF', color: '#1D4ED8', border: '1.5px solid #BFDBFE',
+                            borderRadius: 10, padding: '7px 13px', fontSize: 12, fontWeight: 700, cursor: 'pointer',
+                            boxShadow: '0 1px 3px rgba(0,0,0,0.05)', display: 'inline-flex', alignItems: 'center', gap: 5
                           }}>
                             📋 Fiche Client
                           </button>
 
-                          <div style={{ display: 'flex', alignItems: 'center', gap: 6, background: '#F1F5F9', padding: '4px 10px', borderRadius: 10 }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 8, background: '#FFFFFF', border: '1.5px solid #E2E8F0', padding: '5px 12px', borderRadius: 10 }}>
                             <span style={{ fontSize: 11, fontWeight: 700, color: '#334155' }}>IA Réponse</span>
                             <button
                               onClick={() => {
@@ -2524,42 +2570,45 @@ export default function AdminPage() {
                                 });
                               }}
                               style={{
-                                width: 40, height: 22, borderRadius: 11, border: 'none', cursor: 'pointer',
-                                background: (activeUserObj?.ai_support_enabled ?? true) ? '#10B981' : '#94A3B8',
+                                width: 38, height: 20, borderRadius: 10, border: 'none', cursor: 'pointer',
+                                background: (activeUserObj?.ai_support_enabled ?? true) ? '#10B981' : '#CBD5E1',
                                 position: 'relative', transition: 'background 0.3s'
                               }}
                             >
                               <div style={{
-                                width: 18, height: 18, borderRadius: '50%', background: 'white',
+                                width: 16, height: 16, borderRadius: '50%', background: 'white',
                                 position: 'absolute', top: 2, left: (activeUserObj?.ai_support_enabled ?? true) ? 20 : 2,
-                                transition: 'left 0.3s', boxShadow: '0 1px 3px rgba(0,0,0,0.1)'
+                                transition: 'left 0.3s', boxShadow: '0 1px 3px rgba(0,0,0,0.15)'
                               }} />
                             </button>
                           </div>
                         </div>
                       </div>
 
-                      {/* Live User Quotidien Metrics Banner */}
+                      {/* Live User Quotidien Mini-Cards Banner */}
                       {activeUserObj && (
                         <div style={{
-                          display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(110px, 1fr))', gap: 8,
-                          background: 'white', border: '1px solid #E2E8F0', borderRadius: 12, padding: '10px 14px'
+                          display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))', gap: 10,
+                          background: '#FFFFFF', border: '1.5px solid #E2E8F0', borderRadius: 14, padding: '12px 14px'
                         }}>
-                          <div>
-                            <span style={{ color: '#64748B', fontSize: 10, fontWeight: 700, display: 'block' }}>💰 SOLDE ACTUEL</span>
-                            <strong style={{ color: '#1A56DB', fontSize: 13, fontWeight: 800 }}>{formatXOF(activeUserObj.balanceCents || 0)}</strong>
+                          <div style={{ background: '#EFF6FF', borderRadius: 10, padding: '8px 10px', border: '1px solid #DBEAFE' }}>
+                            <span style={{ color: '#1E40AF', fontSize: 10, fontWeight: 700, display: 'block', marginBottom: 2 }}>💰 SOLDE ACTUEL</span>
+                            <strong style={{ color: '#1D4ED8', fontSize: 13, fontWeight: 800 }}>{formatXOF(activeUserObj.balanceCents || 0)}</strong>
                           </div>
-                          <div>
-                            <span style={{ color: '#64748B', fontSize: 10, fontWeight: 700, display: 'block' }}>👥 PARRAINAGE</span>
-                            <strong style={{ color: '#059669', fontSize: 13, fontWeight: 800 }}>{activeUserObj.referralsCount || 0} filleul(s)</strong>
+
+                          <div style={{ background: '#ECFDF5', borderRadius: 10, padding: '8px 10px', border: '1px solid #A7F3D0' }}>
+                            <span style={{ color: '#065F46', fontSize: 10, fontWeight: 700, display: 'block', marginBottom: 2 }}>👥 PARRAINAGE</span>
+                            <strong style={{ color: '#047857', fontSize: 13, fontWeight: 800 }}>{activeUserObj.referralsCount || 0} filleul(s)</strong>
                           </div>
-                          <div>
-                            <span style={{ color: '#64748B', fontSize: 10, fontWeight: 700, display: 'block' }}>🤖 BOTS ACTIFS</span>
-                            <strong style={{ color: '#7C3AED', fontSize: 13, fontWeight: 800 }}>{activeUserBotsCount} bot(s)</strong>
+
+                          <div style={{ background: '#F5F3FF', borderRadius: 10, padding: '8px 10px', border: '1px solid #DDD6FE' }}>
+                            <span style={{ color: '#5B21B6', fontSize: 10, fontWeight: 700, display: 'block', marginBottom: 2 }}>🤖 BOTS ACTIFS</span>
+                            <strong style={{ color: '#6D28D9', fontSize: 13, fontWeight: 800 }}>{activeUserBotsCount} bot(s)</strong>
                           </div>
-                          <div>
-                            <span style={{ color: '#64748B', fontSize: 10, fontWeight: 700, display: 'block' }}>💸 RETRAITS TOTAL</span>
-                            <strong style={{ color: '#D97706', fontSize: 13, fontWeight: 800 }}>
+
+                          <div style={{ background: '#FFFBEB', borderRadius: 10, padding: '8px 10px', border: '1px solid #FDE68A' }}>
+                            <span style={{ color: '#92400E', fontSize: 10, fontWeight: 700, display: 'block', marginBottom: 2 }}>💸 RETRAITS TOTAL</span>
+                            <strong style={{ color: '#B45309', fontSize: 13, fontWeight: 800 }}>
                               {formatXOF(activeUserObj.withdrawalsTotalCents || 0)} ({activeUserObj.withdrawalsCount || 0})
                             </strong>
                           </div>
@@ -2567,11 +2616,11 @@ export default function AdminPage() {
                       )}
                     </div>
 
-                    {/* Messages Window */}
-                    <div style={{ flex: 1, padding: 20, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 12 }}>
+                    {/* Messages Scroll Area */}
+                    <div style={{ flex: 1, padding: '20px 18px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 14, background: '#F8FAFC' }}>
                       {loadingChat ? (
                         <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100%' }}>
-                          <Loader2 size={24} color="#1A56DB" style={{ animation: 'spin 0.8s linear infinite' }} />
+                          <Loader2 size={24} color="#1D4ED8" style={{ animation: 'spin 0.8s linear infinite' }} />
                         </div>
                       ) : (
                         chatMessages.map(msg => {
@@ -2585,43 +2634,45 @@ export default function AdminPage() {
                               maxWidth: '85%', alignSelf: isAdmin ? 'flex-end' : 'flex-start'
                             }}>
                               {isEditing ? (
-                                <div style={{ display: 'flex', flexDirection: 'column', gap: 8, width: '100%', minWidth: 250 }}>
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: 8, width: '100%', minWidth: 250, background: 'white', padding: 12, borderRadius: 12, border: '1px solid #1D4ED8' }}>
                                   <textarea
                                     value={editingMessageContent}
                                     onChange={e => setEditingMessageContent(e.target.value)}
-                                    style={{ width: '100%', padding: 10, borderRadius: 8, border: '1px solid #1A56DB', outline: 'none', resize: 'vertical', minHeight: 60 }}
+                                    style={{ width: '100%', padding: 10, borderRadius: 8, border: '1px solid #CBD5E1', outline: 'none', resize: 'vertical', minHeight: 60, fontSize: 13 }}
                                   />
                                   <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
-                                    <button onClick={() => setEditingMessageId(null)} style={{ background: '#F3F4F6', border: 'none', padding: '4px 8px', borderRadius: 6, fontSize: 12, cursor: 'pointer' }}>Annuler</button>
-                                    <button onClick={() => handleEditMessage(msg.id)} disabled={actionLoading === `edit-${msg.id}`} style={{ background: '#1A56DB', color: 'white', border: 'none', padding: '4px 8px', borderRadius: 6, fontSize: 12, cursor: 'pointer', display: 'flex', alignItems: 'center' }}>
+                                    <button onClick={() => setEditingMessageId(null)} style={{ background: '#F1F5F9', border: 'none', padding: '5px 10px', borderRadius: 6, fontSize: 12, cursor: 'pointer' }}>Annuler</button>
+                                    <button onClick={() => handleEditMessage(msg.id)} disabled={actionLoading === `edit-${msg.id}`} style={{ background: '#1D4ED8', color: 'white', border: 'none', padding: '5px 10px', borderRadius: 6, fontSize: 12, cursor: 'pointer', display: 'flex', alignItems: 'center', fontWeight: 700 }}>
                                       {actionLoading === `edit-${msg.id}` ? <Loader2 size={12} style={{ animation: 'spin 0.8s linear' }} /> : 'Sauvegarder'}
                                     </button>
                                   </div>
                                 </div>
                               ) : (
-                                <div style={{ position: 'relative', display: 'flex', alignItems: 'center', gap: 8 }}>
+                                <div style={{ position: 'relative', display: 'flex', alignItems: 'center', gap: 6 }}>
                                   {isAdmin && (
-                                    <div style={{ display: 'flex', gap: 4, opacity: 0.6 }}>
-                                      <button onClick={() => { setEditingMessageId(msg.id); setEditingMessageContent(msg.content); }} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 2, color: '#6B7280' }} title="Modifier">
-                                        <Edit size={14} />
+                                    <div style={{ display: 'flex', gap: 2, opacity: 0.7, background: '#FFFFFF', padding: '2px 4px', borderRadius: 8, border: '1px solid #E2E8F0' }}>
+                                      <button onClick={() => { setEditingMessageId(msg.id); setEditingMessageContent(msg.content); }} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 3, color: '#64748B' }} title="Modifier">
+                                        <Edit size={13} />
                                       </button>
-                                      <button onClick={() => handleDeleteMessage(msg.id)} disabled={actionLoading === `delete-${msg.id}`} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 2, color: '#EF4444' }} title="Supprimer">
-                                        {actionLoading === `delete-${msg.id}` ? <Loader2 size={14} style={{ animation: 'spin 0.8s linear' }} /> : <Trash size={14} />}
+                                      <button onClick={() => handleDeleteMessage(msg.id)} disabled={actionLoading === `delete-${msg.id}`} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 3, color: '#EF4444' }} title="Supprimer">
+                                        {actionLoading === `delete-${msg.id}` ? <Loader2 size={13} style={{ animation: 'spin 0.8s linear' }} /> : <Trash size={13} />}
                                       </button>
                                     </div>
                                   )}
                                   <div style={{
-                                    background: isAdmin ? '#1A56DB' : '#F3F4F6',
-                                    color: isAdmin ? 'white' : '#111827',
-                                    padding: '10px 14px',
-                                    borderRadius: isAdmin ? '16px 16px 4px 16px' : '16px 16px 16px 4px',
-                                    fontSize: 14, lineHeight: 1.5
+                                    background: isAdmin ? 'linear-gradient(135deg, #1D4ED8, #1E40AF)' : '#FFFFFF',
+                                    color: isAdmin ? '#FFFFFF' : '#0F172A',
+                                    padding: '12px 16px',
+                                    borderRadius: isAdmin ? '18px 18px 4px 18px' : '18px 18px 18px 4px',
+                                    fontSize: 14, lineHeight: 1.5,
+                                    border: isAdmin ? 'none' : '1px solid #E2E8F0',
+                                    boxShadow: isAdmin ? '0 3px 10px rgba(29, 78, 216, 0.2)' : '0 1px 3px rgba(0,0,0,0.03)'
                                   }}>
                                     {msg.content}
                                   </div>
                                 </div>
                               )}
-                              <span style={{ fontSize: 11, color: '#9CA3AF', marginTop: 4 }}>
+                              <span style={{ fontSize: 10, color: '#94A3B8', marginTop: 4, fontWeight: 600 }}>
                                 {new Date(msg.created_at).toLocaleTimeString('fr-BJ', { hour: '2-digit', minute: '2-digit' })}
                               </span>
                             </div>
@@ -2632,17 +2683,24 @@ export default function AdminPage() {
                     </div>
 
                     {/* Chat Input Form */}
-                    <div style={{ padding: 16, borderTop: '1px solid #E5E7EB' }}>
+                    <div style={{ padding: '14px 18px', borderTop: '1px solid #E2E8F0', background: '#FFFFFF' }}>
                       <form onSubmit={handleSendAdminMessage} style={{ display: 'flex', gap: 10 }}>
                         <input
                           type="text" value={chatInput} onChange={e => setChatInput(e.target.value)}
                           placeholder="Tapez votre réponse au client..."
-                          style={{ flex: 1, padding: '0 16px', borderRadius: 24, border: '1px solid #E5E7EB', outline: 'none', fontSize: 14 }}
+                          style={{
+                            flex: 1, padding: '12px 18px', borderRadius: 99,
+                            border: '1.5px solid #E2E8F0', outline: 'none', fontSize: 14,
+                            background: '#F8FAFC', color: '#0F172A'
+                          }}
                         />
                         <button type="submit" disabled={!chatInput.trim()} style={{
-                          width: 44, height: 44, borderRadius: '50%', background: chatInput.trim() ? '#1A56DB' : '#E5E7EB',
+                          width: 46, height: 46, borderRadius: '50%',
+                          background: chatInput.trim() ? 'linear-gradient(135deg, #1D4ED8, #1E40AF)' : '#E2E8F0',
                           color: 'white', border: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center',
-                          cursor: chatInput.trim() ? 'pointer' : 'default'
+                          cursor: chatInput.trim() ? 'pointer' : 'default',
+                          boxShadow: chatInput.trim() ? '0 4px 12px rgba(29, 78, 216, 0.3)' : 'none',
+                          flexShrink: 0
                         }}>
                           {actionLoading === 'send-chat' ? <Loader2 size={18} style={{ animation: 'spin 0.8s linear infinite' }} /> : <Send size={18} />}
                         </button>
@@ -2650,7 +2708,7 @@ export default function AdminPage() {
                     </div>
                   </>
                 ) : (
-                  <div style={{ display: 'flex', flex: 1, alignItems: 'center', justifyContent: 'center', color: '#9CA3AF', fontSize: 14, padding: 20, textAlign: 'center' }}>
+                  <div style={{ display: 'flex', flex: 1, alignItems: 'center', justifyContent: 'center', color: '#94A3B8', fontSize: 14, padding: 20, textAlign: 'center', background: '#F8FAFC' }}>
                     👈 Sélectionnez une conversation pour afficher le tchat et les statistiques du client.
                   </div>
                 )}
@@ -2677,7 +2735,7 @@ export default function AdminPage() {
         }
         .admin-main {
           flex: 1;
-          padding: 28px;
+          padding: 24px;
           overflow-y: auto;
           max-height: 100dvh;
         }
@@ -2703,7 +2761,7 @@ export default function AdminPage() {
             transform: translateX(0);
           }
           .admin-main {
-            padding: 16px;
+            padding: 8px !important;
             max-height: calc(100dvh - 48px);
           }
           .mobile-header {
