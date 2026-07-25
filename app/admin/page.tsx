@@ -146,7 +146,7 @@ export default function AdminPage() {
             tag: 'payment-alert-' + Date.now(),
             renotify: true,
             data: { url: '/admin' }
-          });
+          } as any);
         });
       } else {
         new Notification(title, {
