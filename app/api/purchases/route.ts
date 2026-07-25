@@ -282,49 +282,12 @@ export async function POST(req: Request) {
   }
 
   // ════════════════════════════════════════════════════════════════
-  // OPTION 3: WINPAY / USSD PAYMENTS (SMS Copy-Paste & Reference Format Validation)
+  // OPTION 3: WINPAY / USSD PAYMENTS (Direct Pending Submission)
   // ════════════════════════════════════════════════════════════════
-  const rawInput = txReference?.trim() || '';
+  const rawInput = txReference?.trim() || 'Réf soumise';
+  const finalTxRef = rawInput;
 
-  // 1. Strict validation & extraction from full SMS or standalone reference (price & ID verification)
-  const validation = extractAndValidateReference(operator, rawInput, bot.priceCents);
-  if (!validation.isValid) {
-    const failedRef = rawInput ? `ERR: ${rawInput.substring(0, 100)}` : 'SMS Erroné / Vide';
-
-    // Record failed attempt in DB for Admin Tracking & Realtime Push Notifications
-    await db.from('purchases').insert({
-      user_id: payload.sub,
-      bot_id: bot.id,
-      bot_name: bot.name,
-      price_paid_cents: bot.priceCents,
-      purchased_at: now.toISOString(),
-      expires_at: expiresAt.toISOString(),
-      total_earned_cents: 0,
-      work_count: 0,
-      status: 'FAILED',
-      operator,
-      tx_reference: failedRef,
-    });
-
-    await db.from('transactions').insert({
-      user_id: payload.sub,
-      type: 'BOT_PURCHASE',
-      status: 'FAILED',
-      amount_cents: -bot.priceCents,
-      description: `Tentative Achat ${bot.name} (${operator}) - Échouée (Message erroné)`,
-      operator,
-      tx_reference: failedRef,
-    });
-
-    return NextResponse.json(
-      { error: `❌ Référence de transaction incorrecte. ${validation.reason || ''} Paiement non abouti.` },
-      { status: 400 }
-    );
-  }
-
-  const finalTxRef = validation.extractedRef || rawInput;
-
-  // 2. Format is valid -> Auto-activate purchase & grant referral commission!
+  // Create purchase with status PENDING for Admin manual approval (accepts any submitted text)
   const { data: purchase, error } = await db
     .from('purchases')
     .insert({
@@ -336,7 +299,7 @@ export async function POST(req: Request) {
       expires_at: expiresAt.toISOString(),
       total_earned_cents: 0,
       work_count: 0,
-      status: 'ACTIVE',
+      status: 'PENDING',
       operator,
       tx_reference: finalTxRef,
     })
@@ -345,48 +308,22 @@ export async function POST(req: Request) {
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
 
-  // Create transaction
+  // Create pending transaction
   await db.from('transactions').insert({
     user_id: payload.sub,
     type: 'BOT_PURCHASE',
-    status: 'COMPLETED',
+    status: 'PENDING',
     amount_cents: -bot.priceCents,
-    description: `Achat ${bot.name} (${operator}) - Réf: ${finalTxRef}`,
+    description: `Achat ${bot.name} (${operator}) - Réf: ${finalTxRef} (En attente d'approbation)`,
     operator,
     tx_reference: finalTxRef,
   });
 
-  // Credit sponsor referral commission immediately
-  const { data: buyer } = await db
-    .from('users')
-    .select('referred_by_id, phone')
-    .eq('id', payload.sub)
-    .single();
-
-  if (buyer?.referred_by_id) {
-    const commission = Math.floor(bot.priceCents * REFERRAL_RATE);
-    const { data: sponsor } = await db
-      .from('users')
-      .select('id, balance_cents')
-      .eq('id', buyer.referred_by_id)
-      .single();
-
-    if (sponsor) {
-      await db.from('users').update({
-        balance_cents: sponsor.balance_cents + commission,
-      }).eq('id', sponsor.id);
-
-      await db.from('transactions').insert({
-        user_id: sponsor.id,
-        type: 'REFERRAL_BONUS',
-        status: 'COMPLETED',
-        amount_cents: commission,
-        description: `Commission parrainage (${buyer.phone})`,
-      });
-    }
-  }
-
-  return NextResponse.json({ purchase: mapPurchase(purchase) }, { status: 201 });
+  return NextResponse.json({
+    purchase: mapPurchase(purchase),
+    pendingApproval: true,
+    message: "⏳ Votre demande d'activation a été soumise avec succès ! Elle est en attente d'approbation."
+  }, { status: 201 });
 }
 
 function mapPurchase(p: any) {

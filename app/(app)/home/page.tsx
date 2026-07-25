@@ -436,12 +436,11 @@ function PurchaseModal({ bot, balanceCents, botConfigs, isWinpayActive, onClose,
 
               <button
                 onClick={() => {
-                  const check = extractAndValidateReference(selectedOperator, txRef, bot.priceCents);
-                  if (!check.isValid) {
-                    showToast(`❌ ${check.reason || 'Message, montant ou ID de transaction incorrect.'} Paiement non abouti.`, 'error');
+                  if (!txRef.trim()) {
+                    showToast('Veuillez coller la référence ou le message SMS de transaction.', 'error');
                     return;
                   }
-                  onConfirm(bot, 'WINPAY', check.extractedRef || txRef.trim(), selectedOperator);
+                  onConfirm(bot, 'WINPAY', txRef.trim(), selectedOperator);
                 }}
                 className="btn-press"
                 disabled={buying}
@@ -802,7 +801,7 @@ export default function HomePage() {
         showToast(`Félicitations, ${bot.name} a été activé !`, 'success');
         router.push('/products');
       } else {
-        showToast(`Demande d'activation envoyée avec succès ! En attente de vérification.`, 'success');
+        showToast("⏳ Votre demande d'activation a été soumise avec succès ! Elle est en attente d'approbation.", 'success');
         router.push('/products');
       }
     } catch (err: any) {

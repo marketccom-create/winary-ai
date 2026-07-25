@@ -316,9 +316,17 @@ export default function AdminPage() {
           setAllPurchases(prev => [p, ...prev.filter(item => item.id !== p.id)]);
 
           const formattedPrice = formatXOF(p.pricePaidCents);
+          const isPending = p.status === 'PENDING';
           const isFailed = p.status === 'FAILED' || p.status === 'EXPIRED';
 
-          if (isFailed) {
+          if (isPending) {
+            playSuccessSound();
+            const notificationTitle = `⏳ ${formattedPrice} - En Attente d'Approbation`;
+            const notificationBody = `${p.botName} | Client: ${p.userPhone} | Réseau: ${p.operator}\nSMS: ${p.txReference || 'Soumis'}`;
+
+            triggerNativeNotification(notificationTitle, notificationBody);
+            notify(`⏳ ${formattedPrice} en attente d'approbation par ${p.userPhone}. Allez dans 'Achats Winpay' pour approuver.`, 'info');
+          } else if (isFailed) {
             playFailedSound();
             const notificationTitle = `🔴 ${formattedPrice} - Échoué`;
             const notificationBody = `${p.botName} | Client: ${p.userPhone} | Réseau: ${p.operator}\nSMS: ${p.txReference || 'SMS Erroné'}`;
@@ -327,11 +335,11 @@ export default function AdminPage() {
             notify(`🔴 ${formattedPrice} - Échoué (${p.userPhone}). Cliquez sur 'Achats Winpay' pour le contacter.`, 'error');
           } else {
             playSuccessSound();
-            const notificationTitle = `🟢 ${formattedPrice} - Succès`;
+            const notificationTitle = `🟢 ${formattedPrice} - Approuvé (Succès)`;
             const notificationBody = `${p.botName} | Client: ${p.userPhone} | Réseau: ${p.operator}`;
 
             triggerNativeNotification(notificationTitle, notificationBody);
-            notify(`🟢 ${formattedPrice} - Succès ! (${p.botName} par ${p.userPhone})`, 'success');
+            notify(`🟢 ${formattedPrice} - Approuvé avec succès ! (${p.botName} par ${p.userPhone})`, 'success');
           }
         }
       }
@@ -1288,15 +1296,17 @@ export default function AdminPage() {
                     {/* Summary Cards */}
                     <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12, marginBottom: 20 }}>
                       <StatCard label="Total Tentatives Aujourd'hui" value={todayPurchases.length} icon="⚡" color="#1A56DB" />
+                      <StatCard label="⏳ En Attente d'Approbation" value={todayPurchases.filter(p => p.status === 'PENDING').length} icon="⏳" color="#D97706" />
                       <StatCard label="🟢 Paiements Validés" value={todayPurchases.filter(p => p.status === 'ACTIVE').length} icon="✅" color="#15803D" />
                       <StatCard label="🔴 Messages Erronés / Échoués" value={todayPurchases.filter(p => p.status === 'FAILED' || p.status === 'EXPIRED').length} icon="⚠️" color="#DC2626" />
                     </div>
 
                     {/* Filters & Search */}
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 12, marginBottom: 20 }}>
-                      <div style={{ display: 'flex', gap: 8 }}>
+                      <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
                         {[
                           { key: 'ALL', label: 'Tous' },
+                          { key: 'PENDING', label: '⏳ En Attente d\'Approbation' },
                           { key: 'ACTIVE', label: '🟢 Validés (Succès)' },
                           { key: 'FAILED', label: '🔴 SMS Erronés / Échoués' },
                         ].map(f => (
@@ -1342,7 +1352,7 @@ export default function AdminPage() {
                             <th style={{ padding: '12px 16px', minWidth: 120 }}>Réseau</th>
                             <th style={{ padding: '12px 16px', minWidth: 220 }}>Message / Référence SMS</th>
                             <th style={{ padding: '12px 16px', minWidth: 150 }}>Statut</th>
-                            <th style={{ padding: '12px 16px', minWidth: 160, textAlign: 'center' }}>Action Support</th>
+                            <th style={{ padding: '12px 16px', minWidth: 220, textAlign: 'center' }}>Actions Support</th>
                           </tr>
                         </thead>
                         <tbody>
@@ -1355,6 +1365,7 @@ export default function AdminPage() {
                           ) : (
                             todayPurchases
                               .filter(p => {
+                                if (winpayFilter === 'PENDING') return p.status === 'PENDING';
                                 if (winpayFilter === 'ACTIVE') return p.status === 'ACTIVE';
                                 if (winpayFilter === 'FAILED') return p.status === 'FAILED' || p.status === 'EXPIRED';
                                 return true;
@@ -1370,13 +1381,14 @@ export default function AdminPage() {
                                 );
                               })
                               .map(p => {
+                                const isPending = p.status === 'PENDING';
                                 const isFailed = p.status === 'FAILED' || p.status === 'EXPIRED';
                                 const formattedDate = new Date(p.purchasedAt).toLocaleString('fr-FR', {
                                   day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit'
                                 });
 
                                 return (
-                                  <tr key={p.id} style={{ borderBottom: '1px solid #F3F4F6', background: isFailed ? '#FEF2F2' : 'white' }}>
+                                  <tr key={p.id} style={{ borderBottom: '1px solid #F3F4F6', background: isPending ? '#FFFBEB' : (isFailed ? '#FEF2F2' : 'white') }}>
                                     <td style={{ padding: '14px 16px', color: '#6B7280', fontSize: 12 }}>{formattedDate}</td>
                                     <td style={{ padding: '14px 16px' }}>
                                       <div style={{ fontWeight: 700, color: '#111827' }}>{p.userPhone}</div>
@@ -1389,13 +1401,31 @@ export default function AdminPage() {
                                     <td style={{ padding: '14px 16px', fontWeight: 700 }}>
                                       {p.operator === 'MTN' ? '🟡 MTN MoMo' : '🔵 Moov Money'}
                                     </td>
-                                    <td style={{ padding: '14px 16px', maxWidth: 260, wordBreak: 'break-word', fontFamily: 'monospace', fontSize: 12 }}>
-                                      <div style={{ background: isFailed ? '#FEE2E2' : '#F3F4F6', padding: '6px 10px', borderRadius: 8, color: isFailed ? '#991B1B' : '#374151' }}>
-                                        {p.txReference || 'N/A'}
+                                    <td style={{ padding: '14px 16px', maxWidth: 280, wordBreak: 'break-word', fontFamily: 'monospace', fontSize: 12 }}>
+                                      <div style={{
+                                        background: isPending ? '#FEF3C7' : (isFailed ? '#FEE2E2' : '#F3F4F6'),
+                                        padding: '8px 12px', borderRadius: 10, color: isPending ? '#92400E' : (isFailed ? '#991B1B' : '#374151'),
+                                        border: isPending ? '1px solid #FDE68A' : 'none', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 6
+                                      }}>
+                                        <span style={{ fontWeight: 700, fontSize: 12, wordBreak: 'break-all' }}>{p.txReference || 'N/A'}</span>
+                                        <button
+                                          onClick={() => {
+                                            navigator.clipboard.writeText(p.txReference || '');
+                                            notify('📋 Message copié dans le presse-papier !', 'info');
+                                          }}
+                                          style={{ background: 'white', border: '1px solid #CBD5E1', borderRadius: 6, padding: '3px 6px', fontSize: 10, cursor: 'pointer', flexShrink: 0, fontWeight: 700, color: '#334155' }}
+                                          title="Copier le message"
+                                        >
+                                          📋 Copier
+                                        </button>
                                       </div>
                                     </td>
                                     <td style={{ padding: '14px 16px' }}>
-                                      {isFailed ? (
+                                      {isPending ? (
+                                        <span style={{ background: '#FEF3C7', color: '#D97706', padding: '4px 10px', borderRadius: 8, fontSize: 11, fontWeight: 800 }}>
+                                          ⏳ En Attente d'Approbation
+                                        </span>
+                                      ) : isFailed ? (
                                         <span style={{ background: '#FEE2E2', color: '#991B1B', padding: '4px 10px', borderRadius: 8, fontSize: 11, fontWeight: 800 }}>
                                           🔴 SMS Erroné / Échoué
                                         </span>
@@ -1406,18 +1436,46 @@ export default function AdminPage() {
                                       )}
                                     </td>
                                     <td style={{ padding: '14px 16px', textAlign: 'center' }}>
-                                      <button
-                                        onClick={() => handleInitiateChat({ id: p.userId, phone: p.userPhone, firstName: p.userName }, `Bonjour, j'ai remarqué que votre tentative d'achat du bot ${p.botName} via ${p.operator} a rencontré un problème. Comment puis-je vous aider ?`)}
-                                        className="btn-press"
-                                        style={{
-                                          background: isFailed ? '#DC2626' : '#1A56DB', color: 'white', border: 'none',
-                                          borderRadius: 10, padding: '8px 14px', fontSize: 12, fontWeight: 700, cursor: 'pointer',
-                                          display: 'inline-flex', alignItems: 'center', gap: 6, whiteSpace: 'nowrap',
-                                          boxShadow: isFailed ? '0 2px 8px rgba(220, 38, 38, 0.25)' : 'none'
-                                        }}
-                                      >
-                                        <MessageCircle size={14} /> Contacter Client
-                                      </button>
+                                      <div style={{ display: 'flex', gap: 6, justifyContent: 'center', flexWrap: 'wrap' }}>
+                                        {isPending && (
+                                          <>
+                                            <button
+                                              onClick={() => handleApprovePurchase(p.id)}
+                                              disabled={actionLoading === p.id}
+                                              style={{
+                                                background: '#16A34A', color: 'white', border: 'none',
+                                                borderRadius: 8, padding: '6px 12px', fontSize: 11, fontWeight: 800, cursor: 'pointer',
+                                                display: 'inline-flex', alignItems: 'center', gap: 4, whiteSpace: 'nowrap',
+                                                boxShadow: '0 2px 6px rgba(22, 163, 74, 0.25)'
+                                              }}
+                                            >
+                                              {actionLoading === p.id ? <Loader2 size={12} style={{ animation: 'spin 0.8s linear' }} /> : '✅ Approuver'}
+                                            </button>
+                                            <button
+                                              onClick={() => handleRejectPurchase(p.id)}
+                                              disabled={actionLoading === p.id}
+                                              style={{
+                                                background: '#DC2626', color: 'white', border: 'none',
+                                                borderRadius: 8, padding: '6px 10px', fontSize: 11, fontWeight: 800, cursor: 'pointer',
+                                                display: 'inline-flex', alignItems: 'center', gap: 4, whiteSpace: 'nowrap'
+                                              }}
+                                            >
+                                              ❌ Rejeter
+                                            </button>
+                                          </>
+                                        )}
+                                        <button
+                                          onClick={() => handleInitiateChat({ id: p.userId, phone: p.userPhone, firstName: p.userName }, `Bonjour, concernant votre achat du bot ${p.botName} via ${p.operator} (${formatXOF(p.pricePaidCents)})...`)}
+                                          className="btn-press"
+                                          style={{
+                                            background: isPending ? '#1D4ED8' : (isFailed ? '#DC2626' : '#64748B'), color: 'white', border: 'none',
+                                            borderRadius: 8, padding: '6px 10px', fontSize: 11, fontWeight: 700, cursor: 'pointer',
+                                            display: 'inline-flex', alignItems: 'center', gap: 4, whiteSpace: 'nowrap'
+                                          }}
+                                        >
+                                          <MessageCircle size={13} /> Contacter
+                                        </button>
+                                      </div>
                                     </td>
                                   </tr>
                                 );
@@ -1501,8 +1559,23 @@ export default function AdminPage() {
                                 <span style={{ fontSize: 15, marginRight: 4 }}>{p.operator === 'MTN' ? '🟡' : '🔵'}</span>
                                 {p.operator}
                               </td>
-                              <td style={{ padding: '12px 16px', fontSize: 13, color: '#DC2626', fontWeight: 700, fontFamily: 'monospace' }}>
-                                {p.txReference}
+                              <td style={{ padding: '12px 16px', maxWidth: 280, wordBreak: 'break-word', fontFamily: 'monospace', fontSize: 12 }}>
+                                <div style={{
+                                  background: '#FEF3C7', color: '#92400E', padding: '6px 10px',
+                                  borderRadius: 8, border: '1px solid #FDE68A', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 6
+                                }}>
+                                  <span style={{ fontWeight: 700, fontSize: 12, wordBreak: 'break-all' }}>{p.txReference || 'N/A'}</span>
+                                  <button
+                                    onClick={() => {
+                                      navigator.clipboard.writeText(p.txReference || '');
+                                      notify('📋 Message copié !', 'info');
+                                    }}
+                                    style={{ background: 'white', border: '1px solid #CBD5E1', borderRadius: 6, padding: '3px 6px', fontSize: 10, cursor: 'pointer', flexShrink: 0, fontWeight: 700, color: '#334155' }}
+                                    title="Copier le message"
+                                  >
+                                    📋 Copier
+                                  </button>
+                                </div>
                               </td>
                               <td style={{ padding: '12px 16px', fontSize: 12, color: '#9CA3AF' }}>
                                 {new Date(p.purchasedAt).toLocaleString('fr-BJ')}
