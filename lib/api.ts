@@ -25,23 +25,57 @@ function authHeaders(): HeadersInit {
 
 import { useAuthStore } from './store';
 
-async function apiFetch<T>(url: string, options?: RequestInit): Promise<T> {
-  const res = await fetch(url, {
-    ...options,
-    headers: { ...authHeaders(), ...(options?.headers || {}) },
-  });
-  const json = await res.json();
-  if (!res.ok) {
-    if (res.status === 401) {
-      // Clear token globally if we are unauthorized
-      useAuthStore.getState().logout();
-      if (typeof window !== 'undefined') {
-        window.location.href = '/login';
+async function apiFetch<T>(url: string, options?: RequestInit, retries = 2): Promise<T> {
+  for (let attempt = 0; attempt <= retries; attempt++) {
+    try {
+      const res = await fetch(url, {
+        ...options,
+        headers: { ...authHeaders(), ...(options?.headers || {}) },
+      });
+
+      let json: any = {};
+      const contentType = res.headers.get('content-type') || '';
+
+      if (contentType.includes('application/json')) {
+        json = await res.json();
+      } else {
+        const text = await res.text();
+        if (text.includes('upstream connect error') || text.includes('timeout') || res.status === 504 || res.status === 502) {
+          if (attempt < retries) {
+            await new Promise(r => setTimeout(r, 1000 * (attempt + 1)));
+            continue;
+          }
+          throw new Error('Connexion réseau temporairement lente. Veuillez réessayer.');
+        }
+        json = { error: text };
       }
+
+      if (!res.ok) {
+        if (res.status === 401) {
+          if (!url.includes('/api/auth/login')) {
+            useAuthStore.getState().logout();
+            if (typeof window !== 'undefined') {
+              window.location.href = '/login';
+            }
+          }
+        }
+        if ((res.status === 502 || res.status === 504 || res.status === 503) && attempt < retries) {
+          await new Promise(r => setTimeout(r, 1000 * (attempt + 1)));
+          continue;
+        }
+        throw new Error(json.error || `Erreur serveur (${res.status})`);
+      }
+
+      return json as T;
+    } catch (err: any) {
+      if (attempt < retries && (err.name === 'TypeError' || err.message.includes('fetch') || err.message.includes('timeout') || err.message.includes('upstream'))) {
+        await new Promise(r => setTimeout(r, 1000 * (attempt + 1)));
+        continue;
+      }
+      throw new Error(err.message || 'Problème de connexion réseau. Veuillez réessayer.');
     }
-    throw new Error(json.error || 'Erreur serveur');
   }
-  return json as T;
+  throw new Error('Le serveur met trop de temps à répondre. Veuillez réessayer dans un instant.');
 }
 
 // ─── Auth ─────────────────────────────────────────────────────────────────────
