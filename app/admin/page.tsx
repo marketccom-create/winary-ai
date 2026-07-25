@@ -601,7 +601,12 @@ export default function AdminPage() {
 
     const defaultReason = "Vous n'avez aucun parrainage actif, parrainez un ami et relancez votre retrait, votre solde vous a été retourné sur votre compte.";
 
-    if (!confirm(`⚠️ REJETER EN BLOC LES ${count} DEMANDE(S) DE RETRAIT NON ÉLIGIBLES ?\n\nMotif transmis aux clients :\n"${defaultReason}"\n\nLe solde sera recrédité sur le compte de chaque utilisateur.`)) {
+    const customReason = prompt(`⚠️ REJET EN BLOC DE ${count} DEMANDE(S) NON ÉLIGIBLES :\n\nPersonnalisez ou modifiez le motif ci-dessous avant d'envoyer aux clients :`, defaultReason);
+    if (customReason === null) return;
+
+    const finalReason = customReason.trim() || defaultReason;
+
+    if (!confirm(`Confirmer le rejet en bloc de ${count} demande(s) avec le motif :\n\n"${finalReason}"`)) {
       return;
     }
 
@@ -609,7 +614,7 @@ export default function AdminPage() {
     try {
       let rejectedCount = 0;
       for (const w of ineligibleList) {
-        await apiAdminRejectWithdrawal(w.id, defaultReason);
+        await apiAdminRejectWithdrawal(w.id, finalReason);
         rejectedCount++;
       }
 
@@ -1439,22 +1444,29 @@ export default function AdminPage() {
                                     <td style={{ padding: '14px 16px', fontWeight: 700 }}>
                                       {p.operator === 'MTN' ? '🟡 MTN MoMo' : '🔵 Moov Money'}
                                     </td>
-                                    <td style={{ padding: '14px 16px', maxWidth: 280, wordBreak: 'break-word', fontFamily: 'monospace', fontSize: 12 }}>
+                                    <td style={{ padding: '14px 16px', maxWidth: 350, wordBreak: 'break-word', whiteSpace: 'pre-wrap', fontFamily: 'monospace', fontSize: 13 }}>
                                       <div style={{
-                                        background: isPending ? '#FEF3C7' : (isFailed ? '#FEE2E2' : '#F3F4F6'),
-                                        padding: '8px 12px', borderRadius: 10, color: isPending ? '#92400E' : (isFailed ? '#991B1B' : '#374151'),
-                                        border: isPending ? '1px solid #FDE68A' : 'none', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 6
+                                        background: isPending ? '#FEF3C7' : (isFailed ? '#FEE2E2' : '#F8FAFC'),
+                                        padding: '10px 14px', borderRadius: 12, color: isPending ? '#92400E' : (isFailed ? '#991B1B' : '#0F172A'),
+                                        border: isPending ? '1.5px solid #FDE68A' : '1px solid #E2E8F0',
+                                        display: 'flex', flexDirection: 'column', gap: 6
                                       }}>
-                                        <span style={{ fontWeight: 700, fontSize: 12, wordBreak: 'break-all' }}>{p.txReference || 'N/A'}</span>
+                                        <div style={{ fontWeight: 700, fontSize: 13, wordBreak: 'break-word', whiteSpace: 'pre-wrap', lineHeight: 1.4 }}>
+                                          {p.txReference || 'Aucun message transmis'}
+                                        </div>
                                         <button
                                           onClick={() => {
                                             navigator.clipboard.writeText(p.txReference || '');
                                             notify('📋 Message copié dans le presse-papier !', 'info');
                                           }}
-                                          style={{ background: 'white', border: '1px solid #CBD5E1', borderRadius: 6, padding: '3px 6px', fontSize: 10, cursor: 'pointer', flexShrink: 0, fontWeight: 700, color: '#334155' }}
-                                          title="Copier le message"
+                                          style={{
+                                            alignSelf: 'flex-end', background: 'white', border: '1px solid #CBD5E1',
+                                            borderRadius: 8, padding: '4px 10px', fontSize: 11, cursor: 'pointer',
+                                            fontWeight: 700, color: '#1D4ED8', display: 'flex', alignItems: 'center', gap: 4
+                                          }}
+                                          title="Copier le message complet"
                                         >
-                                          📋 Copier
+                                          📋 Copier le message
                                         </button>
                                       </div>
                                     </td>
