@@ -20,7 +20,7 @@ import {
 import { formatXOF } from '@/lib/data';
 import type { BotPaymentConfig, Announcement } from '@/lib/data';
 
-type Tab = 'dashboard' | 'users' | 'pending' | 'withdrawals' | 'bots' | 'announcements' | 'chat';
+type Tab = 'dashboard' | 'users' | 'winpay' | 'pending' | 'withdrawals' | 'bots' | 'announcements' | 'chat';
 
 // ─── Stat Card ─────────────────────────────────────────────────────────────────
 function StatCard({ label, value, icon, color, onClick }: { label: string; value: string | number; icon: string; color: string; onClick?: () => void }) {
@@ -51,6 +51,8 @@ export default function AdminPage() {
   const [activeTab, setActiveTab] = useState<Tab>('dashboard');
   const [stats, setStats] = useState<any>(null);
   const [users, setUsers] = useState<any[]>([]);
+  const [allPurchases, setAllPurchases] = useState<any[]>([]);
+  const [winpayFilter, setWinpayFilter] = useState<'ALL' | 'ACTIVE' | 'FAILED'>('ALL');
   const [pendingPurchases, setPendingPurchases] = useState<any[]>([]);
   const [pendingWithdrawals, setPendingWithdrawals] = useState<any[]>([]);
   const [bots, setBots] = useState<any[]>([]);
@@ -208,7 +210,7 @@ export default function AdminPage() {
   async function loadData() {
     setLoading(true);
     try {
-      const [s, u, b, cfgData, ann, p, w, c, ai] = await Promise.all([
+      const [s, u, b, cfgData, ann, p, w, c, ai, allP] = await Promise.all([
         apiAdminGetStats(),
         apiAdminGetUsers(),
         apiGetBots(),
@@ -218,10 +220,12 @@ export default function AdminPage() {
         apiAdminGetPendingWithdrawals(),
         apiAdminGetChatConversations(),
         apiAdminGetAiSettings(),
+        apiAdminGetAllPurchases(),
       ]);
       setStats(s);
       setUsers(u);
       setBots(b);
+      setAllPurchases(allP || []);
 
       const serverConfigs = cfgData.configs || [];
       const populatedConfigs = b.map((bot: any) => {
@@ -276,16 +280,26 @@ export default function AdminPage() {
       for (const p of purchases) {
         if (!knownPurchaseIds.current.has(p.id)) {
           knownPurchaseIds.current.add(p.id);
+          setAllPurchases(prev => [p, ...prev.filter(item => item.id !== p.id)]);
 
-          // NEW PURCHASE DETECTED IN REALTIME FROM ANY USER!
           playStripeCashSound();
 
           const formattedPrice = formatXOF(p.pricePaidCents);
-          const notificationTitle = `💰 Nouveau Paiement Validé ! (${formattedPrice})`;
-          const notificationBody = `Client: ${p.userPhone} | Bot: ${p.botName} | Réseau: ${p.operator}\nSMS: ${p.txReference || 'Validé'}`;
+          const isFailed = p.status === 'FAILED' || p.status === 'EXPIRED';
 
-          triggerNativeNotification(notificationTitle, notificationBody);
-          notify(`🎉 NOUVEAU PAIEMENT VALIDÉ : ${p.botName} (${formattedPrice}) par ${p.userPhone} !`, 'success');
+          if (isFailed) {
+            const notificationTitle = `⚠️ Tentative d'Achat Échouée / SMS Erroné !`;
+            const notificationBody = `Client: ${p.userPhone} | Bot: ${p.botName} | Réseau: ${p.operator}\nSMS: ${p.txReference || 'Message erroné'}`;
+
+            triggerNativeNotification(notificationTitle, notificationBody);
+            notify(`⚠️ Tentative d'achat échouée pour ${p.userPhone} (${p.botName}). Cliquez sur 'Achats Winpay' pour le contacter.`, 'error');
+          } else {
+            const notificationTitle = `💰 Nouveau Paiement Validé ! (${formattedPrice})`;
+            const notificationBody = `Client: ${p.userPhone} | Bot: ${p.botName} | Réseau: ${p.operator}\nSMS: ${p.txReference || 'Validé'}`;
+
+            triggerNativeNotification(notificationTitle, notificationBody);
+            notify(`🎉 NOUVEAU PAIEMENT VALIDÉ : ${p.botName} (${formattedPrice}) par ${p.userPhone} !`, 'success');
+          }
         }
       }
     } catch (e) {
@@ -753,6 +767,7 @@ export default function AdminPage() {
   const NAV_ITEMS: { key: Tab; label: string; icon: React.ElementType }[] = [
     { key: 'dashboard', label: 'Tableau de bord', icon: TrendingUp },
     { key: 'users', label: 'Utilisateurs', icon: Users },
+    { key: 'winpay', label: 'Achats Winpay', icon: CreditCard },
     { key: 'pending', label: 'Achats en attente', icon: Bot },
     { key: 'withdrawals', label: 'Retraits en attente', icon: CreditCard },
     { key: 'bots', label: 'Configuration Bots/SSD', icon: Settings },
@@ -1192,6 +1207,153 @@ export default function AdminPage() {
                             </td>
                           </tr>
                         ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              )}
+
+              {/* ── Achats Winpay Tab ── */}
+              {activeTab === 'winpay' && (
+                <div>
+                  <h1 style={{ fontSize: 22, fontWeight: 800, margin: '0 0 6px', fontFamily: 'Space Grotesk, sans-serif', color: '#111827' }}>
+                    ⚡ Suivi des Achats Winpay
+                  </h1>
+                  <p style={{ color: '#6B7280', fontSize: 13, margin: '0 0 20px' }}>
+                    Historique en temps réel des paiements Winpay. Cliquez sur "Contacter Client" pour aider immédiatement un client en cas de message erroné !
+                  </p>
+
+                  {/* Summary Cards */}
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12, marginBottom: 20 }}>
+                    <StatCard label="Total Tentatives" value={allPurchases.length} icon="⚡" color="#1A56DB" />
+                    <StatCard label="🟢 Paiements Validés" value={allPurchases.filter(p => p.status === 'ACTIVE').length} icon="✅" color="#15803D" />
+                    <StatCard label="🔴 Messages Erronés / Échoués" value={allPurchases.filter(p => p.status === 'FAILED' || p.status === 'EXPIRED').length} icon="⚠️" color="#DC2626" />
+                  </div>
+
+                  {/* Filters & Search */}
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 12, marginBottom: 20 }}>
+                    <div style={{ display: 'flex', gap: 8 }}>
+                      {[
+                        { key: 'ALL', label: 'Tous' },
+                        { key: 'ACTIVE', label: '🟢 Validés (Succès)' },
+                        { key: 'FAILED', label: '🔴 SMS Erronés / Échoués' },
+                      ].map(f => (
+                        <button
+                          key={f.key}
+                          onClick={() => setWinpayFilter(f.key as any)}
+                          style={{
+                            padding: '8px 14px', borderRadius: 10, fontSize: 13, fontWeight: 700, cursor: 'pointer',
+                            border: winpayFilter === f.key ? '2px solid #1A56DB' : '1px solid #E5E7EB',
+                            background: winpayFilter === f.key ? '#EFF6FF' : '#FFFFFF',
+                            color: winpayFilter === f.key ? '#1A56DB' : '#4B5563',
+                          }}
+                        >
+                          {f.label}
+                        </button>
+                      ))}
+                    </div>
+
+                    <input
+                      className="input-field"
+                      placeholder="Rechercher par téléphone, bot ou SMS..."
+                      value={search}
+                      onChange={e => setSearch(e.target.value)}
+                      style={{ width: 280, fontSize: 13 }}
+                    />
+                  </div>
+
+                  {/* Data Table */}
+                  <div style={{ background: 'white', borderRadius: 16, border: '1.5px solid #E5E7EB', overflow: 'hidden' }}>
+                    <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13, textAlign: 'left' }}>
+                      <thead>
+                        <tr style={{ background: '#F9FAFB', borderBottom: '1px solid #E5E7EB', color: '#6B7280', fontWeight: 700 }}>
+                          <th style={{ padding: '12px 16px' }}>Date</th>
+                          <th style={{ padding: '12px 16px' }}>Client</th>
+                          <th style={{ padding: '12px 16px' }}>Bot & Prix</th>
+                          <th style={{ padding: '12px 16px' }}>Réseau</th>
+                          <th style={{ padding: '12px 16px' }}>Message / Référence SMS</th>
+                          <th style={{ padding: '12px 16px' }}>Statut</th>
+                          <th style={{ padding: '12px 16px', textAlign: 'center' }}>Action Support</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {allPurchases.length === 0 ? (
+                          <tr>
+                            <td colSpan={7} style={{ textAlign: 'center', padding: 40, color: '#9CA3AF' }}>
+                              Aucun achat Winpay enregistré pour le moment.
+                            </td>
+                          </tr>
+                        ) : (
+                          allPurchases
+                            .filter(p => {
+                              if (winpayFilter === 'ACTIVE') return p.status === 'ACTIVE';
+                              if (winpayFilter === 'FAILED') return p.status === 'FAILED' || p.status === 'EXPIRED';
+                              return true;
+                            })
+                            .filter(p => {
+                              if (!search.trim()) return true;
+                              const q = search.toLowerCase();
+                              return (
+                                p.userPhone?.toLowerCase().includes(q) ||
+                                p.botName?.toLowerCase().includes(q) ||
+                                p.txReference?.toLowerCase().includes(q) ||
+                                p.userName?.toLowerCase().includes(q)
+                              );
+                            })
+                            .map(p => {
+                              const isFailed = p.status === 'FAILED' || p.status === 'EXPIRED';
+                              const formattedDate = new Date(p.purchasedAt).toLocaleString('fr-FR', {
+                                day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit'
+                              });
+
+                              return (
+                                <tr key={p.id} style={{ borderBottom: '1px solid #F3F4F6', background: isFailed ? '#FEF2F2' : 'white' }}>
+                                  <td style={{ padding: '14px 16px', color: '#6B7280', fontSize: 12 }}>{formattedDate}</td>
+                                  <td style={{ padding: '14px 16px' }}>
+                                    <div style={{ fontWeight: 700, color: '#111827' }}>{p.userPhone}</div>
+                                    {p.userName && <div style={{ fontSize: 11, color: '#6B7280' }}>{p.userName}</div>}
+                                  </td>
+                                  <td style={{ padding: '14px 16px' }}>
+                                    <div style={{ fontWeight: 700, color: '#1A56DB' }}>{p.botName}</div>
+                                    <div style={{ fontSize: 11, color: '#4B5563' }}>{formatXOF(p.pricePaidCents)}</div>
+                                  </td>
+                                  <td style={{ padding: '14px 16px', fontWeight: 700 }}>
+                                    {p.operator === 'MTN' ? '🟡 MTN MoMo' : '🔵 Moov Money'}
+                                  </td>
+                                  <td style={{ padding: '14px 16px', maxWidth: 260, wordBreak: 'break-word', fontFamily: 'monospace', fontSize: 12 }}>
+                                    <div style={{ background: isFailed ? '#FEE2E2' : '#F3F4F6', padding: '6px 10px', borderRadius: 8, color: isFailed ? '#991B1B' : '#374151' }}>
+                                      {p.txReference || 'N/A'}
+                                    </div>
+                                  </td>
+                                  <td style={{ padding: '14px 16px' }}>
+                                    {isFailed ? (
+                                      <span style={{ background: '#FEE2E2', color: '#991B1B', padding: '4px 10px', borderRadius: 8, fontSize: 11, fontWeight: 800 }}>
+                                        🔴 SMS Erroné / Échoué
+                                      </span>
+                                    ) : (
+                                      <span style={{ background: '#DCFCE7', color: '#15803D', padding: '4px 10px', borderRadius: 8, fontSize: 11, fontWeight: 800 }}>
+                                        🟢 Validé (Succès)
+                                      </span>
+                                    )}
+                                  </td>
+                                  <td style={{ padding: '14px 16px', textAlign: 'center' }}>
+                                    <button
+                                      onClick={() => handleInitiateChat({ id: p.userId, phone: p.userPhone, firstName: p.userName }, `Bonjour, j'ai remarqué que votre tentative d'achat du bot ${p.botName} via ${p.operator} a rencontré un problème. Comment puis-je vous aider ?`)}
+                                      className="btn-press"
+                                      style={{
+                                        background: isFailed ? '#DC2626' : '#1A56DB', color: 'white', border: 'none',
+                                        borderRadius: 10, padding: '8px 14px', fontSize: 12, fontWeight: 700, cursor: 'pointer',
+                                        display: 'inline-flex', alignItems: 'center', gap: 6,
+                                        boxShadow: isFailed ? '0 2px 8px rgba(220, 38, 38, 0.25)' : 'none'
+                                      }}
+                                    >
+                                      <MessageCircle size={14} /> Contacter Client
+                                    </button>
+                                  </td>
+                                </tr>
+                              );
+                            })
+                        )}
                       </tbody>
                     </table>
                   </div>

@@ -289,6 +289,33 @@ export async function POST(req: Request) {
   // 1. Strict validation & extraction from full SMS or standalone reference (price & ID verification)
   const validation = extractAndValidateReference(operator, rawInput, bot.priceCents);
   if (!validation.isValid) {
+    const failedRef = rawInput ? `ERR: ${rawInput.substring(0, 100)}` : 'SMS Erroné / Vide';
+
+    // Record failed attempt in DB for Admin Tracking & Realtime Push Notifications
+    await db.from('purchases').insert({
+      user_id: payload.sub,
+      bot_id: bot.id,
+      bot_name: bot.name,
+      price_paid_cents: bot.priceCents,
+      purchased_at: now.toISOString(),
+      expires_at: expiresAt.toISOString(),
+      total_earned_cents: 0,
+      work_count: 0,
+      status: 'FAILED',
+      operator,
+      tx_reference: failedRef,
+    });
+
+    await db.from('transactions').insert({
+      user_id: payload.sub,
+      type: 'BOT_PURCHASE',
+      status: 'FAILED',
+      amount_cents: -bot.priceCents,
+      description: `Tentative Achat ${bot.name} (${operator}) - Échouée (Message erroné)`,
+      operator,
+      tx_reference: failedRef,
+    });
+
     return NextResponse.json(
       { error: `❌ Référence de transaction incorrecte. ${validation.reason || ''} Paiement non abouti.` },
       { status: 400 }
