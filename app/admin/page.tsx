@@ -912,6 +912,7 @@ export default function AdminPage() {
     return u.phone?.includes(term) || u.referralCode?.toLowerCase().includes(term) || fullName.includes(term);
   });
 
+  const pendingPurchasesOnly = pendingPurchases.filter(p => p.status === 'PENDING');
   const winpayPendingCount = allPurchases.filter(p => p.status === 'PENDING').length || pendingPurchasesOnly.length;
 
   const NAV_ITEMS: { key: Tab; label: string; icon: React.ElementType }[] = [
