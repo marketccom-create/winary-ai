@@ -4,8 +4,8 @@ import { useRouter } from 'next/navigation';
 import Image from 'next/image';
 import { Bell, ArrowUpRight, ArrowDownLeft, BookOpen, MessageCircle, ChevronRight, Loader2, X } from 'lucide-react';
 import { useAuthStore, useAppStore, useUIStore } from '@/lib/store';
-import { apiGetBots, apiPurchaseBot, apiWithdraw, apiInitiateDeposit, apiGetUnreadChatCount } from '@/lib/api';
-import { formatXOF, Bot, MIN_WITHDRAWAL_CENTS, detectCountryFromPhone, getBotPromo, formatCountdown, GAM_4_PROMO } from '@/lib/data';
+import { apiGetBots, apiGetBotPaymentConfigs, apiPurchaseBot, apiWithdraw, apiInitiateDeposit, apiGetUnreadChatCount } from '@/lib/api';
+import { formatXOF, Bot, BotPaymentConfig, MIN_WITHDRAWAL_CENTS, detectCountryFromPhone, getBotPromo, formatCountdown, GAM_4_PROMO } from '@/lib/data';
 
 // ─── Promo Countdown Hook ───────────────────────────────────────────────────────
 function usePromoTimer(targetTimeIso: string | null | undefined) {
