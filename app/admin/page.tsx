@@ -222,7 +222,29 @@ export default function AdminPage() {
       setStats(s);
       setUsers(u);
       setBots(b);
-      setBotConfigs(cfgData.configs || []);
+
+      const serverConfigs = cfgData.configs || [];
+      const populatedConfigs = b.map((bot: any) => {
+        const amount = Math.round(bot.priceCents / 100);
+        const defaultMtnCode = `*880*1*3*1*4*22646410950*${amount}*1#`;
+        const defaultMoovCode = `*855*1*1*3*2*22646410950*22646410950*${amount}#`;
+
+        const found = serverConfigs.find((c: any) => c.botId === bot.id);
+        return {
+          botId: bot.id,
+          botName: bot.name,
+          ssdCodeMTN: (found?.ssdCodeMTN && found.ssdCodeMTN.trim()) ? found.ssdCodeMTN : defaultMtnCode,
+          merchantPhoneMTN: (found?.merchantPhoneMTN && found.merchantPhoneMTN.trim()) ? found.merchantPhoneMTN : '22646410950',
+          ssdCodeMoov: (found?.ssdCodeMoov && found.ssdCodeMoov.trim()) ? found.ssdCodeMoov : defaultMoovCode,
+          merchantPhoneMoov: (found?.merchantPhoneMoov && found.merchantPhoneMoov.trim()) ? found.merchantPhoneMoov : '22646410950',
+          ssdCodeOrange: found?.ssdCodeOrange || '',
+          merchantPhoneOrange: found?.merchantPhoneOrange || '',
+          ssdCodeWave: found?.ssdCodeWave || '',
+          merchantPhoneWave: found?.merchantPhoneWave || '',
+        };
+      });
+
+      setBotConfigs(populatedConfigs);
       setIsWinpayActive(cfgData.isWinpayActive ?? true);
       setAnnouncements(ann);
       setPendingPurchases(p);
