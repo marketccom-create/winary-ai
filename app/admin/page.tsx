@@ -113,24 +113,57 @@ export default function AdminPage() {
     }
   }, []);
 
-  function playStripeCashSound() {
+  // Joyful cash register chime for approved payments (B5 -> E6 -> A6)
+  function playSuccessSound() {
     try {
       const audioCtx = new (window.AudioContext || (window as any).webkitAudioContext)();
       const osc1 = audioCtx.createOscillator();
-      const gain1 = audioCtx.createGain();
+      const osc2 = audioCtx.createOscillator();
+      const gain = audioCtx.createGain();
 
       osc1.type = 'sine';
       osc1.frequency.setValueAtTime(987.77, audioCtx.currentTime); // B5 note
-      osc1.frequency.exponentialRampToValueAtTime(1318.51, audioCtx.currentTime + 0.15); // E6 note
+      osc1.frequency.exponentialRampToValueAtTime(1318.51, audioCtx.currentTime + 0.12); // E6 note
 
-      gain1.gain.setValueAtTime(0.35, audioCtx.currentTime);
-      gain1.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.35);
+      osc2.type = 'sine';
+      osc2.frequency.setValueAtTime(1318.51, audioCtx.currentTime + 0.12);
+      osc2.frequency.exponentialRampToValueAtTime(1760.00, audioCtx.currentTime + 0.30); // A6 note
 
-      osc1.connect(gain1);
-      gain1.connect(audioCtx.destination);
+      gain.gain.setValueAtTime(0.35, audioCtx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.35);
+
+      osc1.connect(gain);
+      osc2.connect(gain);
+      gain.connect(audioCtx.destination);
 
       osc1.start();
-      osc1.stop(audioCtx.currentTime + 0.35);
+      osc2.start(audioCtx.currentTime + 0.12);
+      osc1.stop(audioCtx.currentTime + 0.12);
+      osc2.stop(audioCtx.currentTime + 0.35);
+    } catch (e) {
+      console.error(e);
+    }
+  }
+
+  // Warning low pitch tone for failed/erroneous payments (A4 -> A3)
+  function playFailedSound() {
+    try {
+      const audioCtx = new (window.AudioContext || (window as any).webkitAudioContext)();
+      const osc = audioCtx.createOscillator();
+      const gain = audioCtx.createGain();
+
+      osc.type = 'sawtooth';
+      osc.frequency.setValueAtTime(440, audioCtx.currentTime);   // A4 note
+      osc.frequency.linearRampToValueAtTime(220, audioCtx.currentTime + 0.35); // Low A3 note
+
+      gain.gain.setValueAtTime(0.30, audioCtx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.35);
+
+      osc.connect(gain);
+      gain.connect(audioCtx.destination);
+
+      osc.start();
+      osc.stop(audioCtx.currentTime + 0.35);
     } catch (e) {
       console.error(e);
     }
@@ -165,10 +198,10 @@ export default function AdminPage() {
       setNotificationPermission(perm);
       if (perm === 'granted') {
         notify('🔔 Notifications PWA activées avec succès !', 'success');
-        playStripeCashSound();
+        playSuccessSound();
         triggerNativeNotification(
-          '💰 Notifications Stripe Activées !',
-          'Vous recevrez un son Stripe et une alerte push sur votre téléphone à chaque nouveau paiement validé.'
+          '🟢 10.000 F - Succès',
+          'Bot Gam 3 | Client: +22997000000 | Réseau: MTN MoMo'
         );
       } else {
         notify('Permission refusée pour les notifications.', 'error');
@@ -282,23 +315,23 @@ export default function AdminPage() {
           knownPurchaseIds.current.add(p.id);
           setAllPurchases(prev => [p, ...prev.filter(item => item.id !== p.id)]);
 
-          playStripeCashSound();
-
           const formattedPrice = formatXOF(p.pricePaidCents);
           const isFailed = p.status === 'FAILED' || p.status === 'EXPIRED';
 
           if (isFailed) {
-            const notificationTitle = `⚠️ Tentative d'Achat Échouée / SMS Erroné !`;
-            const notificationBody = `Client: ${p.userPhone} | Bot: ${p.botName} | Réseau: ${p.operator}\nSMS: ${p.txReference || 'Message erroné'}`;
+            playFailedSound();
+            const notificationTitle = `🔴 ${formattedPrice} - Échoué`;
+            const notificationBody = `${p.botName} | Client: ${p.userPhone} | Réseau: ${p.operator}\nSMS: ${p.txReference || 'SMS Erroné'}`;
 
             triggerNativeNotification(notificationTitle, notificationBody);
-            notify(`⚠️ Tentative d'achat échouée pour ${p.userPhone} (${p.botName}). Cliquez sur 'Achats Winpay' pour le contacter.`, 'error');
+            notify(`🔴 ${formattedPrice} - Échoué (${p.userPhone}). Cliquez sur 'Achats Winpay' pour le contacter.`, 'error');
           } else {
-            const notificationTitle = `💰 Nouveau Paiement Validé ! (${formattedPrice})`;
-            const notificationBody = `Client: ${p.userPhone} | Bot: ${p.botName} | Réseau: ${p.operator}\nSMS: ${p.txReference || 'Validé'}`;
+            playSuccessSound();
+            const notificationTitle = `🟢 ${formattedPrice} - Succès`;
+            const notificationBody = `${p.botName} | Client: ${p.userPhone} | Réseau: ${p.operator}`;
 
             triggerNativeNotification(notificationTitle, notificationBody);
-            notify(`🎉 NOUVEAU PAIEMENT VALIDÉ : ${p.botName} (${formattedPrice}) par ${p.userPhone} !`, 'success');
+            notify(`🟢 ${formattedPrice} - Succès ! (${p.botName} par ${p.userPhone})`, 'success');
           }
         }
       }
@@ -958,22 +991,40 @@ export default function AdminPage() {
                           🔔 Activer les Notifications Push
                         </button>
                       ) : (
-                        <button
-                          onClick={() => {
-                            playStripeCashSound();
-                            triggerNativeNotification(
-                              '💰 Test Notification Stripe Admin !',
-                              'Ceci est un test de notification push pour les paiements validés sur Android, iPhone et Windows.'
-                            );
-                            notify('🔔 Test de notification Stripe effectué avec son !', 'success');
-                          }}
-                          style={{
-                            background: 'rgba(255,255,255,0.2)', color: 'white', border: '1px solid rgba(255,255,255,0.4)',
-                            borderRadius: 10, padding: '10px 16px', fontSize: 13, fontWeight: 700, cursor: 'pointer'
-                          }}
-                        >
-                          🔊 Tester le Son Stripe & Push
-                        </button>
+                        <div style={{ display: 'flex', gap: 8 }}>
+                          <button
+                            onClick={() => {
+                              playSuccessSound();
+                              triggerNativeNotification(
+                                '🟢 10.000 F - Succès',
+                                'Bot Gam 3 | Client: +22997000000 | Réseau: MTN MoMo'
+                              );
+                              notify('🟢 Test notification Succès (10.000 F)', 'success');
+                            }}
+                            style={{
+                              background: '#10B981', color: 'white', border: 'none',
+                              borderRadius: 10, padding: '9px 14px', fontSize: 12, fontWeight: 700, cursor: 'pointer'
+                            }}
+                          >
+                            🟢 Test Succès (10.000 F)
+                          </button>
+                          <button
+                            onClick={() => {
+                              playFailedSound();
+                              triggerNativeNotification(
+                                '🔴 4.000 F - Échoué',
+                                'Bot Gam 1 | Client: +22997000000 | SMS erroné'
+                              );
+                              notify('🔴 Test notification Échoué (4.000 F)', 'error');
+                            }}
+                            style={{
+                              background: '#EF4444', color: 'white', border: 'none',
+                              borderRadius: 10, padding: '9px 14px', fontSize: 12, fontWeight: 700, cursor: 'pointer'
+                            }}
+                          >
+                            🔴 Test Échec (4.000 F)
+                          </button>
+                        </div>
                       )}
                     </div>
                   </div>
