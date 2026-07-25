@@ -558,7 +558,6 @@ export default function AdminPage() {
       return;
     }
 
-    const target = pendingWithdrawals.find(w => w.id === txId);
     setActionLoading(txId);
     try {
       await apiAdminRejectWithdrawal(txId, reason.trim());
