@@ -534,7 +534,8 @@ export default function AdminPage() {
   }
 
   async function handleRejectAllPurchases() {
-    const count = pendingPurchasesOnly.length;
+    const pendingOnly = pendingPurchases.filter(p => p.status === 'PENDING');
+    const count = pendingOnly.length;
     if (count === 0) { notify('Aucune demande en attente.', 'info'); return; }
     if (count <= 3) {
       notify(`Les ${count} demande(s) les plus récentes sont protégées contre le rejet en masse.`, 'info');
