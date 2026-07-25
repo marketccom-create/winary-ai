@@ -722,7 +722,7 @@ export default function AdminPage() {
     }
   }
 
-  function handleInitiateChat(u: any) {
+  function handleInitiateChat(u: any, prefillMessage?: string) {
     // Check if conversation exists
     if (!chatConversations.find(c => c.userId === u.id)) {
       setChatConversations(prev => [{
@@ -735,6 +735,9 @@ export default function AdminPage() {
       }, ...prev]);
     }
     handleSelectChatUser(u.id);
+    if (prefillMessage) {
+      setChatInput(prefillMessage);
+    }
     setActiveTab('chat');
   }
 
