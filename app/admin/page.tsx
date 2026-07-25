@@ -93,8 +93,9 @@ export default function AdminPage() {
   const [aiSettings, setAiSettings] = useState<{ knowledge_base: string; is_active: boolean; last_error?: string | null } | null>(null);
   const [savingAi, setSavingAi] = useState(false);
 
-  // Winpay status state
+  // Winpay and Senepay status state
   const [isWinpayActive, setIsWinpayActive] = useState(true);
+  const [isSenepayActive, setIsSenepayActive] = useState(false);
 
   // Broadcast state
   const [broadcastTitle, setBroadcastTitle] = useState('');
@@ -339,6 +340,7 @@ export default function AdminPage() {
 
       setBotConfigs(populatedConfigs);
       setIsWinpayActive(cfgData.isWinpayActive ?? true);
+      setIsSenepayActive(cfgData.isSenepayActive ?? false);
       setAnnouncements(ann);
       setPendingPurchases(p);
       setPendingWithdrawals(w);
@@ -706,8 +708,8 @@ export default function AdminPage() {
   async function handleSaveBotConfigs() {
     setActionLoading('bots');
     try {
-      await apiAdminUpdateBotPaymentConfigs(botConfigs, isWinpayActive);
-      notify('Configuration Winpay & codes USSD des bots mise à jour !', 'success');
+      await apiAdminUpdateBotPaymentConfigs(botConfigs, isWinpayActive, isSenepayActive);
+      notify('Configuration Winpay, Sene-Pay & codes USSD mise à jour !', 'success');
     } catch (err: any) {
       notify(err.message || 'Erreur lors de la mise à jour', 'error');
     } finally {
@@ -909,13 +911,12 @@ export default function AdminPage() {
     return u.phone?.includes(term) || u.referralCode?.toLowerCase().includes(term) || fullName.includes(term);
   });
 
-  const pendingPurchasesOnly = pendingPurchases.filter(p => p.status === 'PENDING');
+  const winpayPendingCount = allPurchases.filter(p => p.status === 'PENDING').length || pendingPurchasesOnly.length;
 
   const NAV_ITEMS: { key: Tab; label: string; icon: React.ElementType }[] = [
     { key: 'dashboard', label: 'Tableau de bord', icon: TrendingUp },
     { key: 'users', label: 'Utilisateurs', icon: Users },
     { key: 'winpay', label: 'Achats Winpay', icon: CreditCard },
-    { key: 'pending', label: 'Achats en attente', icon: Bot },
     { key: 'withdrawals', label: 'Retraits en attente', icon: CreditCard },
     { key: 'bots', label: 'Configuration Bots/SSD', icon: Settings },
     { key: 'announcements', label: 'Annonces Popups', icon: Megaphone },
@@ -1015,11 +1016,12 @@ export default function AdminPage() {
                 <Icon size={16} />
                 <div style={{ flex: 1, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                   <span>{label}</span>
-                  {key === 'pending' && pendingPurchasesOnly.length > 0 && (
+                  {key === 'winpay' && winpayPendingCount > 0 && (
                     <span style={{
                       background: '#EF4444', color: 'white', fontSize: 10,
-                      fontWeight: 700, borderRadius: 99, padding: '2px 6px',
-                    }}>{pendingPurchasesOnly.length}</span>
+                      fontWeight: 700, borderRadius: 99, padding: '2px 7px',
+                      boxShadow: '0 2px 6px rgba(239, 68, 68, 0.4)'
+                    }}>{winpayPendingCount}</span>
                   )}
                   {key === 'withdrawals' && pendingWithdrawals.length > 0 && (
                     <span style={{
@@ -1502,7 +1504,7 @@ export default function AdminPage() {
                                       <div style={{ fontSize: 11, color: '#4B5563' }}>{formatXOF(p.pricePaidCents)}</div>
                                     </td>
                                     <td style={{ padding: '14px 16px', fontWeight: 700 }}>
-                                      {p.operator === 'MTN' ? '🟡 MTN MoMo' : '🔵 Moov Money'}
+                                      {p.operator === 'MTN' ? '🟡 MTN MoMo' : p.operator === 'MOOV' ? '🔵 Moov Money' : p.operator === 'SENEPAY' ? '💳 Sene-Pay (API)' : p.operator}
                                     </td>
                                     <td style={{ padding: '14px 16px', maxWidth: 350, wordBreak: 'break-word', whiteSpace: 'pre-wrap', fontFamily: 'monospace', fontSize: 13 }}>
                                       <div style={{
@@ -1948,12 +1950,12 @@ export default function AdminPage() {
                   {/* ── Winpay Global Status Toggle ── */}
                   <div style={{
                     background: 'white', borderRadius: 16, border: '1.5px solid #E5E7EB',
-                    padding: 20, marginBottom: 24, boxShadow: '0 1px 3px rgba(0,0,0,0.05)',
+                    padding: 20, marginBottom: 14, boxShadow: '0 1px 3px rgba(0,0,0,0.05)',
                     display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 16
                   }}>
                     <div>
                       <h2 style={{ fontSize: 16, fontWeight: 700, margin: '0 0 4px', color: '#111827' }}>
-                        ⚡ Statut Général de Winpay (Mode Maintenance On/Off)
+                        ⚡ Statut Général de Winpay (Paiements USSD / SMS)
                       </h2>
                       <p style={{ fontSize: 12, color: '#6B7280', margin: 0 }}>
                         Permet de rendre le système de paiement Winpay immédiatement disponible ou en maintenance sur l'application client.
@@ -1971,6 +1973,38 @@ export default function AdminPage() {
                         <div style={{
                           width: 22, height: 22, borderRadius: '50%', background: 'white',
                           position: 'absolute', top: 2, left: isWinpayActive ? 26 : 2,
+                          transition: 'left 0.3s', boxShadow: '0 1px 3px rgba(0,0,0,0.2)'
+                        }} />
+                      </div>
+                    </label>
+                  </div>
+
+                  {/* ── Sene-Pay API Toggle ── */}
+                  <div style={{
+                    background: 'white', borderRadius: 16, border: '1.5px solid #E5E7EB',
+                    padding: 20, marginBottom: 24, boxShadow: '0 1px 3px rgba(0,0,0,0.05)',
+                    display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 16
+                  }}>
+                    <div>
+                      <h2 style={{ fontSize: 16, fontWeight: 700, margin: '0 0 4px', color: '#111827' }}>
+                        💳 Statut de Sene-Pay API (Agrégateur Automatique)
+                      </h2>
+                      <p style={{ fontSize: 12, color: '#6B7280', margin: 0 }}>
+                        Activez ce bouton le jour où Sene-Pay sort de maintenance. Les paiements automatiques par API seront réautorisés.
+                      </p>
+                    </div>
+
+                    <label style={{ display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer' }}>
+                      <span style={{ fontSize: 13, fontWeight: 700, color: isSenepayActive ? '#15803D' : '#DC2626' }}>
+                        {isSenepayActive ? '🟢 Sene-Pay Disponible (API Actif)' : '🔴 Sene-Pay en Maintenance'}
+                      </span>
+                      <div style={{
+                        width: 50, height: 26, borderRadius: 14, position: 'relative', transition: 'background 0.3s',
+                        background: isSenepayActive ? '#10B981' : '#EF4444'
+                      }} onClick={() => setIsSenepayActive(!isSenepayActive)}>
+                        <div style={{
+                          width: 22, height: 22, borderRadius: '50%', background: 'white',
+                          position: 'absolute', top: 2, left: isSenepayActive ? 26 : 2,
                           transition: 'left 0.3s', boxShadow: '0 1px 3px rgba(0,0,0,0.2)'
                         }} />
                       </div>

@@ -125,8 +125,8 @@ export async function apiGetBots() {
   return bots;
 }
 
-export async function apiGetBotPaymentConfigs(): Promise<{ configs: BotPaymentConfig[]; isWinpayActive: boolean }> {
-  const { configs, isWinpayActive } = await apiFetch<{ configs: any[]; isWinpayActive?: boolean }>('/api/bots');
+export async function apiGetBotPaymentConfigs(): Promise<{ configs: BotPaymentConfig[]; isWinpayActive: boolean; isSenepayActive: boolean }> {
+  const { configs, isWinpayActive, isSenepayActive } = await apiFetch<{ configs: any[]; isWinpayActive?: boolean; isSenepayActive?: boolean }>('/api/bots');
   const mappedConfigs = (configs || []).map((c: any) => ({
     botId: c.bot_id,
     botName: c.bot_name,
@@ -139,7 +139,7 @@ export async function apiGetBotPaymentConfigs(): Promise<{ configs: BotPaymentCo
     merchantPhoneOrange: c.merchant_phone_orange || '',
     merchantPhoneWave: c.merchant_phone_wave || '',
   }));
-  return { configs: mappedConfigs, isWinpayActive: isWinpayActive ?? true };
+  return { configs: mappedConfigs, isWinpayActive: isWinpayActive ?? true, isSenepayActive: isSenepayActive ?? false };
 }
 
 // ─── Purchases ────────────────────────────────────────────────────────────────
@@ -346,10 +346,10 @@ export async function apiAdminDeleteWithdrawal(transactionId: string) {
 }
 
 
-export async function apiAdminUpdateBotPaymentConfigs(configs: BotPaymentConfig[], isWinpayActive?: boolean) {
+export async function apiAdminUpdateBotPaymentConfigs(configs: BotPaymentConfig[], isWinpayActive?: boolean, isSenepayActive?: boolean) {
   return apiFetch<{ success: boolean }>('/api/admin/bots', {
     method: 'PUT',
-    body: JSON.stringify({ configs, isWinpayActive }),
+    body: JSON.stringify({ configs, isWinpayActive, isSenepayActive }),
   });
 }
 

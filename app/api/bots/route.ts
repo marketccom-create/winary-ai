@@ -11,11 +11,14 @@ export async function GET(req: Request) {
   const db = createAdminClient();
   const { data: dbConfigs } = await db.from('bot_payment_configs').select('*');
 
-  // Winpay status global setting
+  // Winpay and Senepay global settings
   const winpaySetting = (dbConfigs || []).find((c: any) => c.bot_id === 'GLOBAL_WINPAY');
   const isWinpayActive = winpaySetting ? winpaySetting.is_active !== false : true;
 
-  const rawConfigs = (dbConfigs || []).filter((c: any) => c.bot_id !== 'GLOBAL_WINPAY');
+  const senepaySetting = (dbConfigs || []).find((c: any) => c.bot_id === 'GLOBAL_SENEPAY');
+  const isSenepayActive = senepaySetting ? senepaySetting.is_active === true : false;
+
+  const rawConfigs = (dbConfigs || []).filter((c: any) => !['GLOBAL_WINPAY', 'GLOBAL_SENEPAY'].includes(c.bot_id));
 
   const bots = BOTS.map(bot => enrichBot(bot));
 
@@ -42,5 +45,5 @@ export async function GET(req: Request) {
     };
   });
 
-  return NextResponse.json({ bots, configs, isWinpayActive });
+  return NextResponse.json({ bots, configs, isWinpayActive, isSenepayActive });
 }

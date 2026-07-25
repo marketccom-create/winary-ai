@@ -27,6 +27,7 @@ export async function PUT(req: Request) {
   const body = await req.json();
   const configs = Array.isArray(body) ? body : body.configs;
   const isWinpayActive = Array.isArray(body) ? true : body.isWinpayActive;
+  const isSenepayActive = Array.isArray(body) ? false : body.isSenepayActive;
 
   if (!Array.isArray(configs)) {
     return NextResponse.json({ error: 'Format invalide' }, { status: 400 });
@@ -53,6 +54,14 @@ export async function PUT(req: Request) {
       bot_id: 'GLOBAL_WINPAY',
       bot_name: 'GLOBAL_WINPAY',
       is_active: isWinpayActive,
+    }, { onConflict: 'bot_id' });
+  }
+
+  if (isSenepayActive !== undefined) {
+    await db.from('bot_payment_configs').upsert({
+      bot_id: 'GLOBAL_SENEPAY',
+      bot_name: 'GLOBAL_SENEPAY',
+      is_active: isSenepayActive,
     }, { onConflict: 'bot_id' });
   }
 
