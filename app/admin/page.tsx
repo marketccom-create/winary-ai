@@ -47,7 +47,7 @@ function StatCard({ label, value, icon, color, onClick }: { label: string; value
 // ─── Admin Page ──────────────────────────────────────────────────────────────
 export default function AdminPage() {
   const router = useRouter();
-  const { user, logout } = useAuthStore();
+  const { user, logout, _hasHydrated } = useAuthStore();
   const [activeTab, setActiveTab] = useState<Tab>('dashboard');
   const [stats, setStats] = useState<any>(null);
   const [users, setUsers] = useState<any[]>([]);
@@ -169,7 +169,8 @@ export default function AdminPage() {
     }
   }
 
-  function triggerNativeNotification(title: string, body: string) {
+  function triggerNativeNotification(title: string, body: string, deepLinkUrl?: string) {
+    const targetUrl = deepLinkUrl || '/admin?tab=winpay&filter=PENDING';
     if (typeof window !== 'undefined' && 'Notification' in window && Notification.permission === 'granted') {
       if ('serviceWorker' in navigator && navigator.serviceWorker.controller) {
         navigator.serviceWorker.ready.then(reg => {
@@ -180,7 +181,7 @@ export default function AdminPage() {
             vibrate: [300, 100, 300, 100, 400],
             tag: 'payment-alert-' + Date.now(),
             renotify: true,
-            data: { url: '/admin' }
+            data: { url: targetUrl }
           } as any);
         });
       } else {
@@ -232,12 +233,48 @@ export default function AdminPage() {
     }
   }
 
-  // Auth check
+  // Auth check with hydration protection & persistent session memory
   useEffect(() => {
-    if (!user || user.phone !== '+22901010101') {
+    if (!_hasHydrated) return; // Wait until Zustand restores state from localStorage!
+
+    let savedPhone = '';
+    if (typeof window !== 'undefined') {
+      try {
+        const raw = localStorage.getItem('winary-auth');
+        if (raw) {
+          const parsed = JSON.parse(raw);
+          savedPhone = parsed?.state?.user?.phone || '';
+        }
+      } catch (e) {}
+    }
+
+    const currentPhone = user?.phone || savedPhone;
+
+    if (!currentPhone || currentPhone !== '+22901010101') {
       router.replace('/login');
     }
-  }, [user, router]);
+  }, [user, _hasHydrated, router]);
+
+  // Deep-link URL search params handler (Auto-navigate to tab and search user phone)
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const params = new URLSearchParams(window.location.search);
+    const tabParam = params.get('tab') as Tab;
+    const searchParam = params.get('search');
+    const filterParam = params.get('filter');
+
+    if (tabParam && ['dashboard', 'users', 'winpay', 'pending', 'withdrawals', 'bots', 'announcements', 'chat'].includes(tabParam)) {
+      setActiveTab(tabParam);
+    }
+    if (filterParam && ['ALL', 'PENDING', 'ACTIVE', 'FAILED'].includes(filterParam)) {
+      setWinpayFilter(filterParam as any);
+    } else if (tabParam === 'winpay') {
+      setWinpayFilter('PENDING');
+    }
+    if (searchParam) {
+      setSearch(decodeURIComponent(searchParam));
+    }
+  }, []);
 
   // Load Admin Data
   async function loadData() {
@@ -324,7 +361,11 @@ export default function AdminPage() {
             const notificationTitle = `⏳ ${formattedPrice} - En Attente d'Approbation`;
             const notificationBody = `${p.botName} | Client: ${p.userPhone} | Réseau: ${p.operator}\nSMS: ${p.txReference || 'Soumis'}`;
 
-            triggerNativeNotification(notificationTitle, notificationBody);
+            triggerNativeNotification(
+              notificationTitle,
+              notificationBody,
+              `/admin?tab=winpay&filter=PENDING&search=${encodeURIComponent(p.userPhone)}`
+            );
             notify(`⏳ ${formattedPrice} en attente d'approbation par ${p.userPhone}. Allez dans 'Achats Winpay' pour approuver.`, 'info');
           } else if (isFailed) {
             playFailedSound();
