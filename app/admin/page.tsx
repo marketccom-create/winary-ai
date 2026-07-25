@@ -52,7 +52,7 @@ export default function AdminPage() {
   const [stats, setStats] = useState<any>(null);
   const [users, setUsers] = useState<any[]>([]);
   const [allPurchases, setAllPurchases] = useState<any[]>([]);
-  const [winpayFilter, setWinpayFilter] = useState<'ALL' | 'ACTIVE' | 'FAILED'>('ALL');
+  const [winpayFilter, setWinpayFilter] = useState<'ALL' | 'PENDING' | 'ACTIVE' | 'FAILED'>('ALL');
   const [pendingPurchases, setPendingPurchases] = useState<any[]>([]);
   const [pendingWithdrawals, setPendingWithdrawals] = useState<any[]>([]);
   const [bots, setBots] = useState<any[]>([]);
