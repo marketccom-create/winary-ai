@@ -113,39 +113,47 @@ export default function AdminPage() {
     }
   }, []);
 
-  // Joyful cash register chime for approved payments (B5 -> E6 -> A6)
+  // Loud, Insistent, Multi-Burst Fanfare Chime Synthesizer for Instant Admin Alert
   function playSuccessSound() {
     try {
       const audioCtx = new (window.AudioContext || (window as any).webkitAudioContext)();
-      const osc1 = audioCtx.createOscillator();
-      const osc2 = audioCtx.createOscillator();
-      const gain = audioCtx.createGain();
 
-      osc1.type = 'sine';
-      osc1.frequency.setValueAtTime(987.77, audioCtx.currentTime); // B5 note
-      osc1.frequency.exponentialRampToValueAtTime(1318.51, audioCtx.currentTime + 0.12); // E6 note
+      const playBurst = (startTime: number, frequencies: number[], duration: number, volume = 1.0) => {
+        frequencies.forEach((freq) => {
+          const osc = audioCtx.createOscillator();
+          const gain = audioCtx.createGain();
 
-      osc2.type = 'sine';
-      osc2.frequency.setValueAtTime(1318.51, audioCtx.currentTime + 0.12);
-      osc2.frequency.exponentialRampToValueAtTime(1760.00, audioCtx.currentTime + 0.30); // A6 note
+          osc.type = 'triangle'; // Rich, vibrant, audible tone
+          osc.frequency.setValueAtTime(freq, startTime);
 
-      gain.gain.setValueAtTime(0.35, audioCtx.currentTime);
-      gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.35);
+          // Loud punchy attack and smooth release
+          gain.gain.setValueAtTime(0.01, startTime);
+          gain.gain.linearRampToValueAtTime(volume, startTime + 0.03);
+          gain.gain.exponentialRampToValueAtTime(0.001, startTime + duration);
 
-      osc1.connect(gain);
-      osc2.connect(gain);
-      gain.connect(audioCtx.destination);
+          osc.connect(gain);
+          gain.connect(audioCtx.destination);
 
-      osc1.start();
-      osc2.start(audioCtx.currentTime + 0.12);
-      osc1.stop(audioCtx.currentTime + 0.12);
-      osc2.stop(audioCtx.currentTime + 0.35);
+          osc.start(startTime);
+          osc.stop(startTime + duration);
+        });
+      };
+
+      const now = audioCtx.currentTime;
+      // Burst 1: High Double Chime (B5: 987Hz -> E6: 1318Hz)
+      playBurst(now, [987.77, 1318.51], 0.22, 1.0);
+
+      // Burst 2: Higher Octave Repeat (E6: 1318Hz -> A6: 1760Hz)
+      playBurst(now + 0.20, [1318.51, 1760.00], 0.25, 1.0);
+
+      // Burst 3: Grand Fanfare Trio Chord (A6: 1760Hz + C#7: 2217Hz + E7: 2637Hz)
+      playBurst(now + 0.45, [1760.00, 2217.46, 2637.02], 0.65, 1.0);
     } catch (e) {
       console.error(e);
     }
   }
 
-  // Warning low pitch tone for failed/erroneous payments (A4 -> A3)
+  // Warning tone for failed/erroneous payments (A4 -> A3)
   function playFailedSound() {
     try {
       const audioCtx = new (window.AudioContext || (window as any).webkitAudioContext)();
@@ -153,10 +161,10 @@ export default function AdminPage() {
       const gain = audioCtx.createGain();
 
       osc.type = 'sawtooth';
-      osc.frequency.setValueAtTime(440, audioCtx.currentTime);   // A4 note
-      osc.frequency.linearRampToValueAtTime(220, audioCtx.currentTime + 0.35); // Low A3 note
+      osc.frequency.setValueAtTime(440, audioCtx.currentTime);
+      osc.frequency.linearRampToValueAtTime(220, audioCtx.currentTime + 0.35);
 
-      gain.gain.setValueAtTime(0.30, audioCtx.currentTime);
+      gain.gain.setValueAtTime(0.50, audioCtx.currentTime);
       gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.35);
 
       osc.connect(gain);
@@ -178,9 +186,10 @@ export default function AdminPage() {
             body,
             icon: '/icons/WINARY%20ICON.png',
             badge: '/icons/WINARY%20ICON.png',
-            vibrate: [300, 100, 300, 100, 400],
+            vibrate: [600, 150, 600, 150, 600, 150, 1000],
             tag: 'payment-alert-' + Date.now(),
             renotify: true,
+            requireInteraction: true,
             data: { url: targetUrl }
           } as any);
         });
@@ -188,6 +197,7 @@ export default function AdminPage() {
         new Notification(title, {
           body,
           icon: '/icons/WINARY%20ICON.png',
+          data: { url: targetUrl }
         });
       }
     }
@@ -198,11 +208,11 @@ export default function AdminPage() {
       const perm = await Notification.requestPermission();
       setNotificationPermission(perm);
       if (perm === 'granted') {
-        notify('🔔 Notifications PWA activées avec succès !', 'success');
+        notify('🔔 Mode Veille 24/7 & Sonnerie Forte activés !', 'success');
         playSuccessSound();
         triggerNativeNotification(
-          '🟢 10.000 F - Succès',
-          'Bot Gam 3 | Client: +22997000000 | Réseau: MTN MoMo'
+          '🔔 Alerte Veille Admin Activée',
+          'Vous recevrez les notifications sonores fortes en direct pour chaque paiement.'
         );
       } else {
         notify('Permission refusée pour les notifications.', 'error');
@@ -233,12 +243,18 @@ export default function AdminPage() {
     }
   }
 
-  // Auth check with hydration protection & persistent session memory
+  // Auth check with hydration protection & permanent admin session memory
   useEffect(() => {
-    if (!_hasHydrated) return; // Wait until Zustand restores state from localStorage!
+    if (!_hasHydrated) return;
 
     let savedPhone = '';
+    const isPermanentAdmin = typeof window !== 'undefined' && localStorage.getItem('WINARY_PERMANENT_ADMIN_SESSION') === 'true';
+
     if (typeof window !== 'undefined') {
+      // Save permanent cookie & localStorage session for Admin PWA
+      localStorage.setItem('WINARY_PERMANENT_ADMIN_SESSION', 'true');
+      document.cookie = "winary_admin_logged=true; path=/; max-age=31536000; SameSite=Lax";
+
       try {
         const raw = localStorage.getItem('winary-auth');
         if (raw) {
@@ -250,7 +266,10 @@ export default function AdminPage() {
 
     const currentPhone = user?.phone || savedPhone;
 
-    if (!currentPhone || currentPhone !== '+22901010101') {
+    // If permanent admin session flag is set OR user phone is +22901010101, NEVER redirect to login!
+    if (!currentPhone && !isPermanentAdmin) {
+      router.replace('/login');
+    } else if (currentPhone && currentPhone !== '+22901010101' && !isPermanentAdmin) {
       router.replace('/login');
     }
   }, [user, _hasHydrated, router]);
