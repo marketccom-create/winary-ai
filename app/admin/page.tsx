@@ -546,7 +546,12 @@ export default function AdminPage() {
   }
 
   async function handleRejectWithdrawal(txId: string) {
-    const reason = prompt("Veuillez saisir la raison du rejet pour ce retrait (obligatoire) :");
+    const target = pendingWithdrawals.find(w => w.id === txId);
+    const defaultReason = !target?.isEligible
+      ? "Vous n'avez aucun parrainage actif, parrainez un ami et relancez votre retrait, votre solde vous a été retourné sur votre compte."
+      : "";
+
+    const reason = prompt("Veuillez saisir la raison du rejet pour ce retrait (obligatoire) :", defaultReason);
     if (reason === null) return;
     if (!reason.trim()) {
       notify("La raison du rejet est obligatoire.", 'error');
@@ -581,6 +586,40 @@ export default function AdminPage() {
       notify('Retrait rejeté.', 'info');
     } catch (err: any) {
       notify(err.message || 'Erreur lors du rejet du retrait', 'error');
+    } finally {
+      setActionLoading(null);
+    }
+  }
+
+  async function handleRejectIneligibleWithdrawals() {
+    const ineligibleList = pendingWithdrawals.filter(w => w.status === 'PENDING' && !w.isEligible);
+    const count = ineligibleList.length;
+
+    if (count === 0) {
+      notify('Aucune demande de retrait non éligible en attente.', 'info');
+      return;
+    }
+
+    const defaultReason = "Vous n'avez aucun parrainage actif, parrainez un ami et relancez votre retrait, votre solde vous a été retourné sur votre compte.";
+
+    if (!confirm(`⚠️ REJETER EN BLOC LES ${count} DEMANDE(S) DE RETRAIT NON ÉLIGIBLES ?\n\nMotif transmis aux clients :\n"${defaultReason}"\n\nLe solde sera recrédité sur le compte de chaque utilisateur.`)) {
+      return;
+    }
+
+    setActionLoading('reject_ineligible');
+    try {
+      let rejectedCount = 0;
+      for (const w of ineligibleList) {
+        await apiAdminRejectWithdrawal(w.id, defaultReason);
+        rejectedCount++;
+      }
+
+      setPendingWithdrawals(prev => prev.filter(w => !(w.status === 'PENDING' && !w.isEligible)));
+      await loadData();
+
+      notify(`✅ ${rejectedCount} retrait(s) non éligible(s) rejeté(s) en bloc avec succès !`, 'success');
+    } catch (err: any) {
+      notify(err.message || 'Erreur lors du rejet en bloc', 'error');
     } finally {
       setActionLoading(null);
     }
@@ -1618,12 +1657,35 @@ export default function AdminPage() {
               {/* ── Pending Withdrawals Approval ── */}
               {activeTab === 'withdrawals' && (
                 <div>
-                  <h1 style={{ fontSize: 20, fontWeight: 800, margin: '0 0 6px', fontFamily: 'Space Grotesk, sans-serif', color: '#111827' }}>
-                    Demandes de retraits
-                  </h1>
-                  <p style={{ color: '#9CA3AF', fontSize: 13, margin: '0 0 20px' }}>
-                    Vérifiez le numéro bénéficiaire Mobile Money et validez ou rejetez le retrait.
-                  </p>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: 12, marginBottom: 20 }}>
+                    <div>
+                      <h1 style={{ fontSize: 20, fontWeight: 800, margin: '0 0 4px', fontFamily: 'Space Grotesk, sans-serif', color: '#111827' }}>
+                        Demandes de retraits
+                      </h1>
+                      <p style={{ color: '#9CA3AF', fontSize: 13, margin: 0 }}>
+                        Vérifiez le numéro bénéficiaire Mobile Money et validez ou rejetez le retrait.
+                      </p>
+                    </div>
+
+                    {pendingWithdrawals.filter(w => w.status === 'PENDING' && !w.isEligible).length > 0 && (
+                      <button
+                        onClick={handleRejectIneligibleWithdrawals}
+                        disabled={actionLoading === 'reject_ineligible'}
+                        style={{
+                          background: 'linear-gradient(135deg, #DC2626, #B91C1C)',
+                          color: 'white', border: 'none', borderRadius: 12,
+                          padding: '10px 18px', fontSize: 13, fontWeight: 800,
+                          cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 8,
+                          boxShadow: '0 4px 14px rgba(220, 38, 38, 0.3)', flexShrink: 0
+                        }}
+                      >
+                        {actionLoading === 'reject_ineligible'
+                          ? <Loader2 size={16} style={{ animation: 'spin 0.8s linear infinite' }} />
+                          : <X size={16} />}
+                        ⛔ Rejeter les {pendingWithdrawals.filter(w => w.status === 'PENDING' && !w.isEligible).length} non éligibles en bloc
+                      </button>
+                    )}
+                  </div>
 
                   {/* Synthèse des retraits en attente */}
                   <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12, marginBottom: 20 }}>
