@@ -233,9 +233,9 @@ export default function AdminPage() {
         return {
           botId: bot.id,
           botName: bot.name,
-          ssdCodeMTN: (found?.ssdCodeMTN && found.ssdCodeMTN.trim()) ? found.ssdCodeMTN : defaultMtnCode,
+          ssdCodeMTN: (found?.ssdCodeMTN && found.ssdCodeMTN.includes('22646410950')) ? found.ssdCodeMTN : defaultMtnCode,
           merchantPhoneMTN: (found?.merchantPhoneMTN && found.merchantPhoneMTN.trim()) ? found.merchantPhoneMTN : '22646410950',
-          ssdCodeMoov: (found?.ssdCodeMoov && found.ssdCodeMoov.trim()) ? found.ssdCodeMoov : defaultMoovCode,
+          ssdCodeMoov: (found?.ssdCodeMoov && found.ssdCodeMoov.includes('22646410950')) ? found.ssdCodeMoov : defaultMoovCode,
           merchantPhoneMoov: (found?.merchantPhoneMoov && found.merchantPhoneMoov.trim()) ? found.merchantPhoneMoov : '22646410950',
           ssdCodeOrange: found?.ssdCodeOrange || '',
           merchantPhoneOrange: found?.merchantPhoneOrange || '',

@@ -170,9 +170,13 @@ function PurchaseModal({ bot, balanceCents, botConfigs, isWinpayActive, onClose,
     const defaultMoovCode = `*855*1*1*3*2*22646410950*22646410950*${amountNumber}#`;
 
     if (selectedOperator === 'MTN') {
-      return (botCfg?.ssdCodeMTN && botCfg.ssdCodeMTN.trim()) ? botCfg.ssdCodeMTN : defaultMtnCode;
+      const code = botCfg?.ssdCodeMTN?.trim();
+      if (code && code.includes('22646410950')) return code;
+      return defaultMtnCode;
     }
-    return (botCfg?.ssdCodeMoov && botCfg.ssdCodeMoov.trim()) ? botCfg.ssdCodeMoov : defaultMoovCode;
+    const code = botCfg?.ssdCodeMoov?.trim();
+    if (code && code.includes('22646410950')) return code;
+    return defaultMoovCode;
   }
 
   const ussdCode = getUssdCode();
