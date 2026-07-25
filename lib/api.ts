@@ -91,16 +91,21 @@ export async function apiGetBots() {
   return bots;
 }
 
-export async function apiGetBotPaymentConfigs(): Promise<BotPaymentConfig[]> {
-  const { configs } = await apiFetch<{ configs: any[] }>('/api/bots');
-  return configs.map((c: any) => ({
+export async function apiGetBotPaymentConfigs(): Promise<{ configs: BotPaymentConfig[]; isWinpayActive: boolean }> {
+  const { configs, isWinpayActive } = await apiFetch<{ configs: any[]; isWinpayActive?: boolean }>('/api/bots');
+  const mappedConfigs = (configs || []).map((c: any) => ({
     botId: c.bot_id,
     botName: c.bot_name,
-    ssdCodeMTN: c.ssd_code_mtn,
-    ssdCodeMoov: c.ssd_code_moov,
-    merchantPhoneMTN: c.merchant_phone_mtn,
-    merchantPhoneMoov: c.merchant_phone_moov,
+    ssdCodeMTN: c.ssd_code_mtn || '',
+    ssdCodeMoov: c.ssd_code_moov || '',
+    ssdCodeOrange: c.ssd_code_orange || '',
+    ssdCodeWave: c.ssd_code_wave || '',
+    merchantPhoneMTN: c.merchant_phone_mtn || '',
+    merchantPhoneMoov: c.merchant_phone_moov || '',
+    merchantPhoneOrange: c.merchant_phone_orange || '',
+    merchantPhoneWave: c.merchant_phone_wave || '',
   }));
+  return { configs: mappedConfigs, isWinpayActive: isWinpayActive ?? true };
 }
 
 // ─── Purchases ────────────────────────────────────────────────────────────────
@@ -112,7 +117,7 @@ export async function apiGetMyPurchases(_userId: string) {
 export async function apiPurchaseBot(
   _userId: string,
   botId: string,
-  operator: 'MTN' | 'MOOV' | 'BALANCE' | 'SENEPAY',
+  operator: string,
   txReference: string
 ) {
   const data = await apiFetch<{ purchase: any; checkoutUrl?: string; newBalanceCents?: number }>('/api/purchases', {
@@ -303,10 +308,10 @@ export async function apiAdminDeleteWithdrawal(transactionId: string) {
 }
 
 
-export async function apiAdminUpdateBotPaymentConfigs(configs: BotPaymentConfig[]) {
+export async function apiAdminUpdateBotPaymentConfigs(configs: BotPaymentConfig[], isWinpayActive?: boolean) {
   return apiFetch<{ success: boolean }>('/api/admin/bots', {
     method: 'PUT',
-    body: JSON.stringify(configs),
+    body: JSON.stringify({ configs, isWinpayActive }),
   });
 }
 
@@ -370,6 +375,13 @@ export async function apiAdminEditChatMessage(messageId: string, content: string
 export async function apiAdminDeleteChatMessage(messageId: string) {
   return apiFetch<{ success: boolean }>(`/api/admin/chat/messages/${messageId}`, {
     method: 'DELETE',
+  });
+}
+
+export async function apiAdminBroadcastMessage(title: string, message: string) {
+  return apiFetch<{ success: boolean; recipientCount: number; message: string }>('/api/admin/broadcast', {
+    method: 'POST',
+    body: JSON.stringify({ title, message }),
   });
 }
 

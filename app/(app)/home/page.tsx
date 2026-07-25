@@ -141,17 +141,53 @@ function Gam4PromoBanner({ bot, onBuy }: { bot?: Bot; onBuy: (bot: Bot) => void 
 // ─── Deposit Modal ─────────────────────────────────────────────────────────────
 // (DepositModal unchanged)
 
-// ─── Purchase Confirm Modal (SSD Codes) ──────────────────────────────────────────
-function PurchaseModal({ bot, balanceCents, onClose, onConfirm, buying }: {
+// ─── Purchase Confirm Modal (Winpay USSD & Balance) ─────────────────────────
+function PurchaseModal({ bot, balanceCents, botConfigs, isWinpayActive, onClose, onConfirm, buying }: {
   bot: Bot;
   balanceCents: number;
+  botConfigs: BotPaymentConfig[];
+  isWinpayActive: boolean;
   onClose: () => void;
-  onConfirm: (bot: Bot, method: 'BALANCE' | 'SENEPAY') => void;
+  onConfirm: (bot: Bot, method: string, txRef: string, operator: string) => void;
   buying: boolean;
 }) {
-  const [method, setMethod] = useState<'balance' | 'senepay'>(
-    balanceCents >= bot.priceCents ? 'balance' : 'senepay'
+  const [method, setMethod] = useState<'balance' | 'winpay'>(
+    balanceCents >= bot.priceCents ? 'balance' : 'winpay'
   );
+  const [selectedOperator, setSelectedOperator] = useState<'MTN' | 'MOOV' | 'ORANGE' | 'WAVE'>('MTN');
+  const [txRef, setTxRef] = useState('');
+  const [copied, setCopied] = useState(false);
+  const [winpayStep, setWinpayStep] = useState<'SELECT' | 'USSD'>('SELECT');
+
+  const botCfg = botConfigs.find(c => c.botId === bot.id);
+  const priceFormatted = formatXOF(bot.priceCents);
+
+  // Compute USSD Code for selected operator & bot
+  function getUssdCode() {
+    if (!botCfg) {
+      if (selectedOperator === 'MTN') return `*880*41*${bot.priceCents / 100}*0000#`;
+      if (selectedOperator === 'MOOV') return `*155*1*${bot.priceCents / 100}#`;
+      if (selectedOperator === 'ORANGE') return `*144*4*${bot.priceCents / 100}#`;
+      return `Wave: ${formatXOF(bot.priceCents)}`;
+    }
+    if (selectedOperator === 'MTN') return botCfg.ssdCodeMTN || `*880*41*${bot.priceCents / 100}*0000#`;
+    if (selectedOperator === 'MOOV') return botCfg.ssdCodeMoov || `*155*1*${bot.priceCents / 100}#`;
+    if (selectedOperator === 'ORANGE') return botCfg.ssdCodeOrange || `*144*4*${bot.priceCents / 100}#`;
+    return botCfg.ssdCodeWave || `Wave: ${formatXOF(bot.priceCents)}`;
+  }
+
+  const ussdCode = getUssdCode();
+
+  function handleCopy() {
+    navigator.clipboard.writeText(ussdCode);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2500);
+  }
+
+  function handleDial() {
+    const cleanTel = ussdCode.replace(/#/g, '%23');
+    window.location.href = `tel:${cleanTel}`;
+  }
 
   return (
     <div className="modal-overlay" onClick={onClose}>
@@ -169,87 +205,222 @@ function PurchaseModal({ bot, balanceCents, onClose, onConfirm, buying }: {
         </div>
 
         <p style={{ color: '#6B7280', fontSize: 12, margin: '0 0 16px' }}>
-          {bot.isPromo ? (
-            <span>
-              Offre Flash : <span style={{ textDecoration: 'line-through', color: '#9CA3AF' }}>{formatXOF(bot.originalPriceCents!)}</span>{' '}
-              <strong style={{ color: '#DC2626', fontSize: 14 }}>{formatXOF(bot.priceCents)}</strong>
-            </span>
-          ) : (
-            `Sélectionnez votre mode de paiement pour ${formatXOF(bot.priceCents)}`
-          )}
+          Tarif d'activation : <strong style={{ color: '#1A56DB', fontSize: 14 }}>{priceFormatted}</strong>
         </p>
 
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginBottom: 20 }}>
-          {/* Balance Payment (if user has enough) */}
-          <button
-            onClick={() => setMethod('balance')}
-            disabled={balanceCents < bot.priceCents}
-            style={{
-              width: '100%', height: 56,
-              background: method === 'balance' ? '#EFF6FF' : '#F9FAFB',
-              border: `2px solid ${method === 'balance' ? '#1A56DB' : '#E5E7EB'}`,
-              borderRadius: 12, cursor: balanceCents < bot.priceCents ? 'not-allowed' : 'pointer',
-              display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 16px',
-              opacity: balanceCents < bot.priceCents ? 0.6 : 1,
-            }}
-          >
-            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-              <span style={{ fontSize: 20 }}>💳</span>
-              <div style={{ textAlign: 'left' }}>
-                <div style={{ fontSize: 13, fontWeight: 700, color: '#374151' }}>Payer avec mon solde</div>
-                <div style={{ fontSize: 11, color: '#6B7280' }}>Disponible: {formatXOF(balanceCents)}</div>
-              </div>
-            </div>
-            {method === 'balance' && <span style={{ color: '#1A56DB', fontWeight: 'bold' }}>✓</span>}
-          </button>
-
-          {/* Sene-Pay Checkout */}
-          <button
-            onClick={() => setMethod('senepay')}
-            style={{
-              width: '100%', height: 56,
-              background: method === 'senepay' ? '#EFF6FF' : '#F9FAFB',
-              border: `2px solid ${method === 'senepay' ? '#1A56DB' : '#E5E7EB'}`,
-              borderRadius: 12, cursor: 'pointer',
-              display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 16px',
-            }}
-          >
-            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-              <span style={{ fontSize: 20 }}>⚡</span>
-              <div style={{ textAlign: 'left' }}>
-                <div style={{ fontSize: 13, fontWeight: 700, color: '#374151', display: 'flex', alignItems: 'center', gap: 6 }}>
-                  Sene-Pay (Mobile Money)
-                  <span style={{ fontSize: 10, background: '#FEF3C7', color: '#D97706', padding: '2px 6px', borderRadius: 6, fontWeight: 700 }}>
-                    🛠️ Maintenance
-                  </span>
+        {winpayStep === 'SELECT' ? (
+          <>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginBottom: 20 }}>
+              {/* Balance Payment (if user has enough) */}
+              <button
+                onClick={() => setMethod('balance')}
+                disabled={balanceCents < bot.priceCents}
+                style={{
+                  width: '100%', height: 56,
+                  background: method === 'balance' ? '#EFF6FF' : '#F9FAFB',
+                  border: `2px solid ${method === 'balance' ? '#1A56DB' : '#E5E7EB'}`,
+                  borderRadius: 12, cursor: balanceCents < bot.priceCents ? 'not-allowed' : 'pointer',
+                  display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 16px',
+                  opacity: balanceCents < bot.priceCents ? 0.6 : 1,
+                }}
+              >
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                  <span style={{ fontSize: 20 }}>💳</span>
+                  <div style={{ textAlign: 'left' }}>
+                    <div style={{ fontSize: 13, fontWeight: 700, color: '#374151' }}>Payer avec mon solde</div>
+                    <div style={{ fontSize: 11, color: '#6B7280' }}>Disponible: {formatXOF(balanceCents)}</div>
+                  </div>
                 </div>
-                <div style={{ fontSize: 11, color: '#6B7280' }}>Wave, Orange, MTN, Moov, etc.</div>
+                {method === 'balance' && <span style={{ color: '#1A56DB', fontWeight: 'bold' }}>✓</span>}
+              </button>
+
+              {/* Winpay USSD Checkout */}
+              <button
+                onClick={() => setMethod('winpay')}
+                style={{
+                  width: '100%', height: 56,
+                  background: method === 'winpay' ? '#EFF6FF' : '#F9FAFB',
+                  border: `2px solid ${method === 'winpay' ? '#1A56DB' : '#E5E7EB'}`,
+                  borderRadius: 12, cursor: 'pointer',
+                  display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 16px',
+                }}
+              >
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                  <span style={{ fontSize: 20 }}>⚡</span>
+                  <div style={{ textAlign: 'left' }}>
+                    <div style={{ fontSize: 13, fontWeight: 700, color: '#374151', display: 'flex', alignItems: 'center', gap: 6 }}>
+                      Winpay
+                      {!isWinpayActive ? (
+                        <span style={{ fontSize: 10, background: '#FEF3C7', color: '#D97706', padding: '2px 6px', borderRadius: 6, fontWeight: 700 }}>
+                          🛠️ Maintenance
+                        </span>
+                      ) : (
+                        <span style={{ fontSize: 10, background: '#DCFCE7', color: '#15803D', padding: '2px 6px', borderRadius: 6, fontWeight: 700 }}>
+                          ⚡ Instantané
+                        </span>
+                      )}
+                    </div>
+                    <div style={{ fontSize: 11, color: '#6B7280' }}>MTN MoMo, Moov Money</div>
+                  </div>
+                </div>
+                {method === 'winpay' && <span style={{ color: '#1A56DB', fontWeight: 'bold' }}>✓</span>}
+              </button>
+
+              {/* Sene-Pay (Désactivé & Grisé jusqu'à nouvel ordre) */}
+              <button
+                disabled={true}
+                style={{
+                  width: '100%', height: 56,
+                  background: '#F3F4F6',
+                  border: '1.5px solid #E5E7EB',
+                  borderRadius: 12, cursor: 'not-allowed', opacity: 0.55,
+                  display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 16px',
+                }}
+              >
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                  <span style={{ fontSize: 20 }}>💳</span>
+                  <div style={{ textAlign: 'left' }}>
+                    <div style={{ fontSize: 13, fontWeight: 700, color: '#6B7280', display: 'flex', alignItems: 'center', gap: 6 }}>
+                      Sene-Pay (Direct)
+                      <span style={{ fontSize: 10, background: '#E5E7EB', color: '#6B7280', padding: '2px 6px', borderRadius: 6, fontWeight: 700 }}>
+                        🔒 Indisponible
+                      </span>
+                    </div>
+                    <div style={{ fontSize: 11, color: '#9CA3AF' }}>Temporairement désactivé</div>
+                  </div>
+                </div>
+              </button>
+            </div>
+
+            <div style={{ display: 'flex', gap: 10 }}>
+              <button onClick={onClose} style={{
+                flex: 1, height: 48, background: '#F3F4F6', border: '1px solid #E5E7EB',
+                borderRadius: 12, fontSize: 13, fontWeight: 600, cursor: 'pointer', color: '#374151',
+              }}>Annuler</button>
+
+              <button
+                onClick={() => {
+                  if (method === 'balance') {
+                    onConfirm(bot, 'BALANCE', '', 'BALANCE');
+                  } else {
+                    if (!isWinpayActive) {
+                      alert('Le système de paiement Winpay est actuellement en maintenance temporaire. Veuillez recharger votre solde via le Support Client.');
+                      return;
+                    }
+                    setWinpayStep('USSD');
+                  }
+                }}
+                className="btn-press"
+                disabled={buying}
+                style={{
+                  flex: 2, height: 48,
+                  background: buying ? '#93C5FD' : (bot.isPromo ? 'linear-gradient(135deg, #DC2626, #EA580C)' : 'linear-gradient(135deg, #1A56DB, #1D4ED8)'),
+                  color: 'white', border: 'none', borderRadius: 12,
+                  fontSize: 13, fontWeight: 700, cursor: buying ? 'not-allowed' : 'pointer',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8
+                }}
+              >
+                {buying ? <Loader2 size={16} style={{ animation: 'spin 0.8s linear infinite' }} /> : (method === 'balance' ? `Payer ${priceFormatted}` : 'Continuer')}
+              </button>
+            </div>
+          </>
+        ) : (
+          /* Step 2: Winpay USSD Payment Details (MTN and Moov only) */
+          <div>
+            <div style={{ marginBottom: 14 }}>
+              <label style={{ fontSize: 12, fontWeight: 700, color: '#374151', display: 'block', marginBottom: 8 }}>
+                1. Choisissez votre réseau Mobile Money :
+              </label>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 10 }}>
+                {[
+                  { id: 'MTN', name: 'MTN MoMo', icon: '🟡' },
+                  { id: 'MOOV', name: 'Moov Money', icon: '🔵' },
+                ].map(op => (
+                  <button
+                    key={op.id}
+                    onClick={() => setSelectedOperator(op.id as any)}
+                    style={{
+                      padding: '12px 8px', borderRadius: 12,
+                      border: selectedOperator === op.id ? '2px solid #1A56DB' : '1.5px solid #E5E7EB',
+                      background: selectedOperator === op.id ? '#EFF6FF' : '#F9FAFB',
+                      cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8
+                    }}
+                  >
+                    <span style={{ fontSize: 20 }}>{op.icon}</span>
+                    <span style={{ fontSize: 13, fontWeight: 700, color: selectedOperator === op.id ? '#1A56DB' : '#374151' }}>{op.name}</span>
+                  </button>
+                ))}
               </div>
             </div>
-            {method === 'senepay' && <span style={{ color: '#1A56DB', fontWeight: 'bold' }}>✓</span>}
-          </button>
-        </div>
 
-        <div style={{ display: 'flex', gap: 10 }}>
-          <button onClick={onClose} style={{
-            flex: 1, height: 48, background: '#F3F4F6', border: '1px solid #E5E7EB',
-            borderRadius: 12, fontSize: 13, fontWeight: 600, cursor: 'pointer', color: '#374151',
-          }}>Annuler</button>
-          <button
-            onClick={() => onConfirm(bot, method.toUpperCase() as 'BALANCE' | 'SENEPAY')}
-            className="btn-press"
-            disabled={buying}
-            style={{
-              flex: 2, height: 48,
-              background: buying ? '#93C5FD' : (bot.isPromo ? 'linear-gradient(135deg, #DC2626, #EA580C)' : 'linear-gradient(135deg, #1A56DB, #1D4ED8)'),
-              color: 'white', border: 'none', borderRadius: 12,
-              fontSize: 13, fontWeight: 700, cursor: buying ? 'not-allowed' : 'pointer',
-              display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8
-            }}
-          >
-            {buying ? <Loader2 size={16} style={{ animation: 'spin 0.8s linear infinite' }} /> : `Payer ${formatXOF(bot.priceCents)}`}
-          </button>
-        </div>
+            {/* Payment Action Box (USSD Code Hidden — Only Payer Button) */}
+            <div style={{
+              background: '#ECFDF5', border: '1.5px solid #A7F3D0', borderRadius: 16,
+              padding: 18, textAlign: 'center', marginBottom: 16, boxShadow: '0 2px 8px rgba(16, 185, 129, 0.08)'
+            }}>
+              <div style={{ fontSize: 12, color: '#065F46', fontWeight: 700, marginBottom: 4 }}>
+                2. Régler l'activation via Winpay
+              </div>
+              <div style={{ fontSize: 13, color: '#047857', fontWeight: 600, marginBottom: 12 }}>
+                Montant : <strong style={{ fontSize: 15, color: '#065F46' }}>{priceFormatted}</strong>
+              </div>
+
+              <button
+                onClick={handleDial}
+                className="btn-press"
+                style={{
+                  width: '100%', height: 50, background: 'linear-gradient(135deg, #10B981, #059669)', color: 'white', border: 'none',
+                  borderRadius: 12, fontSize: 16, fontWeight: 800, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
+                  boxShadow: '0 4px 12px rgba(16, 185, 129, 0.3)'
+                }}
+              >
+                <span>📞</span> Payer
+              </button>
+            </div>
+
+            {/* Transaction Ref input */}
+            <div style={{ marginBottom: 18 }}>
+              <label style={{ fontSize: 12, fontWeight: 700, color: '#374151', display: 'block', marginBottom: 4 }}>
+                3. Entrez la référence de transaction ou votre N° expéditeur :
+              </label>
+              <input
+                className="input-field"
+                placeholder="Ex: N° Transaction ou votre N° de téléphone"
+                value={txRef}
+                onChange={e => setTxRef(e.target.value)}
+                style={{ fontSize: 13 }}
+              />
+            </div>
+
+            <div style={{ display: 'flex', gap: 10 }}>
+              <button onClick={() => setWinpayStep('SELECT')} style={{
+                flex: 1, height: 48, background: '#F3F4F6', border: '1px solid #E5E7EB',
+                borderRadius: 12, fontSize: 13, fontWeight: 600, cursor: 'pointer', color: '#374151',
+              }}>Retour</button>
+
+              <button
+                onClick={() => {
+                  if (!txRef.trim()) {
+                    alert('Veuillez entrer la référence de transaction ou votre numéro expéditeur.');
+                    return;
+                  }
+                  onConfirm(bot, 'WINPAY', txRef.trim(), selectedOperator);
+                }}
+                className="btn-press"
+                disabled={buying}
+                style={{
+                  flex: 2, height: 48,
+                  background: buying ? '#93C5FD' : 'linear-gradient(135deg, #1A56DB, #1D4ED8)',
+                  color: 'white', border: 'none', borderRadius: 12,
+                  fontSize: 13, fontWeight: 700, cursor: buying ? 'not-allowed' : 'pointer',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8
+                }}
+              >
+                {buying ? <Loader2 size={16} style={{ animation: 'spin 0.8s linear infinite' }} /> : 'Valider mon achat'}
+              </button>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
@@ -560,6 +731,8 @@ export default function HomePage() {
   const { addPurchase, addTransaction } = useAppStore();
   const { showToast } = useUIStore();
   const [bots, setBots] = useState<Bot[]>([]);
+  const [botConfigs, setBotConfigs] = useState<BotPaymentConfig[]>([]);
+  const [isWinpayActive, setIsWinpayActive] = useState(true);
   const [loadingBots, setLoadingBots] = useState(true);
   const [modal, setModal] = useState<null | 'deposit' | 'withdraw' | { type: 'buy'; bot: Bot }>(null);
   const [buying, setBuying] = useState(false);
@@ -570,23 +743,28 @@ export default function HomePage() {
       apiGetUnreadChatCount().then(c => setUnreadCount(c)).catch(() => {});
     }
     apiGetBots().then(b => { setBots(b as Bot[]); setLoadingBots(false); });
+    apiGetBotPaymentConfigs().then(res => {
+      setBotConfigs(res.configs || []);
+      setIsWinpayActive(res.isWinpayActive ?? true);
+    }).catch(() => {});
   }, [user]);
 
-  async function handleBuy(bot: Bot, method: 'BALANCE' | 'SENEPAY') {
+  async function handleBuy(bot: Bot, method: string, txRef: string = '', operator: string = 'BALANCE') {
     if (!user) return;
     setBuying(true);
     try {
-      const { purchase, checkoutUrl, newBalanceCents } = await apiPurchaseBot(user.id, bot.id, method, '');
+      const op = method === 'BALANCE' ? 'BALANCE' : operator;
+      const { purchase, newBalanceCents } = await apiPurchaseBot(user.id, bot.id, op, txRef);
       if (newBalanceCents !== undefined) {
         updateBalance(newBalanceCents);
       }
       addPurchase(purchase);
       setModal(null);
-      if (method === 'SENEPAY' && checkoutUrl) {
-        showToast(`Redirection vers Sene-Pay...`, 'success');
-        window.location.href = checkoutUrl;
-      } else {
+      if (method === 'BALANCE') {
         showToast(`Félicitations, ${bot.name} a été activé !`, 'success');
+        router.push('/products');
+      } else {
+        showToast(`Demande d'activation envoyée avec succès ! En attente de vérification.`, 'success');
         router.push('/products');
       }
     } catch (err: any) {
@@ -736,6 +914,8 @@ export default function HomePage() {
         <PurchaseModal
           bot={modal.bot}
           balanceCents={user?.balanceCents || 0}
+          botConfigs={botConfigs}
+          isWinpayActive={isWinpayActive}
           onClose={() => setModal(null)}
           onConfirm={handleBuy}
           buying={buying}

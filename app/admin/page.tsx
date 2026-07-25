@@ -15,7 +15,7 @@ import {
   apiAdminGetPendingWithdrawals, apiAdminApproveWithdrawal, apiAdminRejectWithdrawal, apiAdminDeleteWithdrawal,
   apiAdminGetChatConversations, apiAdminGetChatMessages, apiAdminSendChatMessage,
   apiAdminGrantBot, apiAdminEditChatMessage, apiAdminDeleteChatMessage, apiAdminRevokePurchase,
-  apiAdminGetAiSettings, apiAdminUpdateAiSettings
+  apiAdminGetAiSettings, apiAdminUpdateAiSettings, apiAdminBroadcastMessage
 } from '@/lib/api';
 import { formatXOF } from '@/lib/data';
 import type { BotPaymentConfig, Announcement } from '@/lib/data';
@@ -91,6 +91,35 @@ export default function AdminPage() {
   const [aiSettings, setAiSettings] = useState<{ knowledge_base: string; is_active: boolean; last_error?: string | null } | null>(null);
   const [savingAi, setSavingAi] = useState(false);
 
+  // Winpay status state
+  const [isWinpayActive, setIsWinpayActive] = useState(true);
+
+  // Broadcast state
+  const [broadcastTitle, setBroadcastTitle] = useState('');
+  const [broadcastMessage, setBroadcastMessage] = useState('');
+  const [sendingBroadcast, setSendingBroadcast] = useState(false);
+
+  async function handleSendBroadcast() {
+    if (!broadcastMessage.trim()) {
+      notify('Le message de diffusion est obligatoire.', 'error');
+      return;
+    }
+    if (!confirm('Voulez-vous vraiment envoyer ce message à TOUS les utilisateurs via le Chat Support et en Notification Push/Pop-up ?')) return;
+
+    setSendingBroadcast(true);
+    try {
+      const res = await apiAdminBroadcastMessage(broadcastTitle.trim(), broadcastMessage.trim());
+      notify(res.message || 'Message diffusé à tous avec succès !', 'success');
+      setBroadcastTitle('');
+      setBroadcastMessage('');
+      loadData();
+    } catch (err: any) {
+      notify(err.message || 'Erreur lors de la diffusion', 'error');
+    } finally {
+      setSendingBroadcast(false);
+    }
+  }
+
   // Auth check
   useEffect(() => {
     if (!user || user.phone !== '+22901010101') {
@@ -102,7 +131,7 @@ export default function AdminPage() {
   async function loadData() {
     setLoading(true);
     try {
-      const [s, u, b, cfg, ann, p, w, c, ai] = await Promise.all([
+      const [s, u, b, cfgData, ann, p, w, c, ai] = await Promise.all([
         apiAdminGetStats(),
         apiAdminGetUsers(),
         apiGetBots(),
@@ -116,7 +145,8 @@ export default function AdminPage() {
       setStats(s);
       setUsers(u);
       setBots(b);
-      setBotConfigs(cfg);
+      setBotConfigs(cfgData.configs || []);
+      setIsWinpayActive(cfgData.isWinpayActive ?? true);
       setAnnouncements(ann);
       setPendingPurchases(p);
       setPendingWithdrawals(w);
@@ -376,10 +406,10 @@ export default function AdminPage() {
   async function handleSaveBotConfigs() {
     setActionLoading('bots');
     try {
-      await apiAdminUpdateBotPaymentConfigs(botConfigs);
-      alert('Configuration SSD des bots mise à jour !');
+      await apiAdminUpdateBotPaymentConfigs(botConfigs, isWinpayActive);
+      notify('Configuration Winpay & codes USSD des bots mise à jour !', 'success');
     } catch (err: any) {
-      alert(err.message);
+      notify(err.message || 'Erreur lors de la mise à jour', 'error');
     } finally {
       setActionLoading(null);
     }
@@ -1280,17 +1310,49 @@ export default function AdminPage() {
                 </div>
               )}
 
-              {/* ── Bots Config & SSD ── */}
+              {/* ── Bots Config & SSD (Winpay) ── */}
               {activeTab === 'bots' && (
                 <div>
                   <h1 style={{ fontSize: 20, fontWeight: 800, margin: '0 0 6px', fontFamily: 'Space Grotesk, sans-serif', color: '#111827' }}>
-                    Configuration SSD des Bots
+                    Configuration Winpay (Code USSD par Tarif & Réseau)
                   </h1>
                   <p style={{ color: '#9CA3AF', fontSize: 13, margin: '0 0 20px' }}>
-                    Configurez le code SSD et le numéro marchand affichés au client lors de l'achat de chaque bot.
+                    Configurez l'activation de Winpay et personnalisez les codes USSD et numéros marchands par opérateur pour chaque bot.
                   </p>
 
-                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: 20, marginBottom: 24 }}>
+                  {/* ── Winpay Global Status Toggle ── */}
+                  <div style={{
+                    background: 'white', borderRadius: 16, border: '1.5px solid #E5E7EB',
+                    padding: 20, marginBottom: 24, boxShadow: '0 1px 3px rgba(0,0,0,0.05)',
+                    display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 16
+                  }}>
+                    <div>
+                      <h2 style={{ fontSize: 16, fontWeight: 700, margin: '0 0 4px', color: '#111827' }}>
+                        ⚡ Statut Général de Winpay (Mode Maintenance On/Off)
+                      </h2>
+                      <p style={{ fontSize: 12, color: '#6B7280', margin: 0 }}>
+                        Permet de rendre le système de paiement Winpay immédiatement disponible ou en maintenance sur l'application client.
+                      </p>
+                    </div>
+
+                    <label style={{ display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer' }}>
+                      <span style={{ fontSize: 13, fontWeight: 700, color: isWinpayActive ? '#15803D' : '#D97706' }}>
+                        {isWinpayActive ? '🟢 Winpay Disponible (Actif)' : '🟠 Winpay en Maintenance'}
+                      </span>
+                      <div style={{
+                        width: 50, height: 26, borderRadius: 14, position: 'relative', transition: 'background 0.3s',
+                        background: isWinpayActive ? '#10B981' : '#F59E0B'
+                      }} onClick={() => setIsWinpayActive(!isWinpayActive)}>
+                        <div style={{
+                          width: 22, height: 22, borderRadius: '50%', background: 'white',
+                          position: 'absolute', top: 2, left: isWinpayActive ? 26 : 2,
+                          transition: 'left 0.3s', boxShadow: '0 1px 3px rgba(0,0,0,0.2)'
+                        }} />
+                      </div>
+                    </label>
+                  </div>
+
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: 20, marginBottom: 24 }}>
                     {bots.map((bot: any) => {
                       const cfgIndex = botConfigs.findIndex(c => c.botId === bot.id);
                       if (cfgIndex === -1) return null;
@@ -1375,6 +1437,50 @@ export default function AdminPage() {
                               </div>
                             </div>
                           </div>
+
+                          {/* Orange Config */}
+                          <div style={{ borderTop: '1px solid #F3F4F6', paddingTop: 10 }}>
+                            <div style={{ fontSize: 12, fontWeight: 700, display: 'flex', alignItems: 'center', gap: 4, marginBottom: 8, color: '#111827' }}>
+                              <span>🟧</span> Orange Money SSD
+                            </div>
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                              <div>
+                                <label style={{ fontSize: 11, color: '#6B7280', display: 'block', marginBottom: 2 }}>Code SSD</label>
+                                <input
+                                  className="input-field"
+                                  placeholder="*144*...#"
+                                  value={cfg.ssdCodeOrange || ''}
+                                  onChange={e => {
+                                    const updated = [...botConfigs];
+                                    updated[cfgIndex].ssdCodeOrange = e.target.value;
+                                    setBotConfigs(updated);
+                                  }}
+                                />
+                              </div>
+                            </div>
+                          </div>
+
+                          {/* Wave Config */}
+                          <div style={{ borderTop: '1px solid #F3F4F6', paddingTop: 10 }}>
+                            <div style={{ fontSize: 12, fontWeight: 700, display: 'flex', alignItems: 'center', gap: 4, marginBottom: 8, color: '#111827' }}>
+                              <span>🌊</span> Wave / Autre SSD
+                            </div>
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                              <div>
+                                <label style={{ fontSize: 11, color: '#6B7280', display: 'block', marginBottom: 2 }}>Code SSD</label>
+                                <input
+                                  className="input-field"
+                                  placeholder="Code ou lien Wave"
+                                  value={cfg.ssdCodeWave || ''}
+                                  onChange={e => {
+                                    const updated = [...botConfigs];
+                                    updated[cfgIndex].ssdCodeWave = e.target.value;
+                                    setBotConfigs(updated);
+                                  }}
+                                />
+                              </div>
+                            </div>
+                          </div>
                         </div>
                       );
                     })}
@@ -1400,9 +1506,63 @@ export default function AdminPage() {
                 </div>
               )}
 
-              {/* ── Announcements ── */}
+              {/* ── Announcements & Broadcast ── */}
               {activeTab === 'announcements' && (
                 <div>
+                  {/* ── Broadcast Message to ALL Users Card ── */}
+                  <div style={{
+                    background: 'linear-gradient(135deg, #1E1B4B, #312E81)',
+                    borderRadius: 16, padding: 24, marginBottom: 28, color: 'white',
+                    boxShadow: '0 10px 25px rgba(49, 46, 129, 0.2)'
+                  }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 8 }}>
+                      <span style={{ fontSize: 24 }}>📢</span>
+                      <h2 style={{ fontSize: 18, fontWeight: 800, margin: 0, color: 'white', fontFamily: 'Space Grotesk, sans-serif' }}>
+                        Diffusion de Message Général (Chat Support + Push Pop-up)
+                      </h2>
+                    </div>
+                    <p style={{ color: '#C7D2FE', fontSize: 13, margin: '0 0 16px' }}>
+                      Rédigez un message qui sera envoyé <strong>en même temps</strong> à TOUS les utilisateurs sur leur <strong>Chat Support</strong> et affiché en <strong>Notification Pop-up</strong> sur leur écran.
+                    </p>
+
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                      <input
+                        className="input-field"
+                        placeholder="Titre de la notification (ex: 📢 Notification Importante)"
+                        value={broadcastTitle}
+                        onChange={e => setBroadcastTitle(e.target.value)}
+                        style={{ background: '#FFFFFF', color: '#111827', fontWeight: 600 }}
+                      />
+                      <textarea
+                        className="input-field"
+                        rows={3}
+                        placeholder="Rédigez votre message à diffuser à l'ensemble des clients..."
+                        value={broadcastMessage}
+                        onChange={e => setBroadcastMessage(e.target.value)}
+                        style={{ background: '#FFFFFF', color: '#111827', resize: 'vertical', fontFamily: 'Inter, sans-serif' }}
+                      />
+                      <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+                        <button
+                          onClick={handleSendBroadcast}
+                          disabled={sendingBroadcast}
+                          className="btn-press"
+                          style={{
+                            background: sendingBroadcast ? '#818CF8' : 'linear-gradient(135deg, #10B981, #059669)',
+                            color: 'white', border: 'none', borderRadius: 12,
+                            padding: '12px 24px', fontSize: 13, fontWeight: 800, cursor: sendingBroadcast ? 'not-allowed' : 'pointer',
+                            display: 'flex', alignItems: 'center', gap: 8, boxShadow: '0 4px 12px rgba(16, 185, 129, 0.3)'
+                          }}
+                        >
+                          {sendingBroadcast ? (
+                            <Loader2 size={16} style={{ animation: 'spin 0.8s linear infinite' }} />
+                          ) : (
+                            <>🚀 Diffuser à TOUS les utilisateurs</>
+                          )}
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
                     <div>
                       <h1 style={{ fontSize: 20, fontWeight: 800, margin: 0, fontFamily: 'Space Grotesk, sans-serif', color: '#111827' }}>

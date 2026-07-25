@@ -176,14 +176,18 @@ export type User = {
   lastName?: string;
 };
 
-// Per-bot SSD payment config (set by admin)
+// Per-bot SSD payment config for Winpay (set by admin per tariff and operator)
 export type BotPaymentConfig = {
   botId: string;
   botName: string;
   ssdCodeMTN: string;
   ssdCodeMoov: string;
+  ssdCodeOrange?: string;
+  ssdCodeWave?: string;
   merchantPhoneMTN: string;
   merchantPhoneMoov: string;
+  merchantPhoneOrange?: string;
+  merchantPhoneWave?: string;
 };
 
 // Announcement (popup) — multiple supported

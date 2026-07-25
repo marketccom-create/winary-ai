@@ -24,7 +24,10 @@ export async function PUT(req: Request) {
   const { error } = await requireAdmin(req);
   if (error) return error;
 
-  const configs = await req.json();
+  const body = await req.json();
+  const configs = Array.isArray(body) ? body : body.configs;
+  const isWinpayActive = Array.isArray(body) ? true : body.isWinpayActive;
+
   if (!Array.isArray(configs)) {
     return NextResponse.json({ error: 'Format invalide' }, { status: 400 });
   }
@@ -34,10 +37,22 @@ export async function PUT(req: Request) {
     await db.from('bot_payment_configs').upsert({
       bot_id: cfg.botId,
       bot_name: cfg.botName,
-      ssd_code_mtn: cfg.ssdCodeMTN,
-      ssd_code_moov: cfg.ssdCodeMoov,
-      merchant_phone_mtn: cfg.merchantPhoneMTN,
-      merchant_phone_moov: cfg.merchantPhoneMoov,
+      ssd_code_mtn: cfg.ssdCodeMTN || '',
+      ssd_code_moov: cfg.ssdCodeMoov || '',
+      merchant_phone_mtn: cfg.merchantPhoneMTN || '',
+      merchant_phone_moov: cfg.merchantPhoneMoov || '',
+      ...(cfg.ssdCodeOrange !== undefined ? { ssd_code_orange: cfg.ssdCodeOrange } : {}),
+      ...(cfg.ssdCodeWave !== undefined ? { ssd_code_wave: cfg.ssdCodeWave } : {}),
+      ...(cfg.merchantPhoneOrange !== undefined ? { merchant_phone_orange: cfg.merchantPhoneOrange } : {}),
+      ...(cfg.merchantPhoneWave !== undefined ? { merchant_phone_wave: cfg.merchantPhoneWave } : {}),
+    }, { onConflict: 'bot_id' });
+  }
+
+  if (isWinpayActive !== undefined) {
+    await db.from('bot_payment_configs').upsert({
+      bot_id: 'GLOBAL_WINPAY',
+      bot_name: 'GLOBAL_WINPAY',
+      is_active: isWinpayActive,
     }, { onConflict: 'bot_id' });
   }
 
