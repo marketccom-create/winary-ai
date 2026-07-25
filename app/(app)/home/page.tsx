@@ -436,7 +436,7 @@ function PurchaseModal({ bot, balanceCents, botConfigs, isWinpayActive, onClose,
 
               <button
                 onClick={() => {
-                  const check = extractAndValidateReference(selectedOperator, txRef);
+                  const check = extractAndValidateReference(selectedOperator, txRef, bot.priceCents);
                   if (!check.isValid) {
                     showToast(`❌ SMS de confirmation non reconnu (${check.reason || 'Message invalide'}). Veuillez coller le SMS complet.`, 'error');
                     return;

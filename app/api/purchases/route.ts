@@ -286,8 +286,8 @@ export async function POST(req: Request) {
   // ════════════════════════════════════════════════════════════════
   const rawInput = txReference?.trim() || '';
 
-  // 1. Strict validation & extraction from full SMS or standalone reference
-  const validation = extractAndValidateReference(operator, rawInput);
+  // 1. Strict validation & extraction from full SMS or standalone reference (price & ID verification)
+  const validation = extractAndValidateReference(operator, rawInput, bot.priceCents);
   if (!validation.isValid) {
     return NextResponse.json(
       { error: `❌ Référence de transaction incorrecte. ${validation.reason || ''} Paiement non abouti.` },

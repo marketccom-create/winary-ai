@@ -228,16 +228,44 @@ export function detectCountryFromPhone(phone: string): Country {
   return COUNTRIES[0]; // Default to Bénin
 }
 
-// Extract reference & validate full copy-pasted SMS or standalone transaction reference
-export function extractAndValidateReference(operator: string, input: string): { isValid: boolean; extractedRef?: string; reason?: string } {
+// Extract reference & validate full copy-pasted SMS or standalone transaction reference (with strict price & ID verification)
+export function extractAndValidateReference(
+  operator: string,
+  input: string,
+  expectedPriceCents?: number
+): { isValid: boolean; extractedRef?: string; reason?: string } {
   const cleaned = input.trim();
 
+  // 1. Mandatory check: Must not be empty
   if (!cleaned || cleaned.length < 8) {
-    return { isValid: false, reason: "Le message SMS ou la référence est trop courte." };
+    return {
+      isValid: false,
+      reason: "Le message SMS ou la référence est obligatoire et doit être valide (minimum 8 caractères)."
+    };
   }
 
-  // Search for ID:xxx or Ref:xxx or Txn:xxx
-  let extractedRef = cleaned;
+  // 2. Strict Price Check (if expectedPriceCents is provided)
+  if (expectedPriceCents && expectedPriceCents > 0) {
+    const expectedAmount = Math.round(expectedPriceCents / 100);
+    // Patterns to look for in SMS: 4000F, 4000 F, 4 000F, 4.000F, or exact number 4000
+    const amountRegex = new RegExp(`\\b${expectedAmount}\\s*(F|XOF|FCFA)?\\b`, 'i');
+    
+    // Formatted price with space/dot (ex: 4 000 or 4.000)
+    const formattedStr = expectedAmount.toString().replace(/\B(?=(\d{3})+(?!\d))/g, '[\\s\\.]?');
+    const formattedAmountRegex = new RegExp(`\\b${formattedStr}\\s*(F|XOF|FCFA)?\\b`, 'i');
+
+    const hasPriceMatch = amountRegex.test(cleaned) || formattedAmountRegex.test(cleaned);
+
+    if (!hasPriceMatch) {
+      return {
+        isValid: false,
+        reason: `Le montant indiqué dans votre SMS ne correspond pas au prix du bot (${expectedAmount.toLocaleString('fr-FR')} FCFA).`
+      };
+    }
+  }
+
+  // 3. Search for ID:xxx or Ref:xxx or Txn:xxx
+  let extractedRef = '';
   const idMatch = cleaned.match(/ID\s*:\s*([A-Za-z0-9]+)/i) ||
                   cleaned.match(/Ref\s*:\s*([A-Za-z0-9]+)/i) ||
                   cleaned.match(/Txn\s*:\s*([A-Za-z0-9]+)/i);
@@ -249,11 +277,21 @@ export function extractAndValidateReference(operator: string, input: string): { 
     const numMatch = cleaned.match(/\b\d{9,16}\b/);
     if (numMatch) {
       extractedRef = numMatch[0];
+    } else if (cleaned.length >= 8 && cleaned.length <= 32 && !cleaned.includes(' ')) {
+      extractedRef = cleaned;
     }
+  }
+
+  if (!extractedRef || extractedRef.length < 8) {
+    return {
+      isValid: false,
+      reason: "Aucun identifiant ou référence de transaction valide (minimum 8 caractères) n'a été trouvé dans le message SMS."
+    };
   }
 
   const op = operator.toUpperCase();
 
+  // 4. Operator Specific Strict Validation
   if (op === 'MTN') {
     const isSmsFormat = /Paiement|Frais|Solde|ID:|Ref:|ONAFRIQ/i.test(cleaned);
     const mtnRefRegex = /^\d{9,16}$/;
@@ -268,7 +306,7 @@ export function extractAndValidateReference(operator: string, input: string): { 
 
     return {
       isValid: false,
-      reason: "Message SMS MTN MoMo non reconnu (veuillez coller le message SMS complet de confirmation)."
+      reason: "Format de SMS MTN MoMo invalide (veuillez coller le message SMS de confirmation officiel reçu de MTN)."
     };
   }
 
@@ -286,19 +324,15 @@ export function extractAndValidateReference(operator: string, input: string): { 
 
     return {
       isValid: false,
-      reason: "Message SMS Moov Money non reconnu (veuillez coller le message SMS complet de confirmation)."
+      reason: "Format de SMS Moov Money invalide (veuillez coller le message SMS de confirmation officiel reçu de Moov)."
     };
   }
 
-  if (cleaned.length >= 8) {
-    return { isValid: true, extractedRef };
-  }
-
-  return { isValid: false, reason: "Message SMS ou référence non conforme." };
+  return { isValid: true, extractedRef };
 }
 
-export function validateTransactionReference(operator: string, ref: string): { isValid: boolean; reason?: string } {
-  const result = extractAndValidateReference(operator, ref);
+export function validateTransactionReference(operator: string, ref: string, expectedPriceCents?: number): { isValid: boolean; reason?: string } {
+  const result = extractAndValidateReference(operator, ref, expectedPriceCents);
   return { isValid: result.isValid, reason: result.reason };
 }
 
