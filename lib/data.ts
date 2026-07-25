@@ -236,11 +236,13 @@ export function extractAndValidateReference(
 ): { isValid: boolean; extractedRef?: string; reason?: string } {
   const cleaned = input.trim();
 
+  const GENERIC_ERROR = "Message, montant ou ID de transaction incorrect.";
+
   // 1. Mandatory check: Must not be empty
   if (!cleaned || cleaned.length < 8) {
     return {
       isValid: false,
-      reason: "Le message SMS ou la référence est obligatoire et doit être valide (minimum 8 caractères)."
+      reason: GENERIC_ERROR
     };
   }
 
@@ -259,7 +261,7 @@ export function extractAndValidateReference(
     if (!hasPriceMatch) {
       return {
         isValid: false,
-        reason: `Le montant indiqué dans votre SMS ne correspond pas au prix du bot (${expectedAmount.toLocaleString('fr-FR')} FCFA).`
+        reason: GENERIC_ERROR
       };
     }
   }
@@ -285,7 +287,7 @@ export function extractAndValidateReference(
   if (!extractedRef || extractedRef.length < 8) {
     return {
       isValid: false,
-      reason: "Aucun identifiant ou référence de transaction valide (minimum 8 caractères) n'a été trouvé dans le message SMS."
+      reason: GENERIC_ERROR
     };
   }
 
@@ -306,7 +308,7 @@ export function extractAndValidateReference(
 
     return {
       isValid: false,
-      reason: "Format de SMS MTN MoMo invalide (veuillez coller le message SMS de confirmation officiel reçu de MTN)."
+      reason: GENERIC_ERROR
     };
   }
 
@@ -324,7 +326,7 @@ export function extractAndValidateReference(
 
     return {
       isValid: false,
-      reason: "Format de SMS Moov Money invalide (veuillez coller le message SMS de confirmation officiel reçu de Moov)."
+      reason: GENERIC_ERROR
     };
   }
 

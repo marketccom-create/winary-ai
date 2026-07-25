@@ -11,7 +11,7 @@ import {
   apiAdminGetStats, apiAdminGetUsers, apiAdminGetUserDetails, apiAdminUpdateUser,
   apiAdminGetAnnouncements, apiAdminUpdateAnnouncement, apiAdminDeleteAnnouncement,
   apiGetBots, apiGetBotPaymentConfigs, apiAdminUpdateBotPaymentConfigs,
-  apiAdminGetPendingPurchases, apiAdminApprovePurchase, apiAdminRejectPurchase, apiAdminRejectAllPurchases,
+  apiAdminGetPendingPurchases, apiAdminGetAllPurchases, apiAdminApprovePurchase, apiAdminRejectPurchase, apiAdminRejectAllPurchases,
   apiAdminGetPendingWithdrawals, apiAdminApproveWithdrawal, apiAdminRejectWithdrawal, apiAdminDeleteWithdrawal,
   apiAdminGetChatConversations, apiAdminGetChatMessages, apiAdminSendChatMessage,
   apiAdminGrantBot, apiAdminEditChatMessage, apiAdminDeleteChatMessage, apiAdminRevokePurchase,
@@ -258,8 +258,51 @@ export default function AdminPage() {
     }
   }
 
+  // Real-time Purchase Poller & Instant Sound/Push Notification Trigger
+  const knownPurchaseIds = useRef<Set<string>>(new Set());
+  const isFirstPurchaseFetch = useRef(true);
+
+  async function checkRealtimePurchases() {
+    try {
+      const purchases = await apiAdminGetAllPurchases();
+      if (!Array.isArray(purchases)) return;
+
+      if (isFirstPurchaseFetch.current) {
+        purchases.forEach(p => knownPurchaseIds.current.add(p.id));
+        isFirstPurchaseFetch.current = false;
+        return;
+      }
+
+      for (const p of purchases) {
+        if (!knownPurchaseIds.current.has(p.id)) {
+          knownPurchaseIds.current.add(p.id);
+
+          // NEW PURCHASE DETECTED IN REALTIME FROM ANY USER!
+          playStripeCashSound();
+
+          const formattedPrice = formatXOF(p.pricePaidCents);
+          const notificationTitle = `💰 Nouveau Paiement Validé ! (${formattedPrice})`;
+          const notificationBody = `Client: ${p.userPhone} | Bot: ${p.botName} | Réseau: ${p.operator}\nSMS: ${p.txReference || 'Validé'}`;
+
+          triggerNativeNotification(notificationTitle, notificationBody);
+          notify(`🎉 NOUVEAU PAIEMENT VALIDÉ : ${p.botName} (${formattedPrice}) par ${p.userPhone} !`, 'success');
+        }
+      }
+    } catch (e) {
+      console.error('Realtime check error:', e);
+    }
+  }
+
   useEffect(() => {
     loadData();
+    checkRealtimePurchases();
+
+    // Silent background check every 5 seconds
+    const interval = setInterval(() => {
+      checkRealtimePurchases();
+    }, 5000);
+
+    return () => clearInterval(interval);
   }, []);
 
   // Handlers

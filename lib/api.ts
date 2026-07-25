@@ -256,6 +256,10 @@ export async function apiAdminGetPendingPurchases() {
   return apiFetch<any[]>('/api/admin/purchases');
 }
 
+export async function apiAdminGetAllPurchases() {
+  return apiFetch<any[]>('/api/admin/purchases');
+}
+
 export async function apiAdminApprovePurchase(purchaseId: string) {
   return apiFetch<{ success: boolean }>('/api/admin/purchases', {
     method: 'POST',
