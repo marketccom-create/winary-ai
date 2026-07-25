@@ -1268,151 +1268,167 @@ export default function AdminPage() {
               )}
 
               {/* ── Achats Winpay Tab ── */}
-              {activeTab === 'winpay' && (
-                <div>
-                  <h1 style={{ fontSize: 22, fontWeight: 800, margin: '0 0 6px', fontFamily: 'Space Grotesk, sans-serif', color: '#111827' }}>
-                    ⚡ Suivi des Achats Winpay
-                  </h1>
-                  <p style={{ color: '#6B7280', fontSize: 13, margin: '0 0 20px' }}>
-                    Historique en temps réel des paiements Winpay. Cliquez sur "Contacter Client" pour aider immédiatement un client en cas de message erroné !
-                  </p>
+              {activeTab === 'winpay' && (() => {
+                // Filter purchases starting strictly from 25/07/2026 (00:00:00)
+                const startDateMs = new Date('2026-07-25T00:00:00.000Z').getTime();
+                const todayPurchases = allPurchases.filter(p => {
+                  if (!p.purchasedAt) return false;
+                  return new Date(p.purchasedAt).getTime() >= startDateMs;
+                });
 
-                  {/* Summary Cards */}
-                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12, marginBottom: 20 }}>
-                    <StatCard label="Total Tentatives" value={allPurchases.length} icon="⚡" color="#1A56DB" />
-                    <StatCard label="🟢 Paiements Validés" value={allPurchases.filter(p => p.status === 'ACTIVE').length} icon="✅" color="#15803D" />
-                    <StatCard label="🔴 Messages Erronés / Échoués" value={allPurchases.filter(p => p.status === 'FAILED' || p.status === 'EXPIRED').length} icon="⚠️" color="#DC2626" />
-                  </div>
+                return (
+                  <div>
+                    <h1 style={{ fontSize: 22, fontWeight: 800, margin: '0 0 6px', fontFamily: 'Space Grotesk, sans-serif', color: '#111827' }}>
+                      ⚡ Suivi des Achats Winpay (À partir du 25/07/2026)
+                    </h1>
+                    <p style={{ color: '#6B7280', fontSize: 13, margin: '0 0 20px' }}>
+                      Historique en temps réel des transactions du jour (25/07/2026+). Glissez horizontalement si nécessaire. Cliquez sur "Contacter Client" pour aider immédiatement !
+                    </p>
 
-                  {/* Filters & Search */}
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 12, marginBottom: 20 }}>
-                    <div style={{ display: 'flex', gap: 8 }}>
-                      {[
-                        { key: 'ALL', label: 'Tous' },
-                        { key: 'ACTIVE', label: '🟢 Validés (Succès)' },
-                        { key: 'FAILED', label: '🔴 SMS Erronés / Échoués' },
-                      ].map(f => (
-                        <button
-                          key={f.key}
-                          onClick={() => setWinpayFilter(f.key as any)}
-                          style={{
-                            padding: '8px 14px', borderRadius: 10, fontSize: 13, fontWeight: 700, cursor: 'pointer',
-                            border: winpayFilter === f.key ? '2px solid #1A56DB' : '1px solid #E5E7EB',
-                            background: winpayFilter === f.key ? '#EFF6FF' : '#FFFFFF',
-                            color: winpayFilter === f.key ? '#1A56DB' : '#4B5563',
-                          }}
-                        >
-                          {f.label}
-                        </button>
-                      ))}
+                    {/* Summary Cards */}
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12, marginBottom: 20 }}>
+                      <StatCard label="Total Tentatives Aujourd'hui" value={todayPurchases.length} icon="⚡" color="#1A56DB" />
+                      <StatCard label="🟢 Paiements Validés" value={todayPurchases.filter(p => p.status === 'ACTIVE').length} icon="✅" color="#15803D" />
+                      <StatCard label="🔴 Messages Erronés / Échoués" value={todayPurchases.filter(p => p.status === 'FAILED' || p.status === 'EXPIRED').length} icon="⚠️" color="#DC2626" />
                     </div>
 
-                    <input
-                      className="input-field"
-                      placeholder="Rechercher par téléphone, bot ou SMS..."
-                      value={search}
-                      onChange={e => setSearch(e.target.value)}
-                      style={{ width: 280, fontSize: 13 }}
-                    />
-                  </div>
+                    {/* Filters & Search */}
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 12, marginBottom: 20 }}>
+                      <div style={{ display: 'flex', gap: 8 }}>
+                        {[
+                          { key: 'ALL', label: 'Tous' },
+                          { key: 'ACTIVE', label: '🟢 Validés (Succès)' },
+                          { key: 'FAILED', label: '🔴 SMS Erronés / Échoués' },
+                        ].map(f => (
+                          <button
+                            key={f.key}
+                            onClick={() => setWinpayFilter(f.key as any)}
+                            style={{
+                              padding: '8px 14px', borderRadius: 10, fontSize: 13, fontWeight: 700, cursor: 'pointer',
+                              border: winpayFilter === f.key ? '2px solid #1A56DB' : '1px solid #E5E7EB',
+                              background: winpayFilter === f.key ? '#EFF6FF' : '#FFFFFF',
+                              color: winpayFilter === f.key ? '#1A56DB' : '#4B5563',
+                            }}
+                          >
+                            {f.label}
+                          </button>
+                        ))}
+                      </div>
 
-                  {/* Data Table */}
-                  <div style={{ background: 'white', borderRadius: 16, border: '1.5px solid #E5E7EB', overflow: 'hidden' }}>
-                    <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13, textAlign: 'left' }}>
-                      <thead>
-                        <tr style={{ background: '#F9FAFB', borderBottom: '1px solid #E5E7EB', color: '#6B7280', fontWeight: 700 }}>
-                          <th style={{ padding: '12px 16px' }}>Date</th>
-                          <th style={{ padding: '12px 16px' }}>Client</th>
-                          <th style={{ padding: '12px 16px' }}>Bot & Prix</th>
-                          <th style={{ padding: '12px 16px' }}>Réseau</th>
-                          <th style={{ padding: '12px 16px' }}>Message / Référence SMS</th>
-                          <th style={{ padding: '12px 16px' }}>Statut</th>
-                          <th style={{ padding: '12px 16px', textAlign: 'center' }}>Action Support</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {allPurchases.length === 0 ? (
-                          <tr>
-                            <td colSpan={7} style={{ textAlign: 'center', padding: 40, color: '#9CA3AF' }}>
-                              Aucun achat Winpay enregistré pour le moment.
-                            </td>
+                      <input
+                        className="input-field"
+                        placeholder="Rechercher par téléphone, bot ou SMS..."
+                        value={search}
+                        onChange={e => setSearch(e.target.value)}
+                        style={{ width: 280, fontSize: 13 }}
+                      />
+                    </div>
+
+                    {/* Data Table Container with Smooth Horizontal Scroll */}
+                    <div style={{
+                      background: 'white',
+                      borderRadius: 16,
+                      border: '1.5px solid #E5E7EB',
+                      overflowX: 'auto',
+                      WebkitOverflowScrolling: 'touch',
+                      boxShadow: '0 2px 10px rgba(0,0,0,0.03)'
+                    }}>
+                      <table style={{ width: '100%', minWidth: 950, borderCollapse: 'collapse', fontSize: 13, textAlign: 'left' }}>
+                        <thead>
+                          <tr style={{ background: '#F9FAFB', borderBottom: '1px solid #E5E7EB', color: '#6B7280', fontWeight: 700 }}>
+                            <th style={{ padding: '12px 16px', minWidth: 110 }}>Date</th>
+                            <th style={{ padding: '12px 16px', minWidth: 150 }}>Client</th>
+                            <th style={{ padding: '12px 16px', minWidth: 130 }}>Bot & Prix</th>
+                            <th style={{ padding: '12px 16px', minWidth: 120 }}>Réseau</th>
+                            <th style={{ padding: '12px 16px', minWidth: 220 }}>Message / Référence SMS</th>
+                            <th style={{ padding: '12px 16px', minWidth: 150 }}>Statut</th>
+                            <th style={{ padding: '12px 16px', minWidth: 160, textAlign: 'center' }}>Action Support</th>
                           </tr>
-                        ) : (
-                          allPurchases
-                            .filter(p => {
-                              if (winpayFilter === 'ACTIVE') return p.status === 'ACTIVE';
-                              if (winpayFilter === 'FAILED') return p.status === 'FAILED' || p.status === 'EXPIRED';
-                              return true;
-                            })
-                            .filter(p => {
-                              if (!search.trim()) return true;
-                              const q = search.toLowerCase();
-                              return (
-                                p.userPhone?.toLowerCase().includes(q) ||
-                                p.botName?.toLowerCase().includes(q) ||
-                                p.txReference?.toLowerCase().includes(q) ||
-                                p.userName?.toLowerCase().includes(q)
-                              );
-                            })
-                            .map(p => {
-                              const isFailed = p.status === 'FAILED' || p.status === 'EXPIRED';
-                              const formattedDate = new Date(p.purchasedAt).toLocaleString('fr-FR', {
-                                day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit'
-                              });
+                        </thead>
+                        <tbody>
+                          {todayPurchases.length === 0 ? (
+                            <tr>
+                              <td colSpan={7} style={{ textAlign: 'center', padding: 40, color: '#9CA3AF' }}>
+                                Aucun achat Winpay enregistré pour la journée du 25/07/2026.
+                              </td>
+                            </tr>
+                          ) : (
+                            todayPurchases
+                              .filter(p => {
+                                if (winpayFilter === 'ACTIVE') return p.status === 'ACTIVE';
+                                if (winpayFilter === 'FAILED') return p.status === 'FAILED' || p.status === 'EXPIRED';
+                                return true;
+                              })
+                              .filter(p => {
+                                if (!search.trim()) return true;
+                                const q = search.toLowerCase();
+                                return (
+                                  p.userPhone?.toLowerCase().includes(q) ||
+                                  p.botName?.toLowerCase().includes(q) ||
+                                  p.txReference?.toLowerCase().includes(q) ||
+                                  p.userName?.toLowerCase().includes(q)
+                                );
+                              })
+                              .map(p => {
+                                const isFailed = p.status === 'FAILED' || p.status === 'EXPIRED';
+                                const formattedDate = new Date(p.purchasedAt).toLocaleString('fr-FR', {
+                                  day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit'
+                                });
 
-                              return (
-                                <tr key={p.id} style={{ borderBottom: '1px solid #F3F4F6', background: isFailed ? '#FEF2F2' : 'white' }}>
-                                  <td style={{ padding: '14px 16px', color: '#6B7280', fontSize: 12 }}>{formattedDate}</td>
-                                  <td style={{ padding: '14px 16px' }}>
-                                    <div style={{ fontWeight: 700, color: '#111827' }}>{p.userPhone}</div>
-                                    {p.userName && <div style={{ fontSize: 11, color: '#6B7280' }}>{p.userName}</div>}
-                                  </td>
-                                  <td style={{ padding: '14px 16px' }}>
-                                    <div style={{ fontWeight: 700, color: '#1A56DB' }}>{p.botName}</div>
-                                    <div style={{ fontSize: 11, color: '#4B5563' }}>{formatXOF(p.pricePaidCents)}</div>
-                                  </td>
-                                  <td style={{ padding: '14px 16px', fontWeight: 700 }}>
-                                    {p.operator === 'MTN' ? '🟡 MTN MoMo' : '🔵 Moov Money'}
-                                  </td>
-                                  <td style={{ padding: '14px 16px', maxWidth: 260, wordBreak: 'break-word', fontFamily: 'monospace', fontSize: 12 }}>
-                                    <div style={{ background: isFailed ? '#FEE2E2' : '#F3F4F6', padding: '6px 10px', borderRadius: 8, color: isFailed ? '#991B1B' : '#374151' }}>
-                                      {p.txReference || 'N/A'}
-                                    </div>
-                                  </td>
-                                  <td style={{ padding: '14px 16px' }}>
-                                    {isFailed ? (
-                                      <span style={{ background: '#FEE2E2', color: '#991B1B', padding: '4px 10px', borderRadius: 8, fontSize: 11, fontWeight: 800 }}>
-                                        🔴 SMS Erroné / Échoué
-                                      </span>
-                                    ) : (
-                                      <span style={{ background: '#DCFCE7', color: '#15803D', padding: '4px 10px', borderRadius: 8, fontSize: 11, fontWeight: 800 }}>
-                                        🟢 Validé (Succès)
-                                      </span>
-                                    )}
-                                  </td>
-                                  <td style={{ padding: '14px 16px', textAlign: 'center' }}>
-                                    <button
-                                      onClick={() => handleInitiateChat({ id: p.userId, phone: p.userPhone, firstName: p.userName }, `Bonjour, j'ai remarqué que votre tentative d'achat du bot ${p.botName} via ${p.operator} a rencontré un problème. Comment puis-je vous aider ?`)}
-                                      className="btn-press"
-                                      style={{
-                                        background: isFailed ? '#DC2626' : '#1A56DB', color: 'white', border: 'none',
-                                        borderRadius: 10, padding: '8px 14px', fontSize: 12, fontWeight: 700, cursor: 'pointer',
-                                        display: 'inline-flex', alignItems: 'center', gap: 6,
-                                        boxShadow: isFailed ? '0 2px 8px rgba(220, 38, 38, 0.25)' : 'none'
-                                      }}
-                                    >
-                                      <MessageCircle size={14} /> Contacter Client
-                                    </button>
-                                  </td>
-                                </tr>
-                              );
-                            })
-                        )}
-                      </tbody>
-                    </table>
+                                return (
+                                  <tr key={p.id} style={{ borderBottom: '1px solid #F3F4F6', background: isFailed ? '#FEF2F2' : 'white' }}>
+                                    <td style={{ padding: '14px 16px', color: '#6B7280', fontSize: 12 }}>{formattedDate}</td>
+                                    <td style={{ padding: '14px 16px' }}>
+                                      <div style={{ fontWeight: 700, color: '#111827' }}>{p.userPhone}</div>
+                                      {p.userName && <div style={{ fontSize: 11, color: '#6B7280' }}>{p.userName}</div>}
+                                    </td>
+                                    <td style={{ padding: '14px 16px' }}>
+                                      <div style={{ fontWeight: 700, color: '#1A56DB' }}>{p.botName}</div>
+                                      <div style={{ fontSize: 11, color: '#4B5563' }}>{formatXOF(p.pricePaidCents)}</div>
+                                    </td>
+                                    <td style={{ padding: '14px 16px', fontWeight: 700 }}>
+                                      {p.operator === 'MTN' ? '🟡 MTN MoMo' : '🔵 Moov Money'}
+                                    </td>
+                                    <td style={{ padding: '14px 16px', maxWidth: 260, wordBreak: 'break-word', fontFamily: 'monospace', fontSize: 12 }}>
+                                      <div style={{ background: isFailed ? '#FEE2E2' : '#F3F4F6', padding: '6px 10px', borderRadius: 8, color: isFailed ? '#991B1B' : '#374151' }}>
+                                        {p.txReference || 'N/A'}
+                                      </div>
+                                    </td>
+                                    <td style={{ padding: '14px 16px' }}>
+                                      {isFailed ? (
+                                        <span style={{ background: '#FEE2E2', color: '#991B1B', padding: '4px 10px', borderRadius: 8, fontSize: 11, fontWeight: 800 }}>
+                                          🔴 SMS Erroné / Échoué
+                                        </span>
+                                      ) : (
+                                        <span style={{ background: '#DCFCE7', color: '#15803D', padding: '4px 10px', borderRadius: 8, fontSize: 11, fontWeight: 800 }}>
+                                          🟢 Validé (Succès)
+                                        </span>
+                                      )}
+                                    </td>
+                                    <td style={{ padding: '14px 16px', textAlign: 'center' }}>
+                                      <button
+                                        onClick={() => handleInitiateChat({ id: p.userId, phone: p.userPhone, firstName: p.userName }, `Bonjour, j'ai remarqué que votre tentative d'achat du bot ${p.botName} via ${p.operator} a rencontré un problème. Comment puis-je vous aider ?`)}
+                                        className="btn-press"
+                                        style={{
+                                          background: isFailed ? '#DC2626' : '#1A56DB', color: 'white', border: 'none',
+                                          borderRadius: 10, padding: '8px 14px', fontSize: 12, fontWeight: 700, cursor: 'pointer',
+                                          display: 'inline-flex', alignItems: 'center', gap: 6, whiteSpace: 'nowrap',
+                                          boxShadow: isFailed ? '0 2px 8px rgba(220, 38, 38, 0.25)' : 'none'
+                                        }}
+                                      >
+                                        <MessageCircle size={14} /> Contacter Client
+                                      </button>
+                                    </td>
+                                  </tr>
+                                );
+                              })
+                          )}
+                        </tbody>
+                      </table>
+                    </div>
                   </div>
-                </div>
-              )}
+                );
+              })()}
 
               {/* ── Pending Purchases Approval ── */}
               {activeTab === 'pending' && (
