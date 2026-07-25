@@ -228,45 +228,40 @@ export function detectCountryFromPhone(phone: string): Country {
   return COUNTRIES[0]; // Default to Bénin
 }
 
-// Extract reference & validate full copy-pasted SMS or standalone transaction reference (with strict price & ID verification)
+// Extract reference & validate full copy-pasted SMS or standalone transaction reference (with smart price & ID verification)
 export function extractAndValidateReference(
   operator: string,
   input: string,
   expectedPriceCents?: number
 ): { isValid: boolean; extractedRef?: string; reason?: string } {
   const cleaned = input.trim();
-
   const GENERIC_ERROR = "Message, montant ou ID de transaction incorrect.";
 
   // 1. Mandatory check: Must not be empty
-  if (!cleaned || cleaned.length < 8) {
-    return {
-      isValid: false,
-      reason: GENERIC_ERROR
-    };
+  if (!cleaned || cleaned.length < 6) {
+    return { isValid: false, reason: GENERIC_ERROR };
   }
 
-  // 2. Strict Price Check (if expectedPriceCents is provided)
-  if (expectedPriceCents && expectedPriceCents > 0) {
+  // Detect if user pasted a full SMS message or a standalone reference ID
+  const isFullSms = /Paiement|Transfert|Frais|Solde|ONAFRIQ|FCFA|XOF|UEMOA/i.test(cleaned);
+
+  // 2. Smart Price Check (only if full SMS is pasted)
+  if (isFullSms && expectedPriceCents && expectedPriceCents > 0) {
     const expectedAmount = Math.round(expectedPriceCents / 100);
-    // Patterns to look for in SMS: 4000F, 4000 F, 4 000F, 4.000F, or exact number 4000
-    const amountRegex = new RegExp(`\\b${expectedAmount}\\s*(F|XOF|FCFA)?\\b`, 'i');
-    
-    // Formatted price with space/dot (ex: 4 000 or 4.000)
-    const formattedStr = expectedAmount.toString().replace(/\B(?=(\d{3})+(?!\d))/g, '[\\s\\.]?');
-    const formattedAmountRegex = new RegExp(`\\b${formattedStr}\\s*(F|XOF|FCFA)?\\b`, 'i');
+    const amountStr = expectedAmount.toString();                           // ex: "4000"
+    const amountStrFormattedSpace = expectedAmount.toLocaleString('fr-FR'); // ex: "4 000"
+    const amountStrFormattedDot = expectedAmount.toLocaleString('de-DE');   // ex: "4.000"
 
-    const hasPriceMatch = amountRegex.test(cleaned) || formattedAmountRegex.test(cleaned);
+    const hasAmount = cleaned.includes(amountStr) ||
+                      cleaned.includes(amountStrFormattedSpace) ||
+                      cleaned.includes(amountStrFormattedDot);
 
-    if (!hasPriceMatch) {
-      return {
-        isValid: false,
-        reason: GENERIC_ERROR
-      };
+    if (!hasAmount) {
+      return { isValid: false, reason: GENERIC_ERROR };
     }
   }
 
-  // 3. Search for ID:xxx or Ref:xxx or Txn:xxx
+  // 3. Extract Transaction ID / Reference
   let extractedRef = '';
   const idMatch = cleaned.match(/ID\s*:\s*([A-Za-z0-9]+)/i) ||
                   cleaned.match(/Ref\s*:\s*([A-Za-z0-9]+)/i) ||
@@ -275,59 +270,36 @@ export function extractAndValidateReference(
   if (idMatch && idMatch[1]) {
     extractedRef = idMatch[1];
   } else {
-    // Search for standalone numeric sequence of 9 to 16 digits
-    const numMatch = cleaned.match(/\b\d{9,16}\b/);
+    // Search for standalone numeric sequence of 8 to 18 digits
+    const numMatch = cleaned.match(/\b\d{8,18}\b/);
     if (numMatch) {
       extractedRef = numMatch[0];
-    } else if (cleaned.length >= 8 && cleaned.length <= 32 && !cleaned.includes(' ')) {
+    } else if (!cleaned.includes(' ') && cleaned.length >= 6) {
       extractedRef = cleaned;
     }
   }
 
-  if (!extractedRef || extractedRef.length < 8) {
-    return {
-      isValid: false,
-      reason: GENERIC_ERROR
-    };
+  if (!extractedRef || extractedRef.length < 6) {
+    return { isValid: false, reason: GENERIC_ERROR };
   }
 
   const op = operator.toUpperCase();
 
-  // 4. Operator Specific Strict Validation
+  // 4. Operator Reference Validation
   if (op === 'MTN') {
-    const isSmsFormat = /Paiement|Frais|Solde|ID:|Ref:|ONAFRIQ/i.test(cleaned);
-    const mtnRefRegex = /^\d{9,16}$/;
-
-    if (isSmsFormat && (idMatch || mtnRefRegex.test(extractedRef))) {
+    const mtnRefRegex = /^\d{8,18}$/;
+    if (mtnRefRegex.test(extractedRef) || isFullSms) {
       return { isValid: true, extractedRef };
     }
-
-    if (mtnRefRegex.test(cleaned)) {
-      return { isValid: true, extractedRef: cleaned };
-    }
-
-    return {
-      isValid: false,
-      reason: GENERIC_ERROR
-    };
+    return { isValid: false, reason: GENERIC_ERROR };
   }
 
   if (op === 'MOOV') {
-    const isSmsFormat = /Paiement|Transfert|Frais|Solde|Ref:|ID:|Txn/i.test(cleaned);
-    const moovRefRegex = /^[A-Za-z0-9\.\_\-]{8,24}$/;
-
-    if (isSmsFormat && extractedRef.length >= 8) {
+    const moovRefRegex = /^[A-Za-z0-9\.\_\-]{6,24}$/;
+    if (moovRefRegex.test(extractedRef) || isFullSms) {
       return { isValid: true, extractedRef };
     }
-
-    if (moovRefRegex.test(cleaned)) {
-      return { isValid: true, extractedRef: cleaned };
-    }
-
-    return {
-      isValid: false,
-      reason: GENERIC_ERROR
-    };
+    return { isValid: false, reason: GENERIC_ERROR };
   }
 
   return { isValid: true, extractedRef };
