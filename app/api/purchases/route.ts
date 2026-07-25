@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { createAdminClient } from '@/lib/supabase';
 import { verifyAuth, unauthorized } from '@/lib/auth';
-import { BOTS, VALIDITY_DAYS, REFERRAL_RATE, enrichBot } from '@/lib/data';
+import { BOTS, VALIDITY_DAYS, REFERRAL_RATE, enrichBot, validateTransactionReference, extractAndValidateReference } from '@/lib/data';
 import { createCheckoutSession } from '@/lib/senepay';
 
 // GET /api/purchases — mes achats
@@ -282,10 +282,22 @@ export async function POST(req: Request) {
   }
 
   // ════════════════════════════════════════════════════════════════
-  // OPTION 3: MANUAL PAYMENTS (Backwards compatibility)
+  // OPTION 3: WINPAY / USSD PAYMENTS (SMS Copy-Paste & Reference Format Validation)
   // ════════════════════════════════════════════════════════════════
-  const finalTxRef = txReference?.trim() || 'Achat Direct';
+  const rawInput = txReference?.trim() || '';
 
+  // 1. Strict validation & extraction from full SMS or standalone reference
+  const validation = extractAndValidateReference(operator, rawInput);
+  if (!validation.isValid) {
+    return NextResponse.json(
+      { error: `❌ Référence de transaction incorrecte. ${validation.reason || ''} Paiement non abouti.` },
+      { status: 400 }
+    );
+  }
+
+  const finalTxRef = validation.extractedRef || rawInput;
+
+  // 2. Format is valid -> Auto-activate purchase & grant referral commission!
   const { data: purchase, error } = await db
     .from('purchases')
     .insert({
@@ -297,7 +309,7 @@ export async function POST(req: Request) {
       expires_at: expiresAt.toISOString(),
       total_earned_cents: 0,
       work_count: 0,
-      status: 'PENDING',
+      status: 'ACTIVE',
       operator,
       tx_reference: finalTxRef,
     })
@@ -306,16 +318,46 @@ export async function POST(req: Request) {
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
 
-  // Create pending transaction
+  // Create transaction
   await db.from('transactions').insert({
     user_id: payload.sub,
     type: 'BOT_PURCHASE',
-    status: 'PENDING',
+    status: 'COMPLETED',
     amount_cents: -bot.priceCents,
     description: `Achat ${bot.name} (${operator}) - Réf: ${finalTxRef}`,
     operator,
     tx_reference: finalTxRef,
   });
+
+  // Credit sponsor referral commission immediately
+  const { data: buyer } = await db
+    .from('users')
+    .select('referred_by_id, phone')
+    .eq('id', payload.sub)
+    .single();
+
+  if (buyer?.referred_by_id) {
+    const commission = Math.floor(bot.priceCents * REFERRAL_RATE);
+    const { data: sponsor } = await db
+      .from('users')
+      .select('id, balance_cents')
+      .eq('id', buyer.referred_by_id)
+      .single();
+
+    if (sponsor) {
+      await db.from('users').update({
+        balance_cents: sponsor.balance_cents + commission,
+      }).eq('id', sponsor.id);
+
+      await db.from('transactions').insert({
+        user_id: sponsor.id,
+        type: 'REFERRAL_BONUS',
+        status: 'COMPLETED',
+        amount_cents: commission,
+        description: `Commission parrainage (${buyer.phone})`,
+      });
+    }
+  }
 
   return NextResponse.json({ purchase: mapPurchase(purchase) }, { status: 201 });
 }

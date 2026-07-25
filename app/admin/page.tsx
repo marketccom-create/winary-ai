@@ -99,6 +99,83 @@ export default function AdminPage() {
   const [broadcastMessage, setBroadcastMessage] = useState('');
   const [sendingBroadcast, setSendingBroadcast] = useState(false);
 
+  // PWA Notification & Stripe Cash Sound State
+  const [notificationPermission, setNotificationPermission] = useState<NotificationPermission>('default');
+
+  useEffect(() => {
+    if (typeof window !== 'undefined' && 'serviceWorker' in navigator) {
+      navigator.serviceWorker.register('/sw.js').catch(err => console.log('SW Registration error:', err));
+    }
+    if (typeof window !== 'undefined' && 'Notification' in window) {
+      setNotificationPermission(Notification.permission);
+    }
+  }, []);
+
+  function playStripeCashSound() {
+    try {
+      const audioCtx = new (window.AudioContext || (window as any).webkitAudioContext)();
+      const osc1 = audioCtx.createOscillator();
+      const gain1 = audioCtx.createGain();
+
+      osc1.type = 'sine';
+      osc1.frequency.setValueAtTime(987.77, audioCtx.currentTime); // B5 note
+      osc1.frequency.exponentialRampToValueAtTime(1318.51, audioCtx.currentTime + 0.15); // E6 note
+
+      gain1.gain.setValueAtTime(0.35, audioCtx.currentTime);
+      gain1.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.35);
+
+      osc1.connect(gain1);
+      gain1.connect(audioCtx.destination);
+
+      osc1.start();
+      osc1.stop(audioCtx.currentTime + 0.35);
+    } catch (e) {
+      console.error(e);
+    }
+  }
+
+  function triggerNativeNotification(title: string, body: string) {
+    if (typeof window !== 'undefined' && 'Notification' in window && Notification.permission === 'granted') {
+      if ('serviceWorker' in navigator && navigator.serviceWorker.controller) {
+        navigator.serviceWorker.ready.then(reg => {
+          reg.showNotification(title, {
+            body,
+            icon: '/icons/WINARY%20ICON.png',
+            badge: '/icons/WINARY%20ICON.png',
+            vibrate: [300, 100, 300, 100, 400],
+            tag: 'payment-alert-' + Date.now(),
+            renotify: true,
+            data: { url: '/admin' }
+          });
+        });
+      } else {
+        new Notification(title, {
+          body,
+          icon: '/icons/WINARY%20ICON.png',
+        });
+      }
+    }
+  }
+
+  async function requestNotificationPermission() {
+    if (typeof window !== 'undefined' && 'Notification' in window) {
+      const perm = await Notification.requestPermission();
+      setNotificationPermission(perm);
+      if (perm === 'granted') {
+        notify('🔔 Notifications PWA activées avec succès !', 'success');
+        playStripeCashSound();
+        triggerNativeNotification(
+          '💰 Notifications Stripe Activées !',
+          'Vous recevrez un son Stripe et une alerte push sur votre téléphone à chaque nouveau paiement validé.'
+        );
+      } else {
+        notify('Permission refusée pour les notifications.', 'error');
+      }
+    } else {
+      alert('Votre appareil ne prend pas en charge les notifications push.');
+    }
+  }
+
   async function handleSendBroadcast() {
     if (!broadcastMessage.trim()) {
       notify('Le message de diffusion est obligatoire.', 'error');
@@ -766,12 +843,57 @@ export default function AdminPage() {
               {/* ── Dashboard ── */}
               {activeTab === 'dashboard' && (
                 <div>
-                  <h1 style={{ fontSize: 22, fontWeight: 800, margin: '0 0 6px', fontFamily: 'Space Grotesk, sans-serif', color: '#111827' }}>
-                    Tableau de Bord
-                  </h1>
-                  <p style={{ color: '#9CA3AF', fontSize: 13, margin: '0 0 24px' }}>
-                    Vue d'ensemble de la plateforme WINARY AI
-                  </p>
+                  {/* ── PWA Web Push Notification Banner ── */}
+                  <div style={{
+                    background: 'linear-gradient(135deg, #1E3A8A, #1D4ED8)',
+                    color: 'white', borderRadius: 16, padding: '16px 20px', marginBottom: 24,
+                    display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 14,
+                    boxShadow: '0 4px 14px rgba(29, 78, 216, 0.25)'
+                  }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                      <span style={{ fontSize: 26 }}>📲</span>
+                      <div>
+                        <h3 style={{ fontSize: 15, fontWeight: 700, margin: '0 0 2px' }}>
+                          Application PWA & Notifications Instantanées (Alerte Stripe)
+                        </h3>
+                        <p style={{ fontSize: 12, opacity: 0.9, margin: 0 }}>
+                          Compatible Android, iPhone & Windows. Recevez un son Stripe et une alerte push à chaque paiement validé.
+                        </p>
+                      </div>
+                    </div>
+
+                    <div style={{ display: 'flex', gap: 10 }}>
+                      {notificationPermission !== 'granted' ? (
+                        <button
+                          onClick={requestNotificationPermission}
+                          style={{
+                            background: '#10B981', color: 'white', border: 'none', borderRadius: 10,
+                            padding: '10px 16px', fontSize: 13, fontWeight: 700, cursor: 'pointer',
+                            boxShadow: '0 2px 8px rgba(16, 185, 129, 0.3)'
+                          }}
+                        >
+                          🔔 Activer les Notifications Push
+                        </button>
+                      ) : (
+                        <button
+                          onClick={() => {
+                            playStripeCashSound();
+                            triggerNativeNotification(
+                              '💰 Test Notification Stripe Admin !',
+                              'Ceci est un test de notification push pour les paiements validés sur Android, iPhone et Windows.'
+                            );
+                            notify('🔔 Test de notification Stripe effectué avec son !', 'success');
+                          }}
+                          style={{
+                            background: 'rgba(255,255,255,0.2)', color: 'white', border: '1px solid rgba(255,255,255,0.4)',
+                            borderRadius: 10, padding: '10px 16px', fontSize: 13, fontWeight: 700, cursor: 'pointer'
+                          }}
+                        >
+                          🔊 Tester le Son Stripe & Push
+                        </button>
+                      )}
+                    </div>
+                  </div>
 
                   <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12, marginBottom: 24 }}>
                     <StatCard label="Utilisateurs" value={stats?.totalUsers || 0} icon="👥" color="#1A56DB" />

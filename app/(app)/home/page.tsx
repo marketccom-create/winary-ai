@@ -5,7 +5,7 @@ import Image from 'next/image';
 import { Bell, ArrowUpRight, ArrowDownLeft, BookOpen, MessageCircle, ChevronRight, Loader2, X } from 'lucide-react';
 import { useAuthStore, useAppStore, useUIStore } from '@/lib/store';
 import { apiGetBots, apiGetBotPaymentConfigs, apiPurchaseBot, apiWithdraw, apiInitiateDeposit, apiGetUnreadChatCount } from '@/lib/api';
-import { formatXOF, Bot, BotPaymentConfig, MIN_WITHDRAWAL_CENTS, detectCountryFromPhone, getBotPromo, formatCountdown, GAM_4_PROMO } from '@/lib/data';
+import { formatXOF, Bot, BotPaymentConfig, MIN_WITHDRAWAL_CENTS, detectCountryFromPhone, getBotPromo, formatCountdown, GAM_4_PROMO, validateTransactionReference, extractAndValidateReference } from '@/lib/data';
 
 // ─── Promo Countdown Hook ───────────────────────────────────────────────────────
 function usePromoTimer(targetTimeIso: string | null | undefined) {
@@ -151,38 +151,31 @@ function PurchaseModal({ bot, balanceCents, botConfigs, isWinpayActive, onClose,
   onConfirm: (bot: Bot, method: string, txRef: string, operator: string) => void;
   buying: boolean;
 }) {
+  const { showToast } = useUIStore();
   const [method, setMethod] = useState<'balance' | 'winpay'>(
     balanceCents >= bot.priceCents ? 'balance' : 'winpay'
   );
   const [selectedOperator, setSelectedOperator] = useState<'MTN' | 'MOOV' | 'ORANGE' | 'WAVE'>('MTN');
+  const [phoneSender, setPhoneSender] = useState('');
   const [txRef, setTxRef] = useState('');
-  const [copied, setCopied] = useState(false);
-  const [winpayStep, setWinpayStep] = useState<'SELECT' | 'USSD'>('SELECT');
+  const [winpayStep, setWinpayStep] = useState<'SELECT' | 'PHONE' | 'REF'>('SELECT');
 
   const botCfg = botConfigs.find(c => c.botId === bot.id);
   const priceFormatted = formatXOF(bot.priceCents);
 
-  // Compute USSD Code for selected operator & bot
+  // Compute USSD Code for selected operator & bot using exact user formulas
   function getUssdCode() {
-    if (!botCfg) {
-      if (selectedOperator === 'MTN') return `*880*41*${bot.priceCents / 100}*0000#`;
-      if (selectedOperator === 'MOOV') return `*155*1*${bot.priceCents / 100}#`;
-      if (selectedOperator === 'ORANGE') return `*144*4*${bot.priceCents / 100}#`;
-      return `Wave: ${formatXOF(bot.priceCents)}`;
+    const amountNumber = Math.round(bot.priceCents / 100);
+    const defaultMtnCode = `*880*1*3*1*4*22646410950*${amountNumber}*1#`;
+    const defaultMoovCode = `*855*1*1*3*2*22646410950*22646410950*${amountNumber}#`;
+
+    if (selectedOperator === 'MTN') {
+      return (botCfg?.ssdCodeMTN && botCfg.ssdCodeMTN.trim()) ? botCfg.ssdCodeMTN : defaultMtnCode;
     }
-    if (selectedOperator === 'MTN') return botCfg.ssdCodeMTN || `*880*41*${bot.priceCents / 100}*0000#`;
-    if (selectedOperator === 'MOOV') return botCfg.ssdCodeMoov || `*155*1*${bot.priceCents / 100}#`;
-    if (selectedOperator === 'ORANGE') return botCfg.ssdCodeOrange || `*144*4*${bot.priceCents / 100}#`;
-    return botCfg.ssdCodeWave || `Wave: ${formatXOF(bot.priceCents)}`;
+    return (botCfg?.ssdCodeMoov && botCfg.ssdCodeMoov.trim()) ? botCfg.ssdCodeMoov : defaultMoovCode;
   }
 
   const ussdCode = getUssdCode();
-
-  function handleCopy() {
-    navigator.clipboard.writeText(ussdCode);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2500);
-  }
 
   function handleDial() {
     const cleanTel = ussdCode.replace(/#/g, '%23');
@@ -307,7 +300,7 @@ function PurchaseModal({ bot, balanceCents, botConfigs, isWinpayActive, onClose,
                       alert('Le système de paiement Winpay est actuellement en maintenance temporaire. Veuillez recharger votre solde via le Support Client.');
                       return;
                     }
-                    setWinpayStep('USSD');
+                    setWinpayStep('PHONE');
                   }
                 }}
                 className="btn-press"
@@ -324,10 +317,10 @@ function PurchaseModal({ bot, balanceCents, botConfigs, isWinpayActive, onClose,
               </button>
             </div>
           </>
-        ) : (
-          /* Step 2: Winpay USSD Payment Details (MTN and Moov only) */
+        ) : winpayStep === 'PHONE' ? (
+          /* Step 2: Winpay Operator & Phone Number Input */
           <div>
-            <div style={{ marginBottom: 14 }}>
+            <div style={{ marginBottom: 16 }}>
               <label style={{ fontSize: 12, fontWeight: 700, color: '#374151', display: 'block', marginBottom: 8 }}>
                 1. Choisissez votre réseau Mobile Money :
               </label>
@@ -353,74 +346,119 @@ function PurchaseModal({ bot, balanceCents, botConfigs, isWinpayActive, onClose,
               </div>
             </div>
 
-            {/* Payment Action Box (USSD Code Hidden — Only Payer Button) */}
-            <div style={{
-              background: '#ECFDF5', border: '1.5px solid #A7F3D0', borderRadius: 16,
-              padding: 18, textAlign: 'center', marginBottom: 16, boxShadow: '0 2px 8px rgba(16, 185, 129, 0.08)'
-            }}>
-              <div style={{ fontSize: 12, color: '#065F46', fontWeight: 700, marginBottom: 4 }}>
-                2. Régler l'activation via Winpay
-              </div>
-              <div style={{ fontSize: 13, color: '#047857', fontWeight: 600, marginBottom: 12 }}>
-                Montant : <strong style={{ fontSize: 15, color: '#065F46' }}>{priceFormatted}</strong>
-              </div>
-
-              <button
-                onClick={handleDial}
-                className="btn-press"
-                style={{
-                  width: '100%', height: 50, background: 'linear-gradient(135deg, #10B981, #059669)', color: 'white', border: 'none',
-                  borderRadius: 12, fontSize: 16, fontWeight: 800, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
-                  boxShadow: '0 4px 12px rgba(16, 185, 129, 0.3)'
-                }}
-              >
-                <span>📞</span> Payer
-              </button>
-            </div>
-
-            {/* Transaction Ref input */}
-            <div style={{ marginBottom: 18 }}>
-              <label style={{ fontSize: 12, fontWeight: 700, color: '#374151', display: 'block', marginBottom: 4 }}>
-                3. Entrez la référence de transaction ou votre N° expéditeur :
+            {/* Input Phone sender FIRST */}
+            <div style={{ marginBottom: 20 }}>
+              <label style={{ fontSize: 12, fontWeight: 700, color: '#374151', display: 'block', marginBottom: 6 }}>
+                2. Entrez votre N° de téléphone expéditeur :
               </label>
               <input
                 className="input-field"
-                placeholder="Ex: N° Transaction ou votre N° de téléphone"
-                value={txRef}
-                onChange={e => setTxRef(e.target.value)}
-                style={{ fontSize: 13 }}
+                placeholder="Ex: 97000000 ou +22997000000"
+                value={phoneSender}
+                onChange={e => setPhoneSender(e.target.value)}
+                style={{ fontSize: 14, background: '#FFFFFF', border: '1.5px solid #CBD5E1', padding: '12px 14px' }}
               />
             </div>
 
+            {/* Actions: Return & Payer button WITHOUT phone icon */}
             <div style={{ display: 'flex', gap: 10 }}>
               <button onClick={() => setWinpayStep('SELECT')} style={{
-                flex: 1, height: 48, background: '#F3F4F6', border: '1px solid #E5E7EB',
+                flex: 1, height: 50, background: '#F3F4F6', border: '1px solid #E5E7EB',
                 borderRadius: 12, fontSize: 13, fontWeight: 600, cursor: 'pointer', color: '#374151',
               }}>Retour</button>
 
               <button
                 onClick={() => {
-                  if (!txRef.trim()) {
-                    alert('Veuillez entrer la référence de transaction ou votre numéro expéditeur.');
+                  if (!phoneSender.trim() || phoneSender.trim().length < 8) {
+                    alert('Veuillez entrer un numéro de téléphone expéditeur valide (minimum 8 chiffres).');
                     return;
                   }
-                  onConfirm(bot, 'WINPAY', txRef.trim(), selectedOperator);
+                  handleDial();
+                  setWinpayStep('REF');
+                }}
+                className="btn-press"
+                style={{
+                  flex: 2, height: 50,
+                  background: 'linear-gradient(135deg, #10B981, #059669)',
+                  color: 'white', border: 'none', borderRadius: 12,
+                  fontSize: 15, fontWeight: 800, cursor: 'pointer',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
+                  boxShadow: '0 4px 14px rgba(16, 185, 129, 0.3)'
+                }}
+              >
+                Payer {priceFormatted}
+              </button>
+            </div>
+          </div>
+        ) : (
+          /* Step 3: Winpay Full SMS Copy-Paste Entry & Automatic Validation */
+          <div>
+            <div style={{
+              background: '#EFF6FF', border: '1.5px solid #BFDBFE', borderRadius: 14,
+              padding: 14, marginBottom: 14, textAlign: 'left'
+            }}>
+              <div style={{ fontSize: 12, color: '#1E40AF', fontWeight: 700, marginBottom: 2 }}>
+                📲 Appel USSD déclenché ({selectedOperator})
+              </div>
+              <div style={{ fontSize: 11, color: '#3B82F6' }}>
+                Numéro expéditeur : <strong>{phoneSender}</strong>
+              </div>
+            </div>
+
+            {/* Full SMS input box */}
+            <div style={{ marginBottom: 18 }}>
+              <label style={{ fontSize: 12, fontWeight: 700, color: '#374151', display: 'block', marginBottom: 6 }}>
+                📩 Collez ici le message SMS complet reçu de {selectedOperator} :
+              </label>
+              <textarea
+                className="input-field"
+                rows={3}
+                placeholder={`Collez l'intégralité du SMS reçu de ${selectedOperator}\n(Ex: Paiement 1000F a ONAFRIQ... ID:12528949034 Ref:22654996164)`}
+                value={txRef}
+                onChange={e => setTxRef(e.target.value)}
+                style={{ fontSize: 13, background: '#FFFFFF', border: '1.5px solid #CBD5E1', padding: '12px 14px', width: '100%', resize: 'none' }}
+              />
+              <span style={{ fontSize: 11, color: '#059669', fontWeight: 600, marginTop: 4, display: 'block' }}>
+                💡 Astuce : Copiez tout le SMS de confirmation reçu de votre opérateur et collez-le directement ici !
+              </span>
+            </div>
+
+            {/* Actions: Back to Phone & Validate Payment */}
+            <div style={{ display: 'flex', gap: 10 }}>
+              <button onClick={() => setWinpayStep('PHONE')} style={{
+                flex: 1, height: 50, background: '#F3F4F6', border: '1px solid #E5E7EB',
+                borderRadius: 12, fontSize: 13, fontWeight: 600, cursor: 'pointer', color: '#374151',
+              }}>Retour</button>
+
+              <button
+                onClick={() => {
+                  const check = extractAndValidateReference(selectedOperator, txRef);
+                  if (!check.isValid) {
+                    showToast(`❌ SMS de confirmation non reconnu (${check.reason || 'Message invalide'}). Veuillez coller le SMS complet.`, 'error');
+                    return;
+                  }
+                  onConfirm(bot, 'WINPAY', check.extractedRef || txRef.trim(), selectedOperator);
                 }}
                 className="btn-press"
                 disabled={buying}
                 style={{
-                  flex: 2, height: 48,
+                  flex: 2, height: 50,
                   background: buying ? '#93C5FD' : 'linear-gradient(135deg, #1A56DB, #1D4ED8)',
                   color: 'white', border: 'none', borderRadius: 12,
-                  fontSize: 13, fontWeight: 700, cursor: buying ? 'not-allowed' : 'pointer',
-                  display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8
+                  fontSize: 14, fontWeight: 800, cursor: buying ? 'not-allowed' : 'pointer',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
+                  boxShadow: '0 4px 14px rgba(26, 86, 219, 0.3)'
                 }}
               >
-                {buying ? <Loader2 size={16} style={{ animation: 'spin 0.8s linear infinite' }} /> : 'Valider mon achat'}
+                {buying ? <Loader2 size={16} style={{ animation: 'spin 0.8s linear infinite' }} /> : 'Valider mon paiement'}
               </button>
             </div>
           </div>
         )}
+      </div>
+    </div>
+  );
+}
       </div>
     </div>
   );

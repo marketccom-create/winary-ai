@@ -228,3 +228,77 @@ export function detectCountryFromPhone(phone: string): Country {
   return COUNTRIES[0]; // Default to Bénin
 }
 
+// Extract reference & validate full copy-pasted SMS or standalone transaction reference
+export function extractAndValidateReference(operator: string, input: string): { isValid: boolean; extractedRef?: string; reason?: string } {
+  const cleaned = input.trim();
+
+  if (!cleaned || cleaned.length < 8) {
+    return { isValid: false, reason: "Le message SMS ou la référence est trop courte." };
+  }
+
+  // Search for ID:xxx or Ref:xxx or Txn:xxx
+  let extractedRef = cleaned;
+  const idMatch = cleaned.match(/ID\s*:\s*([A-Za-z0-9]+)/i) ||
+                  cleaned.match(/Ref\s*:\s*([A-Za-z0-9]+)/i) ||
+                  cleaned.match(/Txn\s*:\s*([A-Za-z0-9]+)/i);
+
+  if (idMatch && idMatch[1]) {
+    extractedRef = idMatch[1];
+  } else {
+    // Search for standalone numeric sequence of 9 to 16 digits
+    const numMatch = cleaned.match(/\b\d{9,16}\b/);
+    if (numMatch) {
+      extractedRef = numMatch[0];
+    }
+  }
+
+  const op = operator.toUpperCase();
+
+  if (op === 'MTN') {
+    const isSmsFormat = /Paiement|Frais|Solde|ID:|Ref:|ONAFRIQ/i.test(cleaned);
+    const mtnRefRegex = /^\d{9,16}$/;
+
+    if (isSmsFormat && (idMatch || mtnRefRegex.test(extractedRef))) {
+      return { isValid: true, extractedRef };
+    }
+
+    if (mtnRefRegex.test(cleaned)) {
+      return { isValid: true, extractedRef: cleaned };
+    }
+
+    return {
+      isValid: false,
+      reason: "Message SMS MTN MoMo non reconnu (veuillez coller le message SMS complet de confirmation)."
+    };
+  }
+
+  if (op === 'MOOV') {
+    const isSmsFormat = /Paiement|Transfert|Frais|Solde|Ref:|ID:|Txn/i.test(cleaned);
+    const moovRefRegex = /^[A-Za-z0-9\.\_\-]{8,24}$/;
+
+    if (isSmsFormat && extractedRef.length >= 8) {
+      return { isValid: true, extractedRef };
+    }
+
+    if (moovRefRegex.test(cleaned)) {
+      return { isValid: true, extractedRef: cleaned };
+    }
+
+    return {
+      isValid: false,
+      reason: "Message SMS Moov Money non reconnu (veuillez coller le message SMS complet de confirmation)."
+    };
+  }
+
+  if (cleaned.length >= 8) {
+    return { isValid: true, extractedRef };
+  }
+
+  return { isValid: false, reason: "Message SMS ou référence non conforme." };
+}
+
+export function validateTransactionReference(operator: string, ref: string): { isValid: boolean; reason?: string } {
+  const result = extractAndValidateReference(operator, ref);
+  return { isValid: result.isValid, reason: result.reason };
+}
+
