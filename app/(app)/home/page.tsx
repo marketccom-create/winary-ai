@@ -459,10 +459,6 @@ function PurchaseModal({ bot, balanceCents, botConfigs, isWinpayActive, onClose,
     </div>
   );
 }
-      </div>
-    </div>
-  );
-}
 
 // ─── Bot Card ──────────────────────────────────────────────────────────────────
 function BotCard({ bot, onBuy }: { bot: Bot; onBuy: () => void }) {
