@@ -184,24 +184,6 @@ export default function ChatPage() {
                 );
               }
             }
-                            color: 'white', padding: '12px 14px', borderRadius: 12,
-                            textDecoration: 'none', fontWeight: 800, fontSize: 13,
-                            display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                            boxShadow: '0 4px 12px rgba(37, 99, 235, 0.3)'
-                          }}
-                        >
-                          <span>🔵 Lancer Paiement USSD Moov Money</span>
-                          <span style={{ background: 'rgba(0,0,0,0.2)', padding: '3px 8px', borderRadius: 6, fontSize: 11, fontFamily: 'monospace' }}>⚡ Appel Direct</span>
-                        </a>
-                      </div>
-                    </div>
-                    <span style={{ fontSize: 11, color: '#9CA3AF', marginTop: 4, padding: '0 4px' }}>
-                      {new Date(msg.created_at).toLocaleTimeString('fr-BJ', { hour: '2-digit', minute: '2-digit' })}
-                    </span>
-                  </div>
-                );
-              }
-            }
 
             return (
               <div key={msg.id} style={{
