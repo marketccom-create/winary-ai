@@ -2932,17 +2932,19 @@ export default function AdminPage() {
                           ⚡ Envoyer Bouton USSD Pré-rempli :
                         </span>
                         {[
-                          { key: 'gam1', name: 'Gam 1 (4.000 F)', label: '🤖 Gam 1 (4k)' },
-                          { key: 'gam2', name: 'Gam 2 (6.000 F)', label: '🤖 Gam 2 (6k)' },
-                          { key: 'gam3', name: 'Gam 3 (10.000 F)', label: '🤖 Gam 3 (10k)' },
-                          { key: 'gam4', name: 'Gam 4 (20.000 F)', label: '🤖 Gam 4 (20k)' },
+                          { key: 'gam1', name: 'Gam 1 (4 000 XOF)', label: '🤖 Gam 1 (4k)' },
+                          { key: 'gam2', name: 'Gam 2 (10 000 XOF)', label: '🤖 Gam 2 (10k)' },
+                          { key: 'gam3', name: 'Gam 3 (30 000 XOF)', label: '🤖 Gam 3 (30k)' },
+                          { key: 'gam4', name: 'Gam 4 (80 000 XOF)', label: '🤖 Gam 4 (80k)' },
+                          { key: 'gam5', name: 'Gam 5 (200 000 XOF)', label: '🤖 Gam 5 (200k)' },
+                          { key: 'gam6', name: 'Gam 6 (600 000 XOF)', label: '🤖 Gam 6 (600k)' },
                         ].map(b => (
                           <button
                             key={b.key}
                             type="button"
                             onClick={async () => {
                               if (!selectedChatUser) return;
-                              const msgContent = `[USSD_PAY_CARD:${b.key}] Voici votre lien d'activation direct pour le Robot ${b.name}. Cliquez sur le bouton de votre réseau ci-dessous pour lancer l'appel USSD pré-rempli sur votre téléphone :`;
+                              const msgContent = `[USSD_PAY_CARD:${b.key}] Cliquez ci-dessous sur votre réseau pour lancer le paiement USSD pré-rempli sur votre téléphone :`;
                               setActionLoading('send-chat');
                               try {
                                 await apiAdminSendChatMessage(selectedChatUser, msgContent);
@@ -2958,7 +2960,7 @@ export default function AdminPage() {
                             style={{
                               background: 'linear-gradient(135deg, #1E293B, #0F172A)',
                               color: '#38BDF8', border: '1px solid #334155', borderRadius: 8,
-                              padding: '6px 12px', fontSize: 11, fontWeight: 800, cursor: 'pointer',
+                              padding: '6px 10px', fontSize: 11, fontWeight: 800, cursor: 'pointer',
                               boxShadow: '0 2px 6px rgba(0,0,0,0.1)', display: 'flex', alignItems: 'center', gap: 4
                             }}
                           >
