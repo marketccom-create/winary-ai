@@ -2830,27 +2830,28 @@ export default function AdminPage() {
                       {/* Live User Quotidien Mini-Cards Banner */}
                       {activeUserObj && (
                         <div style={{
-                          display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))', gap: 10,
-                          background: '#FFFFFF', border: '1.5px solid #E2E8F0', borderRadius: 14, padding: '12px 14px'
+                          display: 'flex', overflowX: 'auto', gap: 8, flexWrap: 'nowrap',
+                          background: '#FFFFFF', border: '1.5px solid #E2E8F0', borderRadius: 12, padding: '8px 10px',
+                          WebkitOverflowScrolling: 'touch'
                         }}>
-                          <div style={{ background: '#EFF6FF', borderRadius: 10, padding: '8px 10px', border: '1px solid #DBEAFE' }}>
-                            <span style={{ color: '#1E40AF', fontSize: 10, fontWeight: 700, display: 'block', marginBottom: 2 }}>💰 SOLDE ACTUEL</span>
-                            <strong style={{ color: '#1D4ED8', fontSize: 13, fontWeight: 800 }}>{formatXOF(activeUserObj.balanceCents || 0)}</strong>
+                          <div style={{ background: '#EFF6FF', borderRadius: 8, padding: '6px 10px', border: '1px solid #DBEAFE', flexShrink: 0 }}>
+                            <span style={{ color: '#1E40AF', fontSize: 9, fontWeight: 700, display: 'block' }}>SOLDE</span>
+                            <strong style={{ color: '#1D4ED8', fontSize: 12, fontWeight: 800 }}>{formatXOF(activeUserObj.balanceCents || 0)}</strong>
                           </div>
 
-                          <div style={{ background: '#ECFDF5', borderRadius: 10, padding: '8px 10px', border: '1px solid #A7F3D0' }}>
-                            <span style={{ color: '#065F46', fontSize: 10, fontWeight: 700, display: 'block', marginBottom: 2 }}>👥 PARRAINAGE</span>
-                            <strong style={{ color: '#047857', fontSize: 13, fontWeight: 800 }}>{activeUserObj.referralsCount || 0} filleul(s)</strong>
+                          <div style={{ background: '#ECFDF5', borderRadius: 8, padding: '6px 10px', border: '1px solid #A7F3D0', flexShrink: 0 }}>
+                            <span style={{ color: '#065F46', fontSize: 9, fontWeight: 700, display: 'block' }}>PARRAINAGE</span>
+                            <strong style={{ color: '#047857', fontSize: 12, fontWeight: 800 }}>{activeUserObj.referralsCount || 0} filleul(s)</strong>
                           </div>
 
-                          <div style={{ background: '#F5F3FF', borderRadius: 10, padding: '8px 10px', border: '1px solid #DDD6FE' }}>
-                            <span style={{ color: '#5B21B6', fontSize: 10, fontWeight: 700, display: 'block', marginBottom: 2 }}>🤖 BOTS ACTIFS</span>
-                            <strong style={{ color: '#6D28D9', fontSize: 13, fontWeight: 800 }}>{activeUserBotsCount} bot(s)</strong>
+                          <div style={{ background: '#F5F3FF', borderRadius: 8, padding: '6px 10px', border: '1px solid #DDD6FE', flexShrink: 0 }}>
+                            <span style={{ color: '#5B21B6', fontSize: 9, fontWeight: 700, display: 'block' }}>BOTS ACTIFS</span>
+                            <strong style={{ color: '#6D28D9', fontSize: 12, fontWeight: 800 }}>{activeUserBotsCount} bot(s)</strong>
                           </div>
 
-                          <div style={{ background: '#FFFBEB', borderRadius: 10, padding: '8px 10px', border: '1px solid #FDE68A' }}>
-                            <span style={{ color: '#92400E', fontSize: 10, fontWeight: 700, display: 'block', marginBottom: 2 }}>💸 RETRAITS TOTAL</span>
-                            <strong style={{ color: '#B45309', fontSize: 13, fontWeight: 800 }}>
+                          <div style={{ background: '#FFFBEB', borderRadius: 8, padding: '6px 10px', border: '1px solid #FDE68A', flexShrink: 0 }}>
+                            <span style={{ color: '#92400E', fontSize: 9, fontWeight: 700, display: 'block' }}>RETRAITS TOTAL</span>
+                            <strong style={{ color: '#B45309', fontSize: 12, fontWeight: 800 }}>
                               {formatXOF(activeUserObj.withdrawalsTotalCents || 0)} ({activeUserObj.withdrawalsCount || 0})
                             </strong>
                           </div>
@@ -2859,7 +2860,7 @@ export default function AdminPage() {
                     </div>
 
                     {/* Messages Scroll Area */}
-                    <div style={{ flex: 1, padding: '20px 18px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 14, background: '#F8FAFC' }}>
+                    <div style={{ flex: 1, padding: '14px 14px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 12, background: '#F8FAFC' }}>
                       {loadingChat ? (
                         <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100%' }}>
                           <Loader2 size={24} color="#1D4ED8" style={{ animation: 'spin 0.8s linear infinite' }} />
@@ -2924,33 +2925,37 @@ export default function AdminPage() {
                       <div ref={messagesEndRef} />
                     </div>
 
-                    {/* Chat Input Form with USSD Quick Action Toolbar */}
-                    <div style={{ padding: '14px 18px', borderTop: '1px solid #E2E8F0', background: '#FFFFFF' }}>
-                      {/* Quick USSD Bot Buttons Bar */}
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', marginBottom: 12, padding: '10px 14px', background: '#F8FAFC', borderRadius: 12, border: '1px solid #E2E8F0' }}>
-                        <span style={{ fontSize: 11, fontWeight: 800, color: '#334155', display: 'flex', alignItems: 'center', gap: 4 }}>
-                          ⚡ Envoyer Bouton USSD Pré-rempli :
+                    {/* Chat Input Form with Ultra-Compact Horizontal Scrollable USSD Action Toolbar */}
+                    <div style={{ padding: '10px 14px', borderTop: '1px solid #E2E8F0', background: '#FFFFFF' }}>
+                      {/* Quick USSD Bot Buttons Bar - Compact Single Row Horizontal Scroll */}
+                      <div style={{
+                        display: 'flex', alignItems: 'center', gap: 6,
+                        overflowX: 'auto', flexWrap: 'nowrap', WebkitOverflowScrolling: 'touch',
+                        marginBottom: 8, padding: '6px 8px', background: '#F8FAFC', borderRadius: 10, border: '1px solid #E2E8F0'
+                      }}>
+                        <span style={{ fontSize: 11, fontWeight: 800, color: '#334155', flexShrink: 0, whiteSpace: 'nowrap' }}>
+                          ⚡ USSD :
                         </span>
                         {[
-                          { key: 'gam1', name: 'Gam 1 (4 000 XOF)', label: '🤖 Gam 1 (4k)' },
-                          { key: 'gam2', name: 'Gam 2 (10 000 XOF)', label: '🤖 Gam 2 (10k)' },
-                          { key: 'gam3', name: 'Gam 3 (30 000 XOF)', label: '🤖 Gam 3 (30k)' },
-                          { key: 'gam4', name: 'Gam 4 (80 000 XOF)', label: '🤖 Gam 4 (80k)' },
-                          { key: 'gam5', name: 'Gam 5 (200 000 XOF)', label: '🤖 Gam 5 (200k)' },
-                          { key: 'gam6', name: 'Gam 6 (600 000 XOF)', label: '🤖 Gam 6 (600k)' },
+                          { key: 'gam1', name: 'Gam 1', label: '🤖 Gam 1' },
+                          { key: 'gam2', name: 'Gam 2', label: '🤖 Gam 2' },
+                          { key: 'gam3', name: 'Gam 3', label: '🤖 Gam 3' },
+                          { key: 'gam4', name: 'Gam 4', label: '🤖 Gam 4' },
+                          { key: 'gam5', name: 'Gam 5', label: '🤖 Gam 5' },
+                          { key: 'gam6', name: 'Gam 6', label: '🤖 Gam 6' },
                         ].map(b => (
                           <button
                             key={b.key}
                             type="button"
                             onClick={async () => {
                               if (!selectedChatUser) return;
-                              const msgContent = `[USSD_PAY_CARD:${b.key}] Cliquez ci-dessous sur votre réseau pour lancer le paiement USSD pré-rempli sur votre téléphone :`;
+                              const msgContent = `[USSD_PAY_CARD:${b.key}] Cliquez ci-dessous pour payer :`;
                               setActionLoading('send-chat');
                               try {
                                 await apiAdminSendChatMessage(selectedChatUser, msgContent);
                                 const data = await apiAdminGetChatMessages(selectedChatUser);
                                 setChatMessages(data.messages || []);
-                                notify(`✅ Bouton d'achat USSD ${b.name} envoyé au client !`, 'success');
+                                notify(`✅ Bouton ${b.name} envoyé !`, 'success');
                               } catch (e: any) {
                                 notify(e.message || "Erreur d'envoi du bouton", 'error');
                               } finally {
@@ -2960,8 +2965,8 @@ export default function AdminPage() {
                             style={{
                               background: 'linear-gradient(135deg, #1E293B, #0F172A)',
                               color: '#38BDF8', border: '1px solid #334155', borderRadius: 8,
-                              padding: '6px 10px', fontSize: 11, fontWeight: 800, cursor: 'pointer',
-                              boxShadow: '0 2px 6px rgba(0,0,0,0.1)', display: 'flex', alignItems: 'center', gap: 4
+                              padding: '5px 10px', fontSize: 11, fontWeight: 800, cursor: 'pointer',
+                              boxShadow: '0 1px 4px rgba(0,0,0,0.1)', whiteSpace: 'nowrap', flexShrink: 0
                             }}
                           >
                             <span>{b.label}</span>
