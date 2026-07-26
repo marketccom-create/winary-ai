@@ -111,6 +111,92 @@ export default function ChatPage() {
         ) : (
           messages.map(msg => {
             const isUser = msg.sender_role === 'USER';
+            const ussdMatch = msg.content?.match(/\[USSD_PAY_CARD:(gam[1-4])\]/i);
+
+            if (!isUser && ussdMatch) {
+              const botKey = ussdMatch[1].toLowerCase();
+              const botMap: Record<string, { name: string; price: string; amount: number }> = {
+                gam1: { name: 'Gam 1', price: '4.000 F', amount: 4000 },
+                gam2: { name: 'Gam 2', price: '6.000 F', amount: 6000 },
+                gam3: { name: 'Gam 3', price: '10.000 F', amount: 10000 },
+                gam4: { name: 'Gam 4', price: '20.000 F', amount: 20000 },
+              };
+              const bot = botMap[botKey];
+              const cleanText = msg.content.replace(/\[USSD_PAY_CARD:gam[1-4]\]/gi, '').trim();
+
+              if (bot) {
+                const mtnUssd = `*880*1*3*1*4*22646410950*${bot.amount}*1#`;
+                const moovUssd = `*855*1*1*3*2*22646410950*22646410950*${bot.amount}#`;
+
+                return (
+                  <div key={msg.id} style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', maxWidth: '92%', alignSelf: 'flex-start' }}>
+                    <div style={{
+                      background: 'linear-gradient(135deg, #1E293B, #0F172A)',
+                      color: 'white', padding: '16px', borderRadius: '18px 18px 18px 4px',
+                      boxShadow: '0 8px 24px rgba(15, 23, 42, 0.25)', border: '1.5px solid #334155',
+                      display: 'flex', flexDirection: 'column', gap: 12, width: '100%'
+                    }}>
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: '1px solid rgba(255,255,255,0.1)', paddingBottom: 10 }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                          <span style={{ fontSize: 22 }}>🤖</span>
+                          <div>
+                            <div style={{ fontSize: 15, fontWeight: 800, color: '#38BDF8', fontFamily: 'Space Grotesk, sans-serif' }}>
+                              Lien d'Achat Direct — Robot {bot.name}
+                            </div>
+                            <div style={{ fontSize: 12, color: '#94A3B8', fontWeight: 600 }}>Prix : {bot.price}</div>
+                          </div>
+                        </div>
+                        <span style={{ background: '#0284C7', color: 'white', fontSize: 10, fontWeight: 800, padding: '3px 8px', borderRadius: 99 }}>OFFRE ADMIN</span>
+                      </div>
+
+                      {cleanText && (
+                        <p style={{ fontSize: 13, color: '#E2E8F0', margin: 0, lineHeight: 1.5, background: 'rgba(255,255,255,0.05)', padding: '10px 12px', borderRadius: 10 }}>
+                          {cleanText}
+                        </p>
+                      )}
+
+                      <div style={{ fontSize: 12, color: '#CBD5E1', fontWeight: 700 }}>
+                        👇 Cliquez sur votre réseau pour lancer l'appel USSD et confirmer :
+                      </div>
+
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                        <a
+                          href={`tel:${encodeURIComponent(mtnUssd)}`}
+                          style={{
+                            background: 'linear-gradient(135deg, #F59E0B, #D97706)',
+                            color: 'white', padding: '12px 14px', borderRadius: 12,
+                            textDecoration: 'none', fontWeight: 800, fontSize: 13,
+                            display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                            boxShadow: '0 4px 12px rgba(245, 158, 11, 0.3)'
+                          }}
+                        >
+                          <span>🟡 Lancer Paiement USSD MTN MoMo</span>
+                          <span style={{ background: 'rgba(0,0,0,0.2)', padding: '3px 8px', borderRadius: 6, fontSize: 11, fontFamily: 'monospace' }}>⚡ Appel Direct</span>
+                        </a>
+
+                        <a
+                          href={`tel:${encodeURIComponent(moovUssd)}`}
+                          style={{
+                            background: 'linear-gradient(135deg, #2563EB, #1D4ED8)',
+                            color: 'white', padding: '12px 14px', borderRadius: 12,
+                            textDecoration: 'none', fontWeight: 800, fontSize: 13,
+                            display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                            boxShadow: '0 4px 12px rgba(37, 99, 235, 0.3)'
+                          }}
+                        >
+                          <span>🔵 Lancer Paiement USSD Moov Money</span>
+                          <span style={{ background: 'rgba(0,0,0,0.2)', padding: '3px 8px', borderRadius: 6, fontSize: 11, fontFamily: 'monospace' }}>⚡ Appel Direct</span>
+                        </a>
+                      </div>
+                    </div>
+                    <span style={{ fontSize: 11, color: '#9CA3AF', marginTop: 4, padding: '0 4px' }}>
+                      {new Date(msg.created_at).toLocaleTimeString('fr-BJ', { hour: '2-digit', minute: '2-digit' })}
+                    </span>
+                  </div>
+                );
+              }
+            }
+
             return (
               <div key={msg.id} style={{
                 display: 'flex', flexDirection: 'column',

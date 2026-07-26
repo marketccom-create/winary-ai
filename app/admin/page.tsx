@@ -2924,8 +2924,49 @@ export default function AdminPage() {
                       <div ref={messagesEndRef} />
                     </div>
 
-                    {/* Chat Input Form */}
+                    {/* Chat Input Form with USSD Quick Action Toolbar */}
                     <div style={{ padding: '14px 18px', borderTop: '1px solid #E2E8F0', background: '#FFFFFF' }}>
+                      {/* Quick USSD Bot Buttons Bar */}
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', marginBottom: 12, padding: '10px 14px', background: '#F8FAFC', borderRadius: 12, border: '1px solid #E2E8F0' }}>
+                        <span style={{ fontSize: 11, fontWeight: 800, color: '#334155', display: 'flex', alignItems: 'center', gap: 4 }}>
+                          ⚡ Envoyer Bouton USSD Pré-rempli :
+                        </span>
+                        {[
+                          { key: 'gam1', name: 'Gam 1 (4.000 F)', label: '🤖 Gam 1 (4k)' },
+                          { key: 'gam2', name: 'Gam 2 (6.000 F)', label: '🤖 Gam 2 (6k)' },
+                          { key: 'gam3', name: 'Gam 3 (10.000 F)', label: '🤖 Gam 3 (10k)' },
+                          { key: 'gam4', name: 'Gam 4 (20.000 F)', label: '🤖 Gam 4 (20k)' },
+                        ].map(b => (
+                          <button
+                            key={b.key}
+                            type="button"
+                            onClick={async () => {
+                              if (!selectedChatUser) return;
+                              const msgContent = `[USSD_PAY_CARD:${b.key}] Voici votre lien d'activation direct pour le Robot ${b.name}. Cliquez sur le bouton de votre réseau ci-dessous pour lancer l'appel USSD pré-rempli sur votre téléphone :`;
+                              setActionLoading('send-chat');
+                              try {
+                                await apiAdminSendChatMessage(selectedChatUser, msgContent);
+                                const data = await apiAdminGetChatMessages(selectedChatUser);
+                                setChatMessages(data.messages || []);
+                                notify(`✅ Bouton d'achat USSD ${b.name} envoyé au client !`, 'success');
+                              } catch (e: any) {
+                                notify(e.message || "Erreur d'envoi du bouton", 'error');
+                              } finally {
+                                setActionLoading(null);
+                              }
+                            }}
+                            style={{
+                              background: 'linear-gradient(135deg, #1E293B, #0F172A)',
+                              color: '#38BDF8', border: '1px solid #334155', borderRadius: 8,
+                              padding: '6px 12px', fontSize: 11, fontWeight: 800, cursor: 'pointer',
+                              boxShadow: '0 2px 6px rgba(0,0,0,0.1)', display: 'flex', alignItems: 'center', gap: 4
+                            }}
+                          >
+                            <span>{b.label}</span>
+                          </button>
+                        ))}
+                      </div>
+
                       <form onSubmit={handleSendAdminMessage} style={{ display: 'flex', gap: 10 }}>
                         <input
                           type="text" value={chatInput} onChange={e => setChatInput(e.target.value)}
