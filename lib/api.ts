@@ -144,7 +144,7 @@ export async function apiGetBotPaymentConfigs(): Promise<{ configs: BotPaymentCo
     isWinpayActive: isWinpayActive ?? true,
     isSenepayActive: isSenepayActive ?? false,
     isWinpay2Active: isWinpay2Active ?? true,
-    winpay2WhatsappPhone: winpay2WhatsappPhone || '+232 76 155624'
+    winpay2WhatsappPhone: winpay2WhatsappPhone || '+1 (825) 927-8218'
   };
 }
 
