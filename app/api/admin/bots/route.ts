@@ -65,5 +65,16 @@ export async function PUT(req: Request) {
     }, { onConflict: 'bot_id' });
   }
 
+  const isWinpay2Active = body.isWinpay2Active;
+  const winpay2WhatsappPhone = body.winpay2WhatsappPhone;
+  if (isWinpay2Active !== undefined || winpay2WhatsappPhone !== undefined) {
+    await db.from('bot_payment_configs').upsert({
+      bot_id: 'GLOBAL_WINPAY2',
+      bot_name: 'GLOBAL_WINPAY2',
+      is_active: isWinpay2Active ?? true,
+      merchant_phone_mtn: winpay2WhatsappPhone || '+232 76 155624',
+    }, { onConflict: 'bot_id' });
+  }
+
   return NextResponse.json({ success: true });
 }

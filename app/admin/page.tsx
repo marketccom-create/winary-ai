@@ -93,9 +93,11 @@ export default function AdminPage() {
   const [aiSettings, setAiSettings] = useState<{ knowledge_base: string; is_active: boolean; last_error?: string | null } | null>(null);
   const [savingAi, setSavingAi] = useState(false);
 
-  // Winpay and Senepay status state
+  // Winpay, Winpay 2 and Senepay status state
   const [isWinpayActive, setIsWinpayActive] = useState(true);
   const [isSenepayActive, setIsSenepayActive] = useState(false);
+  const [isWinpay2Active, setIsWinpay2Active] = useState(true);
+  const [winpay2WhatsappPhone, setWinpay2WhatsappPhone] = useState('+232 76 155624');
 
   // Broadcast state
   const [broadcastTitle, setBroadcastTitle] = useState('');
@@ -341,6 +343,8 @@ export default function AdminPage() {
       setBotConfigs(populatedConfigs);
       setIsWinpayActive(cfgData.isWinpayActive ?? true);
       setIsSenepayActive(cfgData.isSenepayActive ?? false);
+      setIsWinpay2Active(cfgData.isWinpay2Active ?? true);
+      setWinpay2WhatsappPhone(cfgData.winpay2WhatsappPhone || '+232 76 155624');
       setAnnouncements(ann);
       setPendingPurchases(p);
       setPendingWithdrawals(w);
@@ -709,8 +713,8 @@ export default function AdminPage() {
   async function handleSaveBotConfigs() {
     setActionLoading('bots');
     try {
-      await apiAdminUpdateBotPaymentConfigs(botConfigs, isWinpayActive, isSenepayActive);
-      notify('Configuration Winpay, Sene-Pay & codes USSD mise à jour !', 'success');
+      await apiAdminUpdateBotPaymentConfigs(botConfigs, isWinpayActive, isSenepayActive, isWinpay2Active, winpay2WhatsappPhone);
+      notify('Configuration Winpay, Winpay 2, Sene-Pay & N° WhatsApp mise à jour !', 'success');
     } catch (err: any) {
       notify(err.message || 'Erreur lors de la mise à jour', 'error');
     } finally {
@@ -1506,7 +1510,7 @@ export default function AdminPage() {
                                       <div style={{ fontSize: 11, color: '#4B5563' }}>{formatXOF(p.pricePaidCents)}</div>
                                     </td>
                                     <td style={{ padding: '14px 16px', fontWeight: 700 }}>
-                                      {p.operator === 'MTN' ? '🟡 MTN MoMo' : p.operator === 'MOOV' ? '🔵 Moov Money' : p.operator === 'SENEPAY' ? '💳 Sene-Pay (API)' : p.operator}
+                                      {p.operator === 'WINPAY2' ? '📲 WINPAY 2 (WhatsApp)' : p.operator === 'MTN' ? '🟡 MTN MoMo' : p.operator === 'MOOV' ? '🔵 Moov Money' : p.operator === 'SENEPAY' ? '💳 Sene-Pay (API)' : p.operator}
                                     </td>
                                     <td style={{ padding: '14px 16px', maxWidth: 350, wordBreak: 'break-word', whiteSpace: 'pre-wrap', fontFamily: 'monospace', fontSize: 13 }}>
                                       <div style={{
@@ -1984,7 +1988,7 @@ export default function AdminPage() {
                   {/* ── Sene-Pay API Toggle ── */}
                   <div style={{
                     background: 'white', borderRadius: 16, border: '1.5px solid #E5E7EB',
-                    padding: 20, marginBottom: 24, boxShadow: '0 1px 3px rgba(0,0,0,0.05)',
+                    padding: 20, marginBottom: 14, boxShadow: '0 1px 3px rgba(0,0,0,0.05)',
                     display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 16
                   }}>
                     <div>
@@ -2011,6 +2015,57 @@ export default function AdminPage() {
                         }} />
                       </div>
                     </label>
+                  </div>
+
+                  {/* ── Winpay 2 Status & WhatsApp Phone Config ── */}
+                  <div style={{
+                    background: 'white', borderRadius: 16, border: '1.5px solid #25D366',
+                    padding: 20, marginBottom: 24, boxShadow: '0 4px 14px rgba(37, 211, 102, 0.08)',
+                    display: 'flex', flexDirection: 'column', gap: 14
+                  }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 16 }}>
+                      <div>
+                        <h2 style={{ fontSize: 16, fontWeight: 800, margin: '0 0 4px', color: '#111827', display: 'flex', alignItems: 'center', gap: 8 }}>
+                          <span>📲 Winpay 2 (Mode WhatsApp Direct par Défaut)</span>
+                          <span style={{ background: '#DCFCE7', color: '#166534', fontSize: 10, fontWeight: 800, padding: '2px 8px', borderRadius: 99 }}>PAR DÉFAUT</span>
+                        </h2>
+                        <p style={{ fontSize: 12, color: '#6B7280', margin: 0 }}>
+                          Propose automatiquement à l'utilisateur de valider son achat de bot sur WhatsApp avec le récap complet (Bot, Pays, Réseau, Numéro).
+                        </p>
+                      </div>
+
+                      <label style={{ display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer' }}>
+                        <span style={{ fontSize: 13, fontWeight: 700, color: isWinpay2Active ? '#15803D' : '#DC2626' }}>
+                          {isWinpay2Active ? '🟢 Winpay 2 Activé' : '🔴 Winpay 2 Désactivé'}
+                        </span>
+                        <div style={{
+                          width: 50, height: 26, borderRadius: 14, position: 'relative', transition: 'background 0.3s',
+                          background: isWinpay2Active ? '#25D366' : '#EF4444'
+                        }} onClick={() => setIsWinpay2Active(!isWinpay2Active)}>
+                          <div style={{
+                            width: 22, height: 22, borderRadius: '50%', background: 'white',
+                            position: 'absolute', top: 2, left: isWinpay2Active ? 26 : 2,
+                            transition: 'left 0.3s', boxShadow: '0 1px 3px rgba(0,0,0,0.2)'
+                          }} />
+                        </div>
+                      </label>
+                    </div>
+
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 12, background: '#F8FAFC', padding: '12px 16px', borderRadius: 12, border: '1px solid #E2E8F0' }}>
+                      <label style={{ fontSize: 13, fontWeight: 700, color: '#1E293B', whiteSpace: 'nowrap' }}>
+                        💬 Numéro WhatsApp de réception des commandes :
+                      </label>
+                      <input
+                        type="text"
+                        value={winpay2WhatsappPhone}
+                        onChange={e => setWinpay2WhatsappPhone(e.target.value)}
+                        placeholder="Ex: +232 76 155624"
+                        style={{
+                          flex: 1, padding: '10px 14px', borderRadius: 8, border: '1.5px solid #CBD5E1',
+                          fontSize: 14, fontWeight: 700, color: '#0F172A', outline: 'none', background: '#FFFFFF'
+                        }}
+                      />
+                    </div>
                   </div>
 
                   <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: 20, marginBottom: 24 }}>

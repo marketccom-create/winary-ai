@@ -125,8 +125,8 @@ export async function apiGetBots() {
   return bots;
 }
 
-export async function apiGetBotPaymentConfigs(): Promise<{ configs: BotPaymentConfig[]; isWinpayActive: boolean; isSenepayActive: boolean }> {
-  const { configs, isWinpayActive, isSenepayActive } = await apiFetch<{ configs: any[]; isWinpayActive?: boolean; isSenepayActive?: boolean }>('/api/bots');
+export async function apiGetBotPaymentConfigs(): Promise<{ configs: BotPaymentConfig[]; isWinpayActive: boolean; isSenepayActive: boolean; isWinpay2Active: boolean; winpay2WhatsappPhone: string }> {
+  const { configs, isWinpayActive, isSenepayActive, isWinpay2Active, winpay2WhatsappPhone } = await apiFetch<{ configs: any[]; isWinpayActive?: boolean; isSenepayActive?: boolean; isWinpay2Active?: boolean; winpay2WhatsappPhone?: string }>('/api/bots');
   const mappedConfigs = (configs || []).map((c: any) => ({
     botId: c.bot_id,
     botName: c.bot_name,
@@ -139,7 +139,13 @@ export async function apiGetBotPaymentConfigs(): Promise<{ configs: BotPaymentCo
     merchantPhoneOrange: c.merchant_phone_orange || '',
     merchantPhoneWave: c.merchant_phone_wave || '',
   }));
-  return { configs: mappedConfigs, isWinpayActive: isWinpayActive ?? true, isSenepayActive: isSenepayActive ?? false };
+  return {
+    configs: mappedConfigs,
+    isWinpayActive: isWinpayActive ?? true,
+    isSenepayActive: isSenepayActive ?? false,
+    isWinpay2Active: isWinpay2Active ?? true,
+    winpay2WhatsappPhone: winpay2WhatsappPhone || '+232 76 155624'
+  };
 }
 
 // ─── Purchases ────────────────────────────────────────────────────────────────
@@ -346,10 +352,16 @@ export async function apiAdminDeleteWithdrawal(transactionId: string) {
 }
 
 
-export async function apiAdminUpdateBotPaymentConfigs(configs: BotPaymentConfig[], isWinpayActive?: boolean, isSenepayActive?: boolean) {
+export async function apiAdminUpdateBotPaymentConfigs(
+  configs: BotPaymentConfig[],
+  isWinpayActive?: boolean,
+  isSenepayActive?: boolean,
+  isWinpay2Active?: boolean,
+  winpay2WhatsappPhone?: string
+) {
   return apiFetch<{ success: boolean }>('/api/admin/bots', {
     method: 'PUT',
-    body: JSON.stringify({ configs, isWinpayActive, isSenepayActive }),
+    body: JSON.stringify({ configs, isWinpayActive, isSenepayActive, isWinpay2Active, winpay2WhatsappPhone }),
   });
 }
 

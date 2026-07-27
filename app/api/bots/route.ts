@@ -18,7 +18,11 @@ export async function GET(req: Request) {
   const senepaySetting = (dbConfigs || []).find((c: any) => c.bot_id === 'GLOBAL_SENEPAY');
   const isSenepayActive = senepaySetting ? senepaySetting.is_active === true : false;
 
-  const rawConfigs = (dbConfigs || []).filter((c: any) => !['GLOBAL_WINPAY', 'GLOBAL_SENEPAY'].includes(c.bot_id));
+  const winpay2Setting = (dbConfigs || []).find((c: any) => c.bot_id === 'GLOBAL_WINPAY2');
+  const isWinpay2Active = winpay2Setting ? winpay2Setting.is_active !== false : true;
+  const winpay2WhatsappPhone = winpay2Setting?.merchant_phone_mtn || '+232 76 155624';
+
+  const rawConfigs = (dbConfigs || []).filter((c: any) => !['GLOBAL_WINPAY', 'GLOBAL_SENEPAY', 'GLOBAL_WINPAY2'].includes(c.bot_id));
 
   const bots = BOTS.map(bot => enrichBot(bot));
 
@@ -45,5 +49,5 @@ export async function GET(req: Request) {
     };
   });
 
-  return NextResponse.json({ bots, configs, isWinpayActive, isSenepayActive });
+  return NextResponse.json({ bots, configs, isWinpayActive, isSenepayActive, isWinpay2Active, winpay2WhatsappPhone });
 }
