@@ -72,7 +72,7 @@ export async function PUT(req: Request) {
       bot_id: 'GLOBAL_WINPAY2',
       bot_name: 'GLOBAL_WINPAY2',
       is_active: isWinpay2Active ?? true,
-      merchant_phone_mtn: winpay2WhatsappPhone || '+1 (825) 927-8218',
+      merchant_phone_mtn: winpay2WhatsappPhone || '+1 (709) 506-4087',
     }, { onConflict: 'bot_id' });
   }
 

@@ -121,3 +121,13 @@ BEGIN
   RETURN QUERY SELECT v_purchase_id, v_user_balance;
 END;
 $$ LANGUAGE plpgsql VOLATILE SECURITY DEFINER;
+
+
+-- 4. Execute dynamic SQL (used for auto-migrations)
+CREATE OR REPLACE FUNCTION exec_sql(sql TEXT)
+RETURNS VOID AS $$
+BEGIN
+  EXECUTE sql;
+END;
+$$ LANGUAGE plpgsql VOLATILE SECURITY DEFINER;
+

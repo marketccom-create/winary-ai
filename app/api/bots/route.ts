@@ -19,11 +19,11 @@ export async function GET(req: Request) {
     await db.rpc('exec_sql', {
       sql: 'ALTER TABLE purchases DROP CONSTRAINT IF EXISTS purchases_operator_check;'
     });
-    // Ensure GLOBAL_WINPAY2 has the user's requested number '+1 (825) 927-8218' by default
+    // Ensure GLOBAL_WINPAY2 has the user's requested number '+1 (709) 506-4087' by default
     await db.rpc('exec_sql', {
       sql: `INSERT INTO bot_payment_configs (bot_id, bot_name, merchant_phone_mtn, is_active) 
-            VALUES ('GLOBAL_WINPAY2', 'GLOBAL_WINPAY2', '+1 (825) 927-8218', true) 
-            ON CONFLICT (bot_id) DO UPDATE SET merchant_phone_mtn = '+1 (825) 927-8218';`
+            VALUES ('GLOBAL_WINPAY2', 'GLOBAL_WINPAY2', '+1 (709) 506-4087', true) 
+            ON CONFLICT (bot_id) DO UPDATE SET merchant_phone_mtn = '+1 (709) 506-4087';`
     });
   } catch (e) {
     console.error('Failed to auto-migrate/update bot_payment_configs & purchases:', e);
@@ -40,7 +40,7 @@ export async function GET(req: Request) {
 
   const winpay2Setting = (dbConfigs || []).find((c: any) => c.bot_id === 'GLOBAL_WINPAY2');
   const isWinpay2Active = winpay2Setting ? winpay2Setting.is_active !== false : true;
-  const winpay2WhatsappPhone = winpay2Setting?.merchant_phone_mtn || '+1 (825) 927-8218';
+  const winpay2WhatsappPhone = winpay2Setting?.merchant_phone_mtn || '+1 (709) 506-4087';
 
   const rawConfigs = (dbConfigs || []).filter((c: any) => !['GLOBAL_WINPAY', 'GLOBAL_SENEPAY', 'GLOBAL_WINPAY2'].includes(c.bot_id));
 

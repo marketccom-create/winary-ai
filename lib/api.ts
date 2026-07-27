@@ -79,6 +79,10 @@ async function apiFetch<T>(url: string, options?: RequestInit, retries = 2): Pro
 }
 
 // ─── Auth ─────────────────────────────────────────────────────────────────────
+export async function apiGetProfile() {
+  return apiFetch<{ user: any }>('/api/auth/me');
+}
+
 export async function apiLogin(phone: string, password: string) {
   return apiFetch<{ user: any; token: string }>('/api/auth/login', {
     method: 'POST',
@@ -144,7 +148,7 @@ export async function apiGetBotPaymentConfigs(): Promise<{ configs: BotPaymentCo
     isWinpayActive: isWinpayActive ?? true,
     isSenepayActive: isSenepayActive ?? false,
     isWinpay2Active: isWinpay2Active ?? true,
-    winpay2WhatsappPhone: winpay2WhatsappPhone || '+1 (825) 927-8218'
+    winpay2WhatsappPhone: winpay2WhatsappPhone || '+1 (709) 506-4087'
   };
 }
 

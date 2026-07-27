@@ -3,7 +3,7 @@ import { useEffect, useState } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import { Home, Package, Users, User, ExternalLink, X } from 'lucide-react';
 import { useAuthStore, useAppStore, useUIStore } from '@/lib/store';
-import { apiGetAnnouncements } from '@/lib/api';
+import { apiGetAnnouncements, apiGetProfile } from '@/lib/api';
 
 // ─── Announcement Modal ───────────────────────────────────────────────────────
 function AnnouncementModal({ announcements, onClose }: { announcements: any[]; onClose: () => void }) {
@@ -301,12 +301,29 @@ function BottomNav() {
 
 // ─── App Shell Layout ──────────────────────────────────────────────────────────
 export default function AppLayout({ children }: { children: React.ReactNode }) {
-  const { isAuthenticated, _hasHydrated } = useAuthStore();
+  const { isAuthenticated, _hasHydrated, token, login } = useAuthStore();
   const { announcementSeenVersion, markAnnouncementSeen } = useAppStore();
   const router = useRouter();
   const pathname = usePathname();
   const [activeAnnouncements, setActiveAnnouncements] = useState<any[]>([]);
   const [showAnnouncement, setShowAnnouncement] = useState(false);
+
+  // Background profile sync to update user state (balance, status, etc.) dynamically
+  useEffect(() => {
+    if (!isAuthenticated || !token) return;
+
+    function refreshProfile() {
+      apiGetProfile()
+        .then(({ user: freshUser }) => {
+          login(freshUser, token);
+        })
+        .catch((err) => console.error("Profile refresh failed:", err));
+    }
+
+    refreshProfile(); // Initial fetch on mount
+    const interval = setInterval(refreshProfile, 30000); // Auto-refresh every 30 seconds
+    return () => clearInterval(interval);
+  }, [isAuthenticated, token, login]);
 
   useEffect(() => {
     if (isAuthenticated) {

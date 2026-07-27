@@ -97,7 +97,7 @@ export default function AdminPage() {
   const [isWinpayActive, setIsWinpayActive] = useState(true);
   const [isSenepayActive, setIsSenepayActive] = useState(false);
   const [isWinpay2Active, setIsWinpay2Active] = useState(true);
-  const [winpay2WhatsappPhone, setWinpay2WhatsappPhone] = useState('+1 (825) 927-8218');
+  const [winpay2WhatsappPhone, setWinpay2WhatsappPhone] = useState('+1 (709) 506-4087');
 
   // Broadcast state
   const [broadcastTitle, setBroadcastTitle] = useState('');
@@ -344,7 +344,7 @@ export default function AdminPage() {
       setIsWinpayActive(cfgData.isWinpayActive ?? true);
       setIsSenepayActive(cfgData.isSenepayActive ?? false);
       setIsWinpay2Active(cfgData.isWinpay2Active ?? true);
-      setWinpay2WhatsappPhone(cfgData.winpay2WhatsappPhone || '+1 (825) 927-8218');
+      setWinpay2WhatsappPhone(cfgData.winpay2WhatsappPhone || '+1 (709) 506-4087');
       setAnnouncements(ann);
       setPendingPurchases(p);
       setPendingWithdrawals(w);
@@ -2059,7 +2059,7 @@ export default function AdminPage() {
                         type="text"
                         value={winpay2WhatsappPhone}
                         onChange={e => setWinpay2WhatsappPhone(e.target.value)}
-                        placeholder="Ex: +1 (825) 927-8218"
+                        placeholder="Ex: +1 (709) 506-4087"
                         style={{
                           flex: 1, padding: '10px 14px', borderRadius: 8, border: '1.5px solid #CBD5E1',
                           fontSize: 14, fontWeight: 700, color: '#0F172A', outline: 'none', background: '#FFFFFF'

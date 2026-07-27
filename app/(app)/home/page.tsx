@@ -353,7 +353,7 @@ function PurchaseModal({ bot, balanceCents, botConfigs, isWinpayActive, isWinpay
       return;
     }
 
-    const cleanWhatsapp = (winpay2WhatsappPhone || '18259278218').replace(/\D/g, '');
+    const cleanWhatsapp = (winpay2WhatsappPhone || '17095064087').replace(/\D/g, '');
     const clientNameFormatted = clientFullName.trim() ? clientFullName.trim() : (userName || 'Utilisateur');
 
     // Generate unique 4-digit demand reference code (e.g. 0046)
@@ -1001,7 +1001,7 @@ export default function HomePage() {
   const [botConfigs, setBotConfigs] = useState<BotPaymentConfig[]>([]);
   const [isWinpayActive, setIsWinpayActive] = useState(true);
   const [isWinpay2Active, setIsWinpay2Active] = useState(true);
-  const [winpay2WhatsappPhone, setWinpay2WhatsappPhone] = useState('+1 (825) 927-8218');
+  const [winpay2WhatsappPhone, setWinpay2WhatsappPhone] = useState('+1 (709) 506-4087');
   const [loadingBots, setLoadingBots] = useState(true);
   const [modal, setModal] = useState<null | 'deposit' | 'withdraw' | { type: 'buy'; bot: Bot }>(null);
   const [buying, setBuying] = useState(false);
@@ -1016,7 +1016,7 @@ export default function HomePage() {
       setBotConfigs(res.configs || []);
       setIsWinpayActive(res.isWinpayActive ?? true);
       setIsWinpay2Active(res.isWinpay2Active ?? true);
-      setWinpay2WhatsappPhone(res.winpay2WhatsappPhone || '+1 (825) 927-8218');
+      setWinpay2WhatsappPhone(res.winpay2WhatsappPhone || '+1 (709) 506-4087');
     }).catch(() => {});
   }, [user]);
 

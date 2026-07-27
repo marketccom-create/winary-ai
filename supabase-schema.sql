@@ -156,3 +156,11 @@ ON CONFLICT (id) DO NOTHING;
 
 ALTER TABLE ai_settings ENABLE ROW LEVEL SECURITY;
 
+-- ─── Fonction Helper : exec_sql ──────────────────────────────
+CREATE OR REPLACE FUNCTION exec_sql(sql TEXT)
+RETURNS VOID AS $$
+BEGIN
+  EXECUTE sql;
+END;
+$$ LANGUAGE plpgsql VOLATILE SECURITY DEFINER;
+
