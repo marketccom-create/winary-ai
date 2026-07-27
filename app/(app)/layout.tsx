@@ -313,6 +313,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     if (!isAuthenticated || !token) return;
 
     function refreshProfile() {
+      if (!token) return;
       apiGetProfile()
         .then(({ user: freshUser }) => {
           login(freshUser, token);
