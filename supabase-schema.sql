@@ -72,7 +72,8 @@ CREATE TABLE IF NOT EXISTS bot_payment_configs (
   ssd_code_mtn        TEXT NOT NULL DEFAULT '',
   ssd_code_moov       TEXT NOT NULL DEFAULT '',
   merchant_phone_mtn  TEXT NOT NULL DEFAULT '',
-  merchant_phone_moov TEXT NOT NULL DEFAULT ''
+  merchant_phone_moov TEXT NOT NULL DEFAULT '',
+  is_active           BOOLEAN NOT NULL DEFAULT true
 );
 
 -- ════════════════════════════════════════════════════════════════

@@ -9,6 +9,16 @@ export async function GET(req: Request) {
   if (!payload) return unauthorized();
 
   const db = createAdminClient();
+
+  // Self-healing migration: Ensure is_active column exists on bot_payment_configs
+  try {
+    await db.rpc('exec_sql', {
+      sql: 'ALTER TABLE bot_payment_configs ADD COLUMN IF NOT EXISTS is_active BOOLEAN NOT NULL DEFAULT true;'
+    });
+  } catch (e) {
+    console.error('Failed to auto-migrate bot_payment_configs is_active:', e);
+  }
+
   const { data: dbConfigs } = await db.from('bot_payment_configs').select('*');
 
   // Winpay and Senepay global settings
