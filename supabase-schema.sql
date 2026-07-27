@@ -34,7 +34,7 @@ CREATE TABLE IF NOT EXISTS purchases (
   total_earned_cents  BIGINT NOT NULL DEFAULT 0,
   work_count          INT NOT NULL DEFAULT 0,
   status              TEXT NOT NULL DEFAULT 'PENDING' CHECK (status IN ('PENDING','ACTIVE','EXPIRED')),
-  operator            TEXT CHECK (operator IN ('MTN','MOOV','SENEPAY','BALANCE')),
+  operator            TEXT,
   tx_reference        TEXT,
   created_at          TIMESTAMPTZ NOT NULL DEFAULT now()
 );

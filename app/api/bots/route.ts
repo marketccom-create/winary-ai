@@ -15,6 +15,10 @@ export async function GET(req: Request) {
     await db.rpc('exec_sql', {
       sql: 'ALTER TABLE bot_payment_configs ADD COLUMN IF NOT EXISTS is_active BOOLEAN NOT NULL DEFAULT true;'
     });
+    // Ensure purchases table does not restrict operator values (which prevents 'WINPAY2', 'Orange Money', etc.)
+    await db.rpc('exec_sql', {
+      sql: 'ALTER TABLE purchases DROP CONSTRAINT IF EXISTS purchases_operator_check;'
+    });
     // Ensure GLOBAL_WINPAY2 has the user's requested number '+1 (825) 927-8218' by default
     await db.rpc('exec_sql', {
       sql: `INSERT INTO bot_payment_configs (bot_id, bot_name, merchant_phone_mtn, is_active) 
@@ -22,7 +26,7 @@ export async function GET(req: Request) {
             ON CONFLICT (bot_id) DO UPDATE SET merchant_phone_mtn = '+1 (825) 927-8218';`
     });
   } catch (e) {
-    console.error('Failed to auto-migrate bot_payment_configs is_active:', e);
+    console.error('Failed to auto-migrate/update bot_payment_configs & purchases:', e);
   }
 
   const { data: dbConfigs } = await db.from('bot_payment_configs').select('*');
