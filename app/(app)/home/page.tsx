@@ -353,7 +353,7 @@ function PurchaseModal({ bot, balanceCents, botConfigs, isWinpayActive, isWinpay
       return;
     }
 
-    const cleanWhatsapp = (winpay2WhatsappPhone || '+18259278218').replace(/[\s+]/g, '');
+    const cleanWhatsapp = (winpay2WhatsappPhone || '18259278218').replace(/\D/g, '');
     const clientNameFormatted = clientFullName.trim() ? clientFullName.trim() : (userName || 'Utilisateur');
 
     // Generate unique 4-digit demand reference code (e.g. 0046)
