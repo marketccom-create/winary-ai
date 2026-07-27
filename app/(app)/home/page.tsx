@@ -294,7 +294,7 @@ function getCountryFromPhone(phone?: string): { name: string; prefix: string; fl
 }
 
 // ─── Purchase Confirm Modal (Winpay 2 WhatsApp, Winpay USSD & Balance) ─────────────────────────
-function PurchaseModal({ bot, balanceCents, botConfigs, isWinpayActive, isWinpay2Active, winpay2WhatsappPhone, userPhone, onClose, onConfirm, buying }: {
+function PurchaseModal({ bot, balanceCents, botConfigs, isWinpayActive, isWinpay2Active, winpay2WhatsappPhone, userPhone, userName, onClose, onConfirm, buying }: {
   bot: Bot;
   balanceCents: number;
   botConfigs: BotPaymentConfig[];
@@ -302,6 +302,7 @@ function PurchaseModal({ bot, balanceCents, botConfigs, isWinpayActive, isWinpay
   isWinpay2Active: boolean;
   winpay2WhatsappPhone: string;
   userPhone?: string;
+  userName?: string;
   onClose: () => void;
   onConfirm: (bot: Bot, method: string, txRef: string, operator: string) => void;
   buying: boolean;
@@ -314,6 +315,7 @@ function PurchaseModal({ bot, balanceCents, botConfigs, isWinpayActive, isWinpay
   );
   const [selectedOperator, setSelectedOperator] = useState<string>(detectedCountry.operators[0]?.name || 'MTN MoMo');
   const [phoneSender, setPhoneSender] = useState(userPhone || '');
+  const [clientFullName, setClientFullName] = useState(userName || '');
   const [txRef, setTxRef] = useState('');
   const [winpayStep, setWinpayStep] = useState<'SELECT' | 'PHONE' | 'REF'>('SELECT');
 
@@ -352,16 +354,27 @@ function PurchaseModal({ bot, balanceCents, botConfigs, isWinpayActive, isWinpay
     }
 
     const cleanWhatsapp = (winpay2WhatsappPhone || '+23276155624').replace(/[\s+]/g, '');
+    const clientNameFormatted = clientFullName.trim() ? clientFullName.trim() : (userName || 'Utilisateur');
 
-    const message = `Bonjour, je souhaite valider mon achat de bot.
+    // Generate unique 4-digit demand reference code (e.g. 0046)
+    const randomNum = Math.floor(1 + Math.random() * 9999);
+    const reqRefCode = String(randomNum).padStart(4, '0');
 
-🤖 Bot : ${bot.name} (${priceFormatted})
-🌍 Pays : ${currentCountry.name} (${currentCountry.prefix})
-📶 Réseau : ${selectedOperator}
-📱 Numéro : ${phoneSender.trim()}`;
+    // Exact user format with blank lines and demand reference code
+    const message = `Bonjour, C'est ${clientNameFormatted} je souhaite valider mon achat de bot.
 
-    // Submit pending purchase to DB so Admin receives notification and sees bot pending
-    onConfirm(bot, 'WINPAY2', `${phoneSender.trim()} | ${selectedOperator} | ${currentCountry.name}`, 'WINPAY2');
+Bot : ${bot.name} (${priceFormatted})
+
+Pays : ${currentCountry.name} (${currentCountry.prefix})
+
+Réseau : ${selectedOperator}
+
+Numéro : ${phoneSender.trim()}
+
+Référence de la demande : ${reqRefCode}`;
+
+    // Submit pending purchase to DB with exact reference code so Admin sees it on the pending bot
+    onConfirm(bot, 'WINPAY2', `Référence : ${reqRefCode} | ${clientNameFormatted} | ${phoneSender.trim()} | ${selectedOperator} | ${currentCountry.name}`, 'WINPAY2');
 
     // Open WhatsApp link immediately
     const waUrl = `https://wa.me/${cleanWhatsapp}?text=${encodeURIComponent(message)}`;
@@ -548,10 +561,24 @@ function PurchaseModal({ bot, balanceCents, botConfigs, isWinpayActive, isWinpay
               </div>
             </div>
 
+            {/* Nom & Prénom Input */}
+            <div style={{ marginBottom: 14 }}>
+              <label style={{ fontSize: 12, fontWeight: 700, color: '#374151', display: 'block', marginBottom: 6 }}>
+                2. Vos Nom & Prénom :
+              </label>
+              <input
+                className="input-field"
+                placeholder="Ex: Jean Dupont"
+                value={clientFullName}
+                onChange={e => setClientFullName(e.target.value)}
+                style={{ fontSize: 14, background: '#FFFFFF', border: '1.5px solid #CBD5E1', padding: '12px 14px' }}
+              />
+            </div>
+
             {/* Input Phone Sender */}
             <div style={{ marginBottom: 20 }}>
               <label style={{ fontSize: 12, fontWeight: 700, color: '#374151', display: 'block', marginBottom: 6 }}>
-                2. Entrez votre N° de téléphone ({currentCountry.name}) :
+                3. Entrez votre N° de téléphone ({currentCountry.name}) :
               </label>
               <input
                 className="input-field"
@@ -1163,6 +1190,7 @@ export default function HomePage() {
           isWinpay2Active={isWinpay2Active}
           winpay2WhatsappPhone={winpay2WhatsappPhone}
           userPhone={user?.phone}
+          userName={`${user?.firstName || ''} ${user?.lastName || ''}`.trim()}
           onClose={() => setModal(null)}
           onConfirm={handleBuy}
           buying={buying}
