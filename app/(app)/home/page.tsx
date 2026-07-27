@@ -138,25 +138,159 @@ function Gam4PromoBanner({ bot, onBuy }: { bot?: Bot; onBuy: (bot: Bot) => void 
   );
 }
 
-// Helper to detect country based on phone prefix
-function getCountryFromPhone(phone?: string): { name: string; prefix: string; flag: string } {
-  if (!phone) return { name: 'Bénin', prefix: '+229', flag: '🇧🇯' };
+// Helper to detect country & its specific mobile money networks based on phone prefix
+function getCountryFromPhone(phone?: string): { name: string; prefix: string; flag: string; operators: { id: string; name: string; icon: string }[] } {
+  if (!phone) {
+    return {
+      name: 'Bénin', prefix: '+229', flag: '🇧🇯',
+      operators: [
+        { id: 'MTN', name: 'MTN MoMo', icon: '🟡' },
+        { id: 'MOOV', name: 'Moov Money', icon: '🔵' },
+      ]
+    };
+  }
   const clean = phone.replace(/\s+/g, '');
-  if (clean.startsWith('+229') || clean.startsWith('229')) return { name: 'Bénin', prefix: '+229', flag: '🇧🇯' };
-  if (clean.startsWith('+225') || clean.startsWith('225')) return { name: 'Côte d’Ivoire', prefix: '+225', flag: '🇨🇮' };
-  if (clean.startsWith('+221') || clean.startsWith('221')) return { name: 'Sénégal', prefix: '+221', flag: '🇸🇳' };
-  if (clean.startsWith('+228') || clean.startsWith('228')) return { name: 'Togo', prefix: '+228', flag: '🇹🇬' };
-  if (clean.startsWith('+226') || clean.startsWith('226')) return { name: 'Burkina Faso', prefix: '+226', flag: '🇧🇫' };
-  if (clean.startsWith('+232') || clean.startsWith('232')) return { name: 'Sierra Leone', prefix: '+232', flag: '🇸🇱' };
-  if (clean.startsWith('+223') || clean.startsWith('223')) return { name: 'Mali', prefix: '+223', flag: '🇲🇱' };
-  if (clean.startsWith('+224') || clean.startsWith('224')) return { name: 'Guinée', prefix: '+224', flag: '🇬🇳' };
-  if (clean.startsWith('+237') || clean.startsWith('237')) return { name: 'Cameroun', prefix: '+237', flag: '🇨🇲' };
-  if (clean.startsWith('+242') || clean.startsWith('242')) return { name: 'Congo', prefix: '+242', flag: '🇨🇬' };
-  if (clean.startsWith('+243') || clean.startsWith('243')) return { name: 'RDC', prefix: '+243', flag: '🇨🇩' };
-  if (clean.startsWith('+235') || clean.startsWith('235')) return { name: 'Tchad', prefix: '+235', flag: '🇹🇩' };
-  if (clean.startsWith('+227') || clean.startsWith('227')) return { name: 'Niger', prefix: '+227', flag: '🇳🇪' };
-  if (clean.startsWith('+241') || clean.startsWith('241')) return { name: 'Gabon', prefix: '+241', flag: '🇬🇦' };
-  return { name: 'International', prefix: clean.startsWith('+') ? clean.substring(0, 4) : '+229', flag: '🌍' };
+
+  if (clean.startsWith('+229') || clean.startsWith('229')) {
+    return {
+      name: 'Bénin', prefix: '+229', flag: '🇧🇯',
+      operators: [
+        { id: 'MTN', name: 'MTN MoMo', icon: '🟡' },
+        { id: 'MOOV', name: 'Moov Money', icon: '🔵' },
+      ]
+    };
+  }
+  if (clean.startsWith('+225') || clean.startsWith('225')) {
+    return {
+      name: 'Côte d’Ivoire', prefix: '+225', flag: '🇨🇮',
+      operators: [
+        { id: 'MTN', name: 'MTN MoMo', icon: '🟡' },
+        { id: 'MOOV', name: 'Moov Money', icon: '🔵' },
+        { id: 'ORANGE', name: 'Orange Money', icon: '🟠' },
+        { id: 'WAVE', name: 'Wave', icon: '🌊' },
+      ]
+    };
+  }
+  if (clean.startsWith('+221') || clean.startsWith('221')) {
+    return {
+      name: 'Sénégal', prefix: '+221', flag: '🇸🇳',
+      operators: [
+        { id: 'WAVE', name: 'Wave', icon: '🌊' },
+        { id: 'ORANGE', name: 'Orange Money', icon: '🟠' },
+        { id: 'FREE', name: 'Free Money', icon: '🔴' },
+      ]
+    };
+  }
+  if (clean.startsWith('+228') || clean.startsWith('228')) {
+    return {
+      name: 'Togo', prefix: '+228', flag: '🇹🇬',
+      operators: [
+        { id: 'FLOOZ', name: 'Flooz (Moov)', icon: '🟢' },
+        { id: 'TMONEY', name: 'TMoney (Togocom)', icon: '🔴' },
+      ]
+    };
+  }
+  if (clean.startsWith('+226') || clean.startsWith('226')) {
+    return {
+      name: 'Burkina Faso', prefix: '+226', flag: '🇧🇫',
+      operators: [
+        { id: 'ORANGE', name: 'Orange Money', icon: '🟠' },
+        { id: 'MOOV', name: 'Moov Money', icon: '🟡' },
+      ]
+    };
+  }
+  if (clean.startsWith('+223') || clean.startsWith('223')) {
+    return {
+      name: 'Mali', prefix: '+223', flag: '🇲🇱',
+      operators: [
+        { id: 'ORANGE', name: 'Orange Money', icon: '🟠' },
+        { id: 'MOOV', name: 'Moov Money', icon: '🟡' },
+      ]
+    };
+  }
+  if (clean.startsWith('+224') || clean.startsWith('224')) {
+    return {
+      name: 'Guinée', prefix: '+224', flag: '🇬🇳',
+      operators: [
+        { id: 'ORANGE', name: 'Orange Money', icon: '🟠' },
+        { id: 'MTN', name: 'MTN MoMo', icon: '🟡' },
+      ]
+    };
+  }
+  if (clean.startsWith('+237') || clean.startsWith('237')) {
+    return {
+      name: 'Cameroun', prefix: '+237', flag: '🇨🇲',
+      operators: [
+        { id: 'MTN', name: 'MTN MoMo', icon: '🟡' },
+        { id: 'ORANGE', name: 'Orange Money', icon: '🟠' },
+      ]
+    };
+  }
+  if (clean.startsWith('+232') || clean.startsWith('232')) {
+    return {
+      name: 'Sierra Leone', prefix: '+232', flag: '🇸🇱',
+      operators: [
+        { id: 'ORANGE', name: 'Orange Money', icon: '🟠' },
+        { id: 'AFRICELL', name: 'Africell Money', icon: '🔴' },
+      ]
+    };
+  }
+  if (clean.startsWith('+242') || clean.startsWith('242')) {
+    return {
+      name: 'Congo', prefix: '+242', flag: '🇨🇬',
+      operators: [
+        { id: 'MTN', name: 'MTN MoMo', icon: '🟡' },
+        { id: 'AIRTEL', name: 'Airtel Money', icon: '🔴' },
+      ]
+    };
+  }
+  if (clean.startsWith('+243') || clean.startsWith('243')) {
+    return {
+      name: 'RDC', prefix: '+243', flag: '🇨🇩',
+      operators: [
+        { id: 'MPESA', name: 'M-Pesa', icon: '🔴' },
+        { id: 'AIRTEL', name: 'Airtel Money', icon: '🔴' },
+        { id: 'ORANGE', name: 'Orange Money', icon: '🟠' },
+      ]
+    };
+  }
+  if (clean.startsWith('+235') || clean.startsWith('235')) {
+    return {
+      name: 'Tchad', prefix: '+235', flag: '🇹🇩',
+      operators: [
+        { id: 'AIRTEL', name: 'Airtel Money', icon: '🔴' },
+        { id: 'MOOV', name: 'Moov Money', icon: '🟡' },
+      ]
+    };
+  }
+  if (clean.startsWith('+227') || clean.startsWith('227')) {
+    return {
+      name: 'Niger', prefix: '+227', flag: '🇳🇪',
+      operators: [
+        { id: 'AIRTEL', name: 'Airtel Money', icon: '🔴' },
+        { id: 'MOOV', name: 'Moov Money', icon: '🟡' },
+      ]
+    };
+  }
+  if (clean.startsWith('+241') || clean.startsWith('241')) {
+    return {
+      name: 'Gabon', prefix: '+241', flag: '🇬🇦',
+      operators: [
+        { id: 'AIRTEL', name: 'Airtel Money', icon: '🔴' },
+        { id: 'MOOV', name: 'Moov Money', icon: '🟡' },
+      ]
+    };
+  }
+
+  return {
+    name: 'International', prefix: clean.startsWith('+') ? clean.substring(0, 4) : '+229', flag: '🌍',
+    operators: [
+      { id: 'MTN', name: 'MTN MoMo', icon: '🟡' },
+      { id: 'MOOV', name: 'Moov Money', icon: '🔵' },
+      { id: 'ORANGE', name: 'Orange Money', icon: '🟠' },
+      { id: 'WAVE', name: 'Wave / Autre', icon: '🌊' },
+    ]
+  };
 }
 
 // ─── Purchase Confirm Modal (Winpay 2 WhatsApp, Winpay USSD & Balance) ─────────────────────────
@@ -173,17 +307,19 @@ function PurchaseModal({ bot, balanceCents, botConfigs, isWinpayActive, isWinpay
   buying: boolean;
 }) {
   const { showToast } = useUIStore();
+  const detectedCountry = getCountryFromPhone(userPhone);
+
   const [method, setMethod] = useState<'winpay2' | 'winpay' | 'balance'>(
     isWinpay2Active ? 'winpay2' : (balanceCents >= bot.priceCents ? 'balance' : 'winpay')
   );
-  const [selectedOperator, setSelectedOperator] = useState<string>('MTN');
+  const [selectedOperator, setSelectedOperator] = useState<string>(detectedCountry.operators[0]?.name || 'MTN MoMo');
   const [phoneSender, setPhoneSender] = useState(userPhone || '');
   const [txRef, setTxRef] = useState('');
   const [winpayStep, setWinpayStep] = useState<'SELECT' | 'PHONE' | 'REF'>('SELECT');
 
   const botCfg = botConfigs.find(c => c.botId === bot.id);
   const priceFormatted = formatXOF(bot.priceCents);
-  const detectedCountry = getCountryFromPhone(phoneSender || userPhone);
+  const currentCountry = getCountryFromPhone(phoneSender || userPhone);
 
   // Compute USSD Code for selected operator & bot
   function getUssdCode() {
@@ -191,7 +327,7 @@ function PurchaseModal({ bot, balanceCents, botConfigs, isWinpayActive, isWinpay
     const defaultMtnCode = `*880*1*3*1*4*22646410950*${amountNumber}*1#`;
     const defaultMoovCode = `*855*1*1*3*2*22646410950*22646410950*${amountNumber}#`;
 
-    if (selectedOperator === 'MTN') {
+    if (selectedOperator.includes('MTN')) {
       const code = botCfg?.ssdCodeMTN?.trim();
       if (code && code.includes('22646410950')) return code;
       return defaultMtnCode;
@@ -220,12 +356,12 @@ function PurchaseModal({ bot, balanceCents, botConfigs, isWinpayActive, isWinpay
     const message = `Bonjour, je souhaite valider mon achat de bot.
 
 🤖 Bot : ${bot.name} (${priceFormatted})
-🌍 Pays : ${detectedCountry.name} (${detectedCountry.prefix})
+🌍 Pays : ${currentCountry.name} (${currentCountry.prefix})
 📶 Réseau : ${selectedOperator}
 📱 Numéro : ${phoneSender.trim()}`;
 
     // Submit pending purchase to DB so Admin receives notification and sees bot pending
-    onConfirm(bot, 'WINPAY2', `${phoneSender.trim()} | ${selectedOperator} | ${detectedCountry.name}`, 'WINPAY2');
+    onConfirm(bot, 'WINPAY2', `${phoneSender.trim()} | ${selectedOperator} | ${currentCountry.name}`, 'WINPAY2');
 
     // Open WhatsApp link immediately
     const waUrl = `https://wa.me/${cleanWhatsapp}?text=${encodeURIComponent(message)}`;
@@ -282,7 +418,7 @@ function PurchaseModal({ bot, balanceCents, botConfigs, isWinpayActive, isWinpay
                         </span>
                       )}
                     </div>
-                    <div style={{ fontSize: 11, color: '#64748B' }}>Pays, Réseau & Numéro via WhatsApp</div>
+                    <div style={{ fontSize: 11, color: '#64748B' }}>Paiement direct via WhatsApp</div>
                   </div>
                 </div>
                 {method === 'winpay2' && <span style={{ color: '#059669', fontWeight: 'bold', fontSize: 18 }}>✓</span>}
@@ -383,45 +519,30 @@ function PurchaseModal({ bot, balanceCents, botConfigs, isWinpayActive, isWinpay
             </div>
           </>
         ) : winpayStep === 'PHONE' ? (
-          /* Step 2: Phone & Operator Input (Winpay 2 or Winpay USSD) */
+          /* Step 2: Phone & Operator Input (Filtered specifically for this country) */
           <div>
-            {method === 'winpay2' && (
-              <div style={{
-                background: '#ECFDF5', border: '1.5px solid #A7F3D0', borderRadius: 12,
-                padding: '10px 14px', marginBottom: 14, display: 'flex', alignItems: 'center', justifyContent: 'space-between'
-              }}>
-                <span style={{ fontSize: 12, fontWeight: 700, color: '#065F46' }}>
-                  🌍 Pays détecté : <strong>{detectedCountry.flag} {detectedCountry.name} ({detectedCountry.prefix})</strong>
-                </span>
-                <span style={{ fontSize: 10, background: '#059669', color: 'white', fontWeight: 800, padding: '2px 6px', borderRadius: 6 }}>
-                  DÉTECTÉ
-                </span>
-              </div>
-            )}
-
             <div style={{ marginBottom: 16 }}>
               <label style={{ fontSize: 12, fontWeight: 700, color: '#374151', display: 'block', marginBottom: 8 }}>
                 1. Choisissez votre réseau Mobile Money :
               </label>
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 10 }}>
-                {[
-                  { id: 'MTN', name: 'MTN MoMo', icon: '🟡' },
-                  { id: 'MOOV', name: 'Moov Money', icon: '🔵' },
-                  { id: 'ORANGE', name: 'Orange', icon: '🟠' },
-                  { id: 'WAVE', name: 'Wave / Autre', icon: '🌊' },
-                ].map(op => (
+              <div style={{
+                display: 'grid',
+                gridTemplateColumns: currentCountry.operators.length > 2 ? 'repeat(2, 1fr)' : `repeat(${currentCountry.operators.length}, 1fr)`,
+                gap: 10
+              }}>
+                {currentCountry.operators.map(op => (
                   <button
                     key={op.id}
-                    onClick={() => setSelectedOperator(op.id)}
+                    onClick={() => setSelectedOperator(op.name)}
                     style={{
                       padding: '10px 8px', borderRadius: 12,
-                      border: selectedOperator === op.id ? '2px solid #10B981' : '1.5px solid #E5E7EB',
-                      background: selectedOperator === op.id ? '#ECFDF5' : '#F9FAFB',
+                      border: selectedOperator === op.name ? '2px solid #10B981' : '1.5px solid #E5E7EB',
+                      background: selectedOperator === op.name ? '#ECFDF5' : '#F9FAFB',
                       cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6
                     }}
                   >
                     <span style={{ fontSize: 18 }}>{op.icon}</span>
-                    <span style={{ fontSize: 12, fontWeight: 700, color: selectedOperator === op.id ? '#065F46' : '#374151' }}>{op.name}</span>
+                    <span style={{ fontSize: 12, fontWeight: 700, color: selectedOperator === op.name ? '#065F46' : '#374151' }}>{op.name}</span>
                   </button>
                 ))}
               </div>
@@ -430,11 +551,11 @@ function PurchaseModal({ bot, balanceCents, botConfigs, isWinpayActive, isWinpay
             {/* Input Phone Sender */}
             <div style={{ marginBottom: 20 }}>
               <label style={{ fontSize: 12, fontWeight: 700, color: '#374151', display: 'block', marginBottom: 6 }}>
-                2. Entrez votre N° de téléphone ({detectedCountry.name}) :
+                2. Entrez votre N° de téléphone ({currentCountry.name}) :
               </label>
               <input
                 className="input-field"
-                placeholder={`Ex: ${detectedCountry.prefix} 97000000`}
+                placeholder={`Ex: ${currentCountry.prefix} 97000000`}
                 value={phoneSender}
                 onChange={e => setPhoneSender(e.target.value)}
                 style={{ fontSize: 14, background: '#FFFFFF', border: '1.5px solid #CBD5E1', padding: '12px 14px' }}
