@@ -62,6 +62,9 @@ export default function AdminPage() {
 
   const [search, setSearch] = useState('');
   const [withdrawalSearch, setWithdrawalSearch] = useState('');
+  const [withdrawalStatusFilter, setWithdrawalStatusFilter] = useState<'PENDING' | 'COMPLETED' | 'FAILED' | 'ALL'>('PENDING');
+  const [withdrawalEligibilityFilter, setWithdrawalEligibilityFilter] = useState<'ALL' | 'ELIGIBLE' | 'INELIGIBLE'>('ALL');
+
   const [loading, setLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' | 'info' } | null>(null);
@@ -918,12 +921,25 @@ export default function AdminPage() {
   });
 
   const filteredWithdrawals = pendingWithdrawals.filter(w => {
+    // Status filter
+    if (withdrawalStatusFilter !== 'ALL' && w.status !== withdrawalStatusFilter) {
+      return false;
+    }
+    // Eligibility filter
+    if (withdrawalEligibilityFilter === 'ELIGIBLE' && !w.isEligible) {
+      return false;
+    }
+    if (withdrawalEligibilityFilter === 'INELIGIBLE' && w.isEligible) {
+      return false;
+    }
+    // Search filter
     const term = withdrawalSearch.toLowerCase();
     const userName = (w.userName || '').toLowerCase();
     const userPhone = (w.userPhone || '').toLowerCase();
     return userName.includes(term) || userPhone.includes(term);
   });
 
+  const pendingWithdrawalsCount = pendingWithdrawals.filter(w => w.status === 'PENDING').length;
   const pendingPurchasesOnly = pendingPurchases.filter(p => p.status === 'PENDING');
   const winpayPendingCount = allPurchases.filter(p => p.status === 'PENDING').length || pendingPurchasesOnly.length;
 
@@ -931,7 +947,7 @@ export default function AdminPage() {
     { key: 'dashboard', label: 'Tableau de bord', icon: TrendingUp },
     { key: 'users', label: 'Utilisateurs', icon: Users },
     { key: 'winpay', label: 'Achats Winpay', icon: CreditCard },
-    { key: 'withdrawals', label: 'Retraits en attente', icon: CreditCard },
+    { key: 'withdrawals', label: `Retraits (${pendingWithdrawalsCount})`, icon: CreditCard },
     { key: 'bots', label: 'Configuration Bots/SSD', icon: Settings },
     { key: 'announcements', label: 'Annonces Popups', icon: Megaphone },
     { key: 'chat', label: 'Support Client', icon: MessageCircle },
@@ -1741,238 +1757,329 @@ export default function AdminPage() {
                 </div>
               )}
 
-              {/* ── Pending Withdrawals Approval ── */}
-              {activeTab === 'withdrawals' && (
-                <div>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: 12, marginBottom: 20 }}>
-                    <div>
-                      <h1 style={{ fontSize: 20, fontWeight: 800, margin: '0 0 4px', fontFamily: 'Space Grotesk, sans-serif', color: '#111827' }}>
-                        Demandes de retraits
-                      </h1>
-                      <p style={{ color: '#9CA3AF', fontSize: 13, margin: 0 }}>
-                        Vérifiez le numéro bénéficiaire Mobile Money et validez ou rejetez le retrait.
-                      </p>
+              {/* ── Pending Withdrawals & History Approval ── */}
+              {activeTab === 'withdrawals' && (() => {
+                const pendingCount = pendingWithdrawals.filter(w => w.status === 'PENDING').length;
+                const approvedCount = pendingWithdrawals.filter(w => w.status === 'COMPLETED').length;
+                const rejectedCount = pendingWithdrawals.filter(w => w.status === 'FAILED').length;
+                const totalWithdrawalsCount = pendingWithdrawals.length;
+
+                const eligiblePendingCount = pendingWithdrawals.filter(w => w.status === 'PENDING' && w.isEligible).length;
+                const ineligiblePendingCount = pendingWithdrawals.filter(w => w.status === 'PENDING' && !w.isEligible).length;
+
+                return (
+                  <div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: 12, marginBottom: 20 }}>
+                      <div>
+                        <h1 style={{ fontSize: 20, fontWeight: 800, margin: '0 0 4px', fontFamily: 'Space Grotesk, sans-serif', color: '#111827' }}>
+                          Demandes & Historique des retraits
+                        </h1>
+                        <p style={{ color: '#6B7280', fontSize: 13, margin: 0 }}>
+                          Traitez les demandes en attente ou filtrez pour consulter l'historique des retraits validés et rejetés.
+                        </p>
+                      </div>
+
+                      {ineligiblePendingCount > 0 && (
+                        <button
+                          onClick={handleRejectIneligibleWithdrawals}
+                          disabled={actionLoading === 'reject_ineligible'}
+                          style={{
+                            background: 'linear-gradient(135deg, #DC2626, #B91C1C)',
+                            color: 'white', border: 'none', borderRadius: 12,
+                            padding: '10px 18px', fontSize: 13, fontWeight: 800,
+                            cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 8,
+                            boxShadow: '0 4px 14px rgba(220, 38, 38, 0.3)', flexShrink: 0
+                          }}
+                        >
+                          {actionLoading === 'reject_ineligible'
+                            ? <Loader2 size={16} style={{ animation: 'spin 0.8s linear infinite' }} />
+                            : <X size={16} />}
+                          ⛔ Rejeter les {ineligiblePendingCount} non éligibles en bloc
+                        </button>
+                      )}
                     </div>
 
-                    {pendingWithdrawals.filter(w => w.status === 'PENDING' && !w.isEligible).length > 0 && (
-                      <button
-                        onClick={handleRejectIneligibleWithdrawals}
-                        disabled={actionLoading === 'reject_ineligible'}
-                        style={{
-                          background: 'linear-gradient(135deg, #DC2626, #B91C1C)',
-                          color: 'white', border: 'none', borderRadius: 12,
-                          padding: '10px 18px', fontSize: 13, fontWeight: 800,
-                          cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 8,
-                          boxShadow: '0 4px 14px rgba(220, 38, 38, 0.3)', flexShrink: 0
-                        }}
-                      >
-                        {actionLoading === 'reject_ineligible'
-                          ? <Loader2 size={16} style={{ animation: 'spin 0.8s linear infinite' }} />
-                          : <X size={16} />}
-                        ⛔ Rejeter les {pendingWithdrawals.filter(w => w.status === 'PENDING' && !w.isEligible).length} non éligibles en bloc
-                      </button>
+                    {/* Onglets de Filtrage par Statut (En attente, Approuvés, Rejetés, Tous) */}
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginBottom: 16 }}>
+                      {[
+                        { id: 'PENDING', label: '⏳ En attente', count: pendingCount, color: '#D97706', bg: '#FFFBEB' },
+                        { id: 'COMPLETED', label: '✅ Approuvés', count: approvedCount, color: '#15803D', bg: '#F0FDF4' },
+                        { id: 'FAILED', label: '⛔ Rejetés', count: rejectedCount, color: '#B91C1C', bg: '#FEF2F2' },
+                        { id: 'ALL', label: '📋 Tous les retraits', count: totalWithdrawalsCount, color: '#1D4ED8', bg: '#EFF6FF' },
+                      ].map(tab => {
+                        const isActive = withdrawalStatusFilter === tab.id;
+                        return (
+                          <button
+                            key={tab.id}
+                            onClick={() => {
+                              setWithdrawalStatusFilter(tab.id as any);
+                              setWithdrawalEligibilityFilter('ALL');
+                            }}
+                            style={{
+                              display: 'flex', alignItems: 'center', gap: 8,
+                              padding: '8px 16px', borderRadius: 12, fontSize: 13, fontWeight: 700,
+                              border: isActive ? `2px solid ${tab.color}` : '1.5px solid #E5E7EB',
+                              background: isActive ? tab.bg : 'white',
+                              color: isActive ? tab.color : '#374151',
+                              cursor: 'pointer', transition: 'all 0.15s ease',
+                              boxShadow: isActive ? '0 2px 8px rgba(0,0,0,0.05)' : 'none',
+                            }}
+                          >
+                            <span>{tab.label}</span>
+                            <span style={{
+                              background: isActive ? tab.color : '#E5E7EB',
+                              color: isActive ? 'white' : '#6B7280',
+                              padding: '2px 8px', borderRadius: 99, fontSize: 11, fontWeight: 800,
+                            }}>
+                              {tab.count}
+                            </span>
+                          </button>
+                        );
+                      })}
+                    </div>
+
+                    {/* Sous-filtres par éligibilité (parrainage) quand on consulte les retraits en attente ou tous */}
+                    {(withdrawalStatusFilter === 'PENDING' || withdrawalStatusFilter === 'ALL') && (
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 16, flexWrap: 'wrap' }}>
+                        <span style={{ fontSize: 12, fontWeight: 700, color: '#6B7280' }}>Éligibilité :</span>
+                        {[
+                          { id: 'ALL', label: 'Tous', count: withdrawalStatusFilter === 'PENDING' ? pendingCount : totalWithdrawalsCount },
+                          { id: 'ELIGIBLE', label: '✅ Éligibles (Parrain actif)', count: eligiblePendingCount },
+                          { id: 'INELIGIBLE', label: '⛔ Non éligibles (Sans parrain)', count: ineligiblePendingCount },
+                        ].map(sub => {
+                          const isActive = withdrawalEligibilityFilter === sub.id;
+                          return (
+                            <button
+                              key={sub.id}
+                              onClick={() => setWithdrawalEligibilityFilter(sub.id as any)}
+                              style={{
+                                padding: '5px 12px', borderRadius: 8, fontSize: 12, fontWeight: 700,
+                                border: isActive ? '1.5px solid #1A56DB' : '1px solid #D1D5DB',
+                                background: isActive ? '#EFF6FF' : 'white',
+                                color: isActive ? '#1A56DB' : '#4B5563',
+                                cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6,
+                              }}
+                            >
+                              {sub.label}
+                              <span style={{ fontSize: 11, opacity: 0.8 }}>({sub.count})</span>
+                            </button>
+                          );
+                        })}
+                      </div>
                     )}
-                  </div>
 
-                  {/* Synthèse des retraits en attente */}
-                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12, marginBottom: 20 }}>
-                    <div style={{ background: '#FFFBEB', border: '1.5px solid #FCD34D', borderRadius: 14, padding: '14px 18px', flex: 1, minWidth: 200 }}>
-                      <div style={{ fontSize: 11, fontWeight: 700, color: '#B45309', textTransform: 'uppercase', letterSpacing: 0.5 }}>Total En Attente</div>
-                      <div style={{ fontSize: 20, fontWeight: 800, color: '#92400E', fontFamily: 'Space Grotesk, sans-serif', marginTop: 2 }}>
-                        {formatXOF(stats?.pendingWithdrawalsTotalCents || 0)}
-                      </div>
-                      <div style={{ fontSize: 12, color: '#B45309', marginTop: 4, fontWeight: 600 }}>
-                        {pendingWithdrawals.filter(w => w.status === 'PENDING').length} demande(s) au total
-                      </div>
-                    </div>
+                    {/* Synthèse rapide pour l'onglet En attente */}
+                    {withdrawalStatusFilter === 'PENDING' && (
+                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12, marginBottom: 20 }}>
+                        <div style={{ background: '#FFFBEB', border: '1.5px solid #FCD34D', borderRadius: 14, padding: '14px 18px', flex: 1, minWidth: 200 }}>
+                          <div style={{ fontSize: 11, fontWeight: 700, color: '#B45309', textTransform: 'uppercase', letterSpacing: 0.5 }}>Total En Attente</div>
+                          <div style={{ fontSize: 20, fontWeight: 800, color: '#92400E', fontFamily: 'Space Grotesk, sans-serif', marginTop: 2 }}>
+                            {formatXOF(stats?.pendingWithdrawalsTotalCents || 0)}
+                          </div>
+                          <div style={{ fontSize: 12, color: '#B45309', marginTop: 4, fontWeight: 600 }}>
+                            {pendingCount} demande(s) au total
+                          </div>
+                        </div>
 
-                    <div style={{ background: '#F0FDF4', border: '1.5px solid #86EFAC', borderRadius: 14, padding: '14px 18px', flex: 1, minWidth: 200 }}>
-                      <div style={{ fontSize: 11, fontWeight: 700, color: '#15803D', textTransform: 'uppercase', letterSpacing: 0.5 }}>✅ Retraits Éligibles</div>
-                      <div style={{ fontSize: 20, fontWeight: 800, color: '#166534', fontFamily: 'Space Grotesk, sans-serif', marginTop: 2 }}>
-                        {formatXOF(pendingWithdrawals.filter(w => w.status === 'PENDING' && w.isEligible).reduce((sum, w) => sum + Math.abs(w.amountCents), 0))}
-                      </div>
-                      <div style={{ fontSize: 12, color: '#15803D', marginTop: 4, fontWeight: 600 }}>
-                        {pendingWithdrawals.filter(w => w.status === 'PENDING' && w.isEligible).length} demande(s) (Parrain actif)
-                      </div>
-                    </div>
+                        <div style={{ background: '#F0FDF4', border: '1.5px solid #86EFAC', borderRadius: 14, padding: '14px 18px', flex: 1, minWidth: 200 }}>
+                          <div style={{ fontSize: 11, fontWeight: 700, color: '#15803D', textTransform: 'uppercase', letterSpacing: 0.5 }}>✅ Retraits Éligibles</div>
+                          <div style={{ fontSize: 20, fontWeight: 800, color: '#166534', fontFamily: 'Space Grotesk, sans-serif', marginTop: 2 }}>
+                            {formatXOF(pendingWithdrawals.filter(w => w.status === 'PENDING' && w.isEligible).reduce((sum, w) => sum + Math.abs(w.amountCents), 0))}
+                          </div>
+                          <div style={{ fontSize: 12, color: '#15803D', marginTop: 4, fontWeight: 600 }}>
+                            {eligiblePendingCount} demande(s) (Parrain actif)
+                          </div>
+                        </div>
 
-                    <div style={{ background: '#FEF2F2', border: '1.5px solid #FCA5A5', borderRadius: 14, padding: '14px 18px', flex: 1, minWidth: 200 }}>
-                      <div style={{ fontSize: 11, fontWeight: 700, color: '#B91C1C', textTransform: 'uppercase', letterSpacing: 0.5 }}>⛔ Retraits Non Éligibles</div>
-                      <div style={{ fontSize: 20, fontWeight: 800, color: '#991B1B', fontFamily: 'Space Grotesk, sans-serif', marginTop: 2 }}>
-                        {formatXOF(pendingWithdrawals.filter(w => w.status === 'PENDING' && !w.isEligible).reduce((sum, w) => sum + Math.abs(w.amountCents), 0))}
+                        <div style={{ background: '#FEF2F2', border: '1.5px solid #FCA5A5', borderRadius: 14, padding: '14px 18px', flex: 1, minWidth: 200 }}>
+                          <div style={{ fontSize: 11, fontWeight: 700, color: '#B91C1C', textTransform: 'uppercase', letterSpacing: 0.5 }}>⛔ Retraits Non Éligibles</div>
+                          <div style={{ fontSize: 20, fontWeight: 800, color: '#991B1B', fontFamily: 'Space Grotesk, sans-serif', marginTop: 2 }}>
+                            {formatXOF(pendingWithdrawals.filter(w => w.status === 'PENDING' && !w.isEligible).reduce((sum, w) => sum + Math.abs(w.amountCents), 0))}
+                          </div>
+                          <div style={{ fontSize: 12, color: '#B91C1C', marginTop: 4, fontWeight: 600 }}>
+                            {ineligiblePendingCount} demande(s) (Sans parrainage)
+                          </div>
+                        </div>
                       </div>
-                      <div style={{ fontSize: 12, color: '#B91C1C', marginTop: 4, fontWeight: 600 }}>
-                        {pendingWithdrawals.filter(w => w.status === 'PENDING' && !w.isEligible).length} demande(s) (Sans parrainage)
+                    )}
+
+                    {/* Search Bar for Withdrawals */}
+                    {pendingWithdrawals.length > 0 && (
+                      <div style={{ position: 'relative', marginBottom: 16 }}>
+                        <Search size={16} style={{ position: 'absolute', left: 14, top: '50%', transform: 'translateY(-50%)', color: '#9CA3AF' }} />
+                        <input
+                          className="input-field"
+                          placeholder="Rechercher par nom d'utilisateur ou numéro de téléphone..."
+                          value={withdrawalSearch}
+                          onChange={e => setWithdrawalSearch(e.target.value)}
+                          style={{ paddingLeft: 40 }}
+                        />
                       </div>
-                    </div>
-                  </div>
+                    )}
 
-                  {/* Search Bar for Pending Withdrawals */}
-                  {pendingWithdrawals.length > 0 && (
-                    <div style={{ position: 'relative', marginBottom: 16 }}>
-                      <Search size={16} style={{ position: 'absolute', left: 14, top: '50%', transform: 'translateY(-50%)', color: '#9CA3AF' }} />
-                      <input
-                        className="input-field"
-                        placeholder="Rechercher par nom d'utilisateur ou numéro de téléphone..."
-                        value={withdrawalSearch}
-                        onChange={e => setWithdrawalSearch(e.target.value)}
-                        style={{ paddingLeft: 40 }}
-                      />
-                    </div>
-                  )}
-
-                  {pendingWithdrawals.length === 0 ? (
-                    <div style={{
-                      background: 'white', borderRadius: 16, border: '1.5px solid #E5E7EB',
-                      padding: '40px 20px', textAlign: 'center',
-                    }}>
-                      <span style={{ fontSize: 32 }}>💤</span>
-                      <h3 style={{ fontSize: 16, fontWeight: 700, color: '#374151', margin: '8px 0 2px' }}>Aucun retrait en attente</h3>
-                      <p style={{ fontSize: 13, color: '#9CA3AF', margin: 0 }}>Toutes les demandes de retrait ont été traitées.</p>
-                    </div>
-                  ) : filteredWithdrawals.length === 0 ? (
-                    <div style={{
-                      background: 'white', borderRadius: 16, border: '1.5px solid #E5E7EB',
-                      padding: '40px 20px', textAlign: 'center',
-                    }}>
-                      <span style={{ fontSize: 32 }}>🔍</span>
-                      <h3 style={{ fontSize: 16, fontWeight: 700, color: '#374151', margin: '8px 0 2px' }}>Aucun résultat trouvé</h3>
-                      <p style={{ fontSize: 13, color: '#9CA3AF', margin: 0 }}>Aucun retrait ne correspond à votre recherche "{withdrawalSearch}".</p>
-                    </div>
-                  ) : (
-                    <div className="table-container" style={{ background: 'white', borderRadius: 16, border: '1.5px solid #E5E7EB' }}>
-                      <table style={{ width: '100%', minWidth: 700, borderCollapse: 'collapse' }}>
-                        <thead>
-                          <tr style={{ background: '#F9FAFB', borderBottom: '1px solid #E5E7EB' }}>
-                            {['Utilisateur', 'Éligibilité', 'Description', 'Montant', 'Date de demande', 'Actions'].map(h => (
-                              <th key={h} style={{ padding: '12px 16px', textAlign: 'left', fontSize: 12, fontWeight: 700, color: '#6B7280' }}>
-                                {h}
-                              </th>
-                            ))}
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {filteredWithdrawals.map((w, i) => (
-                            <tr key={w.id} style={{ borderBottom: i < filteredWithdrawals.length - 1 ? '1px solid #F3F4F6' : 'none' }}>
-                              <td style={{ padding: '12px 16px', fontSize: 13, color: '#111827' }}>
-                                <div style={{ fontWeight: 600 }}>{w.userName || '—'}</div>
-                                <div style={{ fontSize: 12, color: '#6B7280' }}>{w.userPhone}</div>
-                              </td>
-                              {/* ── Badge éligibilité parrainage & Retraits antérieurs ── */}
-                              <td style={{ padding: '12px 16px' }}>
-                                <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-                                  {w.isEligible ? (
-                                    <>
+                    {pendingWithdrawals.length === 0 ? (
+                      <div style={{
+                        background: 'white', borderRadius: 16, border: '1.5px solid #E5E7EB',
+                        padding: '40px 20px', textAlign: 'center',
+                      }}>
+                        <span style={{ fontSize: 32 }}>💤</span>
+                        <h3 style={{ fontSize: 16, fontWeight: 700, color: '#374151', margin: '8px 0 2px' }}>Aucun retrait enregistré</h3>
+                        <p style={{ fontSize: 13, color: '#9CA3AF', margin: 0 }}>Aucune demande de retrait n'a été soumise pour le moment.</p>
+                      </div>
+                    ) : filteredWithdrawals.length === 0 ? (
+                      <div style={{
+                        background: 'white', borderRadius: 16, border: '1.5px solid #E5E7EB',
+                        padding: '40px 20px', textAlign: 'center',
+                      }}>
+                        <span style={{ fontSize: 32 }}>🔍</span>
+                        <h3 style={{ fontSize: 16, fontWeight: 700, color: '#374151', margin: '8px 0 2px' }}>Aucun résultat trouvé</h3>
+                        <p style={{ fontSize: 13, color: '#9CA3AF', margin: 0 }}>
+                          {withdrawalSearch
+                            ? `Aucun retrait ne correspond à votre recherche "${withdrawalSearch}".`
+                            : withdrawalStatusFilter === 'PENDING'
+                              ? 'Toutes les demandes de retrait ont été traitées.'
+                              : withdrawalStatusFilter === 'COMPLETED'
+                                ? 'Aucun retrait approuvé enregistré.'
+                                : withdrawalStatusFilter === 'FAILED'
+                                  ? 'Aucun retrait rejeté enregistré.'
+                                  : 'Aucun retrait ne correspond aux filtres sélectionnés.'}
+                        </p>
+                      </div>
+                    ) : (
+                      <div className="table-container" style={{ background: 'white', borderRadius: 16, border: '1.5px solid #E5E7EB' }}>
+                        <table style={{ width: '100%', minWidth: 700, borderCollapse: 'collapse' }}>
+                          <thead>
+                            <tr style={{ background: '#F9FAFB', borderBottom: '1px solid #E5E7EB' }}>
+                              {['Utilisateur', 'Éligibilité', 'Description', 'Montant', 'Date', 'Statut / Actions'].map(h => (
+                                <th key={h} style={{ padding: '12px 16px', textAlign: 'left', fontSize: 12, fontWeight: 700, color: '#6B7280' }}>
+                                  {h}
+                                </th>
+                              ))}
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {filteredWithdrawals.map((w, i) => (
+                              <tr key={w.id} style={{ borderBottom: i < filteredWithdrawals.length - 1 ? '1px solid #F3F4F6' : 'none' }}>
+                                <td style={{ padding: '12px 16px', fontSize: 13, color: '#111827' }}>
+                                  <div style={{ fontWeight: 600 }}>{w.userName || '—'}</div>
+                                  <div style={{ fontSize: 12, color: '#6B7280' }}>{w.userPhone}</div>
+                                </td>
+                                {/* ── Badge éligibilité parrainage & Retraits antérieurs ── */}
+                                <td style={{ padding: '12px 16px' }}>
+                                  <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                                    {w.isEligible ? (
+                                      <>
+                                        <span style={{
+                                          display: 'inline-flex', alignItems: 'center', gap: 4,
+                                          padding: '4px 10px', borderRadius: 99, fontSize: 11, fontWeight: 700,
+                                          background: '#DCFCE7', color: '#15803D', width: 'fit-content',
+                                        }}>
+                                          ✅ Parrain actif
+                                        </span>
+                                        <span style={{ fontSize: 11, color: '#6B7280' }}>
+                                          {formatXOF(w.commissionsCents)} gagné(s)
+                                        </span>
+                                      </>
+                                    ) : (
                                       <span style={{
                                         display: 'inline-flex', alignItems: 'center', gap: 4,
                                         padding: '4px 10px', borderRadius: 99, fontSize: 11, fontWeight: 700,
-                                        background: '#DCFCE7', color: '#15803D', width: 'fit-content',
+                                        background: '#FEE2E2', color: '#B91C1C', width: 'fit-content',
                                       }}>
-                                        ✅ Parrain actif
+                                        ⛔ Non éligible
                                       </span>
-                                      <span style={{ fontSize: 11, color: '#6B7280' }}>
-                                        {formatXOF(w.commissionsCents)} gagné(s)
-                                      </span>
-                                    </>
-                                  ) : (
-                                    <span style={{
-                                      display: 'inline-flex', alignItems: 'center', gap: 4,
-                                      padding: '4px 10px', borderRadius: 99, fontSize: 11, fontWeight: 700,
-                                      background: '#FEE2E2', color: '#B91C1C', width: 'fit-content',
-                                    }}>
-                                      ⛔ Non éligible
-                                    </span>
-                                  )}
+                                    )}
 
-                                  {/* Badges de retraits déjà effectués */}
-                                  <div style={{
-                                    fontSize: 11, fontWeight: 600,
-                                    color: (w.approvedWithdrawalsCount || 0) > 0 ? '#1D4ED8' : '#6B7280',
-                                    background: (w.approvedWithdrawalsCount || 0) > 0 ? '#EFF6FF' : '#F3F4F6',
-                                    padding: '2px 8px', borderRadius: 6, width: 'fit-content', marginTop: 2,
-                                    border: (w.approvedWithdrawalsCount || 0) > 0 ? '1px solid #BFDBFE' : '1px solid #E5E7EB',
-                                  }}>
-                                    {(w.approvedWithdrawalsCount || 0) > 0
-                                      ? `💳 ${w.approvedWithdrawalsCount} retrait(s) déjà effectué(s)`
-                                      : `🆕 1er retrait (0 effectué)`}
-                                  </div>
-                                </div>
-                              </td>
-                              <td style={{ padding: '12px 16px', fontSize: 13, color: '#374151' }}>
-                                {w.description}
-                              </td>
-                              <td style={{ padding: '12px 16px', fontSize: 13, fontWeight: 700, color: '#B91C1C' }}>
-                                {formatXOF(Math.abs(w.amountCents))}
-                              </td>
-                              <td style={{ padding: '12px 16px', fontSize: 12, color: '#9CA3AF' }}>
-                                {new Date(w.createdAt).toLocaleString('fr-BJ')}
-                              </td>
-                              <td style={{ padding: '12px 16px', display: 'flex', gap: 8, alignItems: 'center' }}>
-                                {w.status === 'PENDING' ? (
-                                  <>
-                                    <button
-                                      onClick={() => handleApproveWithdrawal(w.id)}
-                                      disabled={actionLoading === w.id}
-                                      style={{
-                                        background: '#EFF6FF', border: '1px solid #BFDBFE', borderRadius: 8,
-                                        padding: '6px 12px', fontSize: 12, fontWeight: 700,
-                                        cursor: 'pointer', color: '#1A56DB', display: 'flex', alignItems: 'center', gap: 4,
-                                      }}
-                                    >
-                                      {actionLoading === w.id ? <Loader2 size={12} style={{ animation: 'spin 0.8s linear' }} /> : <Check size={12} />}
-                                      Approuver
-                                    </button>
-                                    <button
-                                      onClick={() => handleRejectWithdrawal(w.id)}
-                                      disabled={actionLoading === w.id}
-                                      style={{
-                                        background: '#FFF1F2', border: '1px solid #FECACA', borderRadius: 8,
-                                        padding: '6px 12px', fontSize: 12, fontWeight: 700,
-                                        cursor: 'pointer', color: '#B91C1C', display: 'flex', alignItems: 'center', gap: 4,
-                                      }}
-                                    >
-                                      <X size={12} />
-                                      Rejeter
-                                    </button>
-                                  </>
-                                ) : (
-                                  <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                                    <span style={{
-                                      padding: '4px 10px', borderRadius: 99, fontSize: 11, fontWeight: 700,
-                                      background: w.status === 'COMPLETED' ? '#DCFCE7' : '#FEE2E2',
-                                      color: w.status === 'COMPLETED' ? '#15803D' : '#B91C1C',
+                                    {/* Badges de retraits déjà effectués */}
+                                    <div style={{
+                                      fontSize: 11, fontWeight: 600,
+                                      color: (w.approvedWithdrawalsCount || 0) > 0 ? '#1D4ED8' : '#6B7280',
+                                      background: (w.approvedWithdrawalsCount || 0) > 0 ? '#EFF6FF' : '#F3F4F6',
+                                      padding: '2px 8px', borderRadius: 6, width: 'fit-content', marginTop: 2,
+                                      border: (w.approvedWithdrawalsCount || 0) > 0 ? '1px solid #BFDBFE' : '1px solid #E5E7EB',
                                     }}>
-                                      {w.status === 'COMPLETED' ? 'Approuvé' : 'Rejeté'}
-                                    </span>
-                                    {w.status === 'FAILED' && (
+                                      {(w.approvedWithdrawalsCount || 0) > 0
+                                        ? `💳 ${w.approvedWithdrawalsCount} retrait(s) déjà effectué(s)`
+                                        : `🆕 1er retrait (0 effectué)`}
+                                    </div>
+                                  </div>
+                                </td>
+                                <td style={{ padding: '12px 16px', fontSize: 13, color: '#374151' }}>
+                                  {w.description}
+                                </td>
+                                <td style={{ padding: '12px 16px', fontSize: 13, fontWeight: 700, color: '#B91C1C' }}>
+                                  {formatXOF(Math.abs(w.amountCents))}
+                                </td>
+                                <td style={{ padding: '12px 16px', fontSize: 12, color: '#9CA3AF' }}>
+                                  {new Date(w.createdAt).toLocaleString('fr-BJ')}
+                                </td>
+                                <td style={{ padding: '12px 16px', display: 'flex', gap: 8, alignItems: 'center' }}>
+                                  {w.status === 'PENDING' ? (
+                                    <>
                                       <button
-                                        onClick={() => handleDeleteWithdrawal(w.id)}
-                                        disabled={actionLoading === 'del_' + w.id}
-                                        title="Supprimer de l'historique"
+                                        onClick={() => handleApproveWithdrawal(w.id)}
+                                        disabled={actionLoading === w.id}
                                         style={{
-                                          background: '#FEE2E2', border: 'none', borderRadius: 6,
-                                          padding: '4px 8px', fontSize: 11, fontWeight: 700,
-                                          cursor: 'pointer', color: '#DC2626',
-                                          display: 'flex', alignItems: 'center', gap: 3,
+                                          background: '#EFF6FF', border: '1px solid #BFDBFE', borderRadius: 8,
+                                          padding: '6px 12px', fontSize: 12, fontWeight: 700,
+                                          cursor: 'pointer', color: '#1A56DB', display: 'flex', alignItems: 'center', gap: 4,
                                         }}
                                       >
-                                        {actionLoading === 'del_' + w.id
-                                          ? <Loader2 size={10} style={{ animation: 'spin 0.8s linear infinite' }} />
-                                          : <Trash size={10} />}
-                                        Supprimer
+                                        {actionLoading === w.id ? <Loader2 size={12} style={{ animation: 'spin 0.8s linear' }} /> : <Check size={12} />}
+                                        Approuver
                                       </button>
-                                    )}
-                                  </div>
-                                )}
-                              </td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
-                    </div>
-                  )}
-                </div>
-              )}
+                                      <button
+                                        onClick={() => handleRejectWithdrawal(w.id)}
+                                        disabled={actionLoading === w.id}
+                                        style={{
+                                          background: '#FFF1F2', border: '1px solid #FECACA', borderRadius: 8,
+                                          padding: '6px 12px', fontSize: 12, fontWeight: 700,
+                                          cursor: 'pointer', color: '#B91C1C', display: 'flex', alignItems: 'center', gap: 4,
+                                        }}
+                                      >
+                                        <X size={12} />
+                                        Rejeter
+                                      </button>
+                                    </>
+                                  ) : (
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                                      <span style={{
+                                        padding: '4px 10px', borderRadius: 99, fontSize: 11, fontWeight: 700,
+                                        background: w.status === 'COMPLETED' ? '#DCFCE7' : '#FEE2E2',
+                                        color: w.status === 'COMPLETED' ? '#15803D' : '#B91C1C',
+                                      }}>
+                                        {w.status === 'COMPLETED' ? 'Approuvé' : 'Rejeté'}
+                                      </span>
+                                      {w.status === 'FAILED' && (
+                                        <button
+                                          onClick={() => handleDeleteWithdrawal(w.id)}
+                                          disabled={actionLoading === 'del_' + w.id}
+                                          title="Supprimer de l'historique"
+                                          style={{
+                                            background: '#FEE2E2', border: 'none', borderRadius: 6,
+                                            padding: '4px 8px', fontSize: 11, fontWeight: 700,
+                                            cursor: 'pointer', color: '#DC2626',
+                                            display: 'flex', alignItems: 'center', gap: 3,
+                                          }}
+                                        >
+                                          {actionLoading === 'del_' + w.id
+                                            ? <Loader2 size={10} style={{ animation: 'spin 0.8s linear infinite' }} />
+                                            : <Trash size={10} />}
+                                          Supprimer
+                                        </button>
+                                      )}
+                                    </div>
+                                  )}
+                                </td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    )}
+                  </div>
+                );
+              })()}
 
               {/* ── Bots Config & SSD (Winpay) ── */}
               {activeTab === 'bots' && (
