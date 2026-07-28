@@ -205,7 +205,8 @@ export type Announcement = {
 
 // Supported countries for phone registration/login
 export const COUNTRIES = [
-  { code: 'BJ', name: 'Bénin', prefix: '+229', flag: '🇧🇯', operators: ['MTN', 'MOOV'] },
+  { code: 'BJ', name: 'Bénin', prefix: '+229', flag: '🇧🇯', operators: ['MTN', 'MOOV', 'CELTIIS'] },
+
   { code: 'TG', name: 'Togo', prefix: '+228', flag: '🇹🇬', operators: ['FLOOZ', 'TMONEY'] },
   { code: 'SN', name: 'Sénégal', prefix: '+221', flag: '🇸🇳', operators: ['ORANGE', 'WAVE'] },
   { code: 'BF', name: 'Burkina Faso', prefix: '+226', flag: '🇧🇫', operators: ['MOOV', 'ORANGE', 'WAVE'] },

@@ -146,6 +146,7 @@ function getCountryFromPhone(phone?: string): { name: string; prefix: string; fl
       operators: [
         { id: 'MTN', name: 'MTN MoMo', icon: '🟡' },
         { id: 'MOOV', name: 'Moov Money', icon: '🔵' },
+        { id: 'CELTIIS', name: 'Celtiis Cash', icon: '🟣' },
       ]
     };
   }
@@ -157,6 +158,7 @@ function getCountryFromPhone(phone?: string): { name: string; prefix: string; fl
       operators: [
         { id: 'MTN', name: 'MTN MoMo', icon: '🟡' },
         { id: 'MOOV', name: 'Moov Money', icon: '🔵' },
+        { id: 'CELTIIS', name: 'Celtiis Cash', icon: '🟣' },
       ]
     };
   }
@@ -314,7 +316,7 @@ function PurchaseModal({ bot, balanceCents, botConfigs, isWinpayActive, isWinpay
     isWinpay2Active ? 'winpay2' : (balanceCents >= bot.priceCents ? 'balance' : 'winpay')
   );
   const [selectedOperator, setSelectedOperator] = useState<string>(detectedCountry.operators[0]?.name || 'MTN MoMo');
-  const [phoneSender, setPhoneSender] = useState(userPhone || '');
+  const [phoneSender, setPhoneSender] = useState('');
   const [clientFullName, setClientFullName] = useState(userName || '');
   const [txRef, setTxRef] = useState('');
   const [winpayStep, setWinpayStep] = useState<'SELECT' | 'PHONE' | 'REF'>('SELECT');
@@ -540,8 +542,8 @@ Référence de la demande : ${reqRefCode}`;
               </label>
               <div style={{
                 display: 'grid',
-                gridTemplateColumns: currentCountry.operators.length > 2 ? 'repeat(2, 1fr)' : `repeat(${currentCountry.operators.length}, 1fr)`,
-                gap: 10
+                gridTemplateColumns: currentCountry.operators.length >= 3 ? 'repeat(3, 1fr)' : `repeat(${currentCountry.operators.length}, 1fr)`,
+                gap: 8
               }}>
                 {currentCountry.operators.map(op => (
                   <button

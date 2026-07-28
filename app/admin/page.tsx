@@ -1534,7 +1534,7 @@ export default function AdminPage() {
                                       <div style={{ fontSize: 11, color: '#4B5563' }}>{formatXOF(p.pricePaidCents)}</div>
                                     </td>
                                     <td style={{ padding: '14px 16px', fontWeight: 700 }}>
-                                      {p.operator === 'WINPAY2' ? '📲 WINPAY 2 (WhatsApp)' : p.operator === 'MTN' ? '🟡 MTN MoMo' : p.operator === 'MOOV' ? '🔵 Moov Money' : p.operator === 'SENEPAY' ? '💳 Sene-Pay (API)' : p.operator}
+                                      {p.operator === 'WINPAY2' ? '📲 WINPAY 2 (WhatsApp)' : p.operator === 'MTN' ? '🟡 MTN MoMo' : p.operator === 'MOOV' ? '🔵 Moov Money' : (p.operator === 'CELTIIS' || p.operator?.includes('Celtiis')) ? '🟣 Celtiis Cash' : p.operator === 'SENEPAY' ? '💳 Sene-Pay (API)' : p.operator}
                                     </td>
                                     <td style={{ padding: '14px 16px', maxWidth: 350, wordBreak: 'break-word', whiteSpace: 'pre-wrap', fontFamily: 'monospace', fontSize: 13 }}>
                                       <div style={{
