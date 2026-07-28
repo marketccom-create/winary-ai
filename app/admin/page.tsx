@@ -61,6 +61,7 @@ export default function AdminPage() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   const [search, setSearch] = useState('');
+  const [withdrawalSearch, setWithdrawalSearch] = useState('');
   const [loading, setLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' | 'info' } | null>(null);
@@ -914,6 +915,13 @@ export default function AdminPage() {
     const term = search.toLowerCase();
     const fullName = `${u.firstName || ''} ${u.lastName || ''}`.toLowerCase();
     return u.phone?.includes(term) || u.referralCode?.toLowerCase().includes(term) || fullName.includes(term);
+  });
+
+  const filteredWithdrawals = pendingWithdrawals.filter(w => {
+    const term = withdrawalSearch.toLowerCase();
+    const userName = (w.userName || '').toLowerCase();
+    const userPhone = (w.userPhone || '').toLowerCase();
+    return userName.includes(term) || userPhone.includes(term);
   });
 
   const pendingPurchasesOnly = pendingPurchases.filter(p => p.status === 'PENDING');
@@ -1799,6 +1807,20 @@ export default function AdminPage() {
                     </div>
                   </div>
 
+                  {/* Search Bar for Pending Withdrawals */}
+                  {pendingWithdrawals.length > 0 && (
+                    <div style={{ position: 'relative', marginBottom: 16 }}>
+                      <Search size={16} style={{ position: 'absolute', left: 14, top: '50%', transform: 'translateY(-50%)', color: '#9CA3AF' }} />
+                      <input
+                        className="input-field"
+                        placeholder="Rechercher par nom d'utilisateur ou numéro de téléphone..."
+                        value={withdrawalSearch}
+                        onChange={e => setWithdrawalSearch(e.target.value)}
+                        style={{ paddingLeft: 40 }}
+                      />
+                    </div>
+                  )}
+
                   {pendingWithdrawals.length === 0 ? (
                     <div style={{
                       background: 'white', borderRadius: 16, border: '1.5px solid #E5E7EB',
@@ -1807,6 +1829,15 @@ export default function AdminPage() {
                       <span style={{ fontSize: 32 }}>💤</span>
                       <h3 style={{ fontSize: 16, fontWeight: 700, color: '#374151', margin: '8px 0 2px' }}>Aucun retrait en attente</h3>
                       <p style={{ fontSize: 13, color: '#9CA3AF', margin: 0 }}>Toutes les demandes de retrait ont été traitées.</p>
+                    </div>
+                  ) : filteredWithdrawals.length === 0 ? (
+                    <div style={{
+                      background: 'white', borderRadius: 16, border: '1.5px solid #E5E7EB',
+                      padding: '40px 20px', textAlign: 'center',
+                    }}>
+                      <span style={{ fontSize: 32 }}>🔍</span>
+                      <h3 style={{ fontSize: 16, fontWeight: 700, color: '#374151', margin: '8px 0 2px' }}>Aucun résultat trouvé</h3>
+                      <p style={{ fontSize: 13, color: '#9CA3AF', margin: 0 }}>Aucun retrait ne correspond à votre recherche "{withdrawalSearch}".</p>
                     </div>
                   ) : (
                     <div className="table-container" style={{ background: 'white', borderRadius: 16, border: '1.5px solid #E5E7EB' }}>
@@ -1821,8 +1852,8 @@ export default function AdminPage() {
                           </tr>
                         </thead>
                         <tbody>
-                          {pendingWithdrawals.map((w, i) => (
-                            <tr key={w.id} style={{ borderBottom: i < pendingWithdrawals.length - 1 ? '1px solid #F3F4F6' : 'none' }}>
+                          {filteredWithdrawals.map((w, i) => (
+                            <tr key={w.id} style={{ borderBottom: i < filteredWithdrawals.length - 1 ? '1px solid #F3F4F6' : 'none' }}>
                               <td style={{ padding: '12px 16px', fontSize: 13, color: '#111827' }}>
                                 <div style={{ fontWeight: 600 }}>{w.userName || '—'}</div>
                                 <div style={{ fontSize: 12, color: '#6B7280' }}>{w.userPhone}</div>
