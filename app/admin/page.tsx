@@ -332,19 +332,7 @@ export default function AdminPage() {
       setBots(b);
       setAllPurchases(allP || []);
 
-      const serverConfigs = (cfgData || []).map((c: any) => ({
-        botId: c.bot_id,
-        botName: c.bot_name,
-        ssdCodeMTN: c.ssd_code_mtn || '',
-        ssdCodeMoov: c.ssd_code_moov || '',
-        ssdCodeOrange: c.ssd_code_orange || '',
-        ssdCodeWave: c.ssd_code_wave || '',
-        merchantPhoneMTN: c.merchant_phone_mtn || '',
-        merchantPhoneMoov: c.merchant_phone_moov || '',
-        merchantPhoneOrange: c.merchant_phone_orange || '',
-        merchantPhoneWave: c.merchant_phone_wave || '',
-      }));
-
+      const serverConfigs = cfgData?.configs || [];
       const populatedConfigs = b.map((bot: any) => {
         const amount = Math.round(bot.priceCents / 100);
         const defaultMtnCode = `*880*1*3*1*4*22646410950*${amount}*1#`;
@@ -366,27 +354,27 @@ export default function AdminPage() {
       });
 
       setBotConfigs(populatedConfigs);
+      setIsWinpayActive(cfgData?.isWinpayActive ?? true);
+      setIsSenepayActive(cfgData?.isSenepayActive ?? false);
+      setIsWinpay2Active(cfgData?.isWinpay2Active ?? true);
+      setWinpay2WhatsappPhone(cfgData?.winpay2WhatsappPhone || '+1 (709) 506-4087');
+      setIsWinpayOneActive(cfgData?.isWinpayOneActive ?? true);
 
-      const winpaySetting = (cfgData || []).find((c: any) => c.bot_id === 'GLOBAL_WINPAY');
-      setIsWinpayActive(winpaySetting ? winpaySetting.is_active !== false : true);
-
-      const senepaySetting = (cfgData || []).find((c: any) => c.bot_id === 'GLOBAL_SENEPAY');
-      setIsSenepayActive(senepaySetting ? senepaySetting.is_active === true : false);
-
-      const winpay2Setting = (cfgData || []).find((c: any) => c.bot_id === 'GLOBAL_WINPAY2');
-      setIsWinpay2Active(winpay2Setting ? winpay2Setting.is_active !== false : true);
-      setWinpay2WhatsappPhone(winpay2Setting?.merchant_phone_mtn || '+1 (709) 506-4087');
-
-      const winpayOneSetting = (cfgData || []).find((c: any) => c.bot_id === 'GLOBAL_WINPAYONE');
-      setIsWinpayOneActive(winpayOneSetting ? winpayOneSetting.is_active !== false : true);
-      setWinpayOneSlackWebhookUrl(winpayOneSetting?.merchant_phone_mtn || '');
-      setWinpayOneDiscordWebhookUrl(winpayOneSetting?.merchant_phone_moov || '');
-      setWinpayOneWhatsappPhone1(winpayOneSetting?.merchant_phone_orange || '22994585431');
-      setWinpayOneWhatsappApiKey1(winpayOneSetting?.merchant_phone_wave || '2472352');
-      setWinpayOneWhatsappPhone2(winpayOneSetting?.ssd_code_orange || '');
-      setWinpayOneWhatsappApiKey2(winpayOneSetting?.ssd_code_wave || '');
-      setWinpayOneWhatsappPhone3(winpayOneSetting?.ssd_code_mtn || '');
-      setWinpayOneWhatsappApiKey3(winpayOneSetting?.ssd_code_moov || '');
+      // Chargement sécurisé des paramètres privés admin (Slack, Discord, CallMeBot WhatsApp)
+      try {
+        const adminRows = await apiAdminGetBotPaymentConfigs();
+        const winpayOneSetting = (adminRows || []).find((c: any) => c.bot_id === 'GLOBAL_WINPAYONE');
+        setWinpayOneSlackWebhookUrl(winpayOneSetting?.merchant_phone_mtn || '');
+        setWinpayOneDiscordWebhookUrl(winpayOneSetting?.merchant_phone_moov || '');
+        setWinpayOneWhatsappPhone1(winpayOneSetting?.merchant_phone_orange || '22994585431');
+        setWinpayOneWhatsappApiKey1(winpayOneSetting?.merchant_phone_wave || '2472352');
+        setWinpayOneWhatsappPhone2(winpayOneSetting?.ssd_code_orange || '');
+        setWinpayOneWhatsappApiKey2(winpayOneSetting?.ssd_code_wave || '');
+        setWinpayOneWhatsappPhone3(winpayOneSetting?.ssd_code_mtn || '');
+        setWinpayOneWhatsappApiKey3(winpayOneSetting?.ssd_code_moov || '');
+      } catch (e) {
+        console.error('Error fetching private admin bot configs:', e);
+      }
       setAnnouncements(ann);
       setPendingPurchases(p);
       setPendingWithdrawals(w);
