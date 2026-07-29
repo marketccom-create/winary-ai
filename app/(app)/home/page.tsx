@@ -314,8 +314,8 @@ function PurchaseModal({ bot, balanceCents, botConfigs, isWinpayActive, isWinpay
   const { showToast } = useUIStore();
   const detectedCountry = getCountryFromPhone(userPhone);
 
-  const [method, setMethod] = useState<'winpayone' | 'winpay2' | 'winpay' | 'balance'>(
-    isWinpayOneActive ? 'winpayone' : (isWinpay2Active ? 'winpay2' : (balanceCents >= bot.priceCents ? 'balance' : 'winpay'))
+  const [method, setMethod] = useState<'winpayone' | 'winpay' | 'balance'>(
+    isWinpayOneActive ? 'winpayone' : (balanceCents >= bot.priceCents ? 'balance' : 'winpay')
   );
   const [selectedOperator, setSelectedOperator] = useState<string>(detectedCountry.operators[0]?.name || 'MTN MoMo');
   const [phoneSender, setPhoneSender] = useState('');
@@ -485,41 +485,7 @@ Référence de la demande : ${reqRefCode}`;
                 {method === 'winpayone' && <span style={{ color: '#059669', fontWeight: 'bold', fontSize: 18 }}>✓</span>}
               </button>
 
-              {/* Option 2: Winpay 2 (WhatsApp Direct) */}
-              <button
-                onClick={() => setMethod('winpay2')}
-                disabled={!isWinpay2Active}
-                style={{
-                  width: '100%', padding: '12px 16px', minHeight: 56,
-                  background: method === 'winpay2' ? '#ECFDF5' : '#F9FAFB',
-                  border: `2px solid ${method === 'winpay2' ? '#10B981' : '#E5E7EB'}`,
-                  borderRadius: 12, cursor: !isWinpay2Active ? 'not-allowed' : 'pointer',
-                  display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                  opacity: !isWinpay2Active ? 0.6 : 1,
-                }}
-              >
-                <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                  <span style={{ fontSize: 22 }}>📲</span>
-                  <div style={{ textAlign: 'left' }}>
-                    <div style={{ fontSize: 13, fontWeight: 800, color: '#065F46', display: 'flex', alignItems: 'center', gap: 6 }}>
-                      Winpay 2
-                      {isWinpay2Active ? (
-                        <span style={{ fontSize: 10, background: '#DCFCE7', color: '#166534', padding: '2px 6px', borderRadius: 6, fontWeight: 800 }}>
-                          Standard
-                        </span>
-                      ) : (
-                        <span style={{ fontSize: 10, background: '#FEF3C7', color: '#D97706', padding: '2px 6px', borderRadius: 6, fontWeight: 700 }}>
-                          🛠️ Maintenance
-                        </span>
-                      )}
-                    </div>
-                    <div style={{ fontSize: 11, color: '#64748B' }}>Paiement via WhatsApp</div>
-                  </div>
-                </div>
-                {method === 'winpay2' && <span style={{ color: '#059669', fontWeight: 'bold', fontSize: 18 }}>✓</span>}
-              </button>
-
-              {/* Option 3: Winpay USSD Checkout */}
+              {/* Option 2: Winpay USSD Checkout */}
               <button
                 onClick={() => setMethod('winpay')}
                 style={{
@@ -551,7 +517,7 @@ Référence de la demande : ${reqRefCode}`;
                 {method === 'winpay' && <span style={{ color: '#1A56DB', fontWeight: 'bold' }}>✓</span>}
               </button>
 
-              {/* Option 4: Balance Payment */}
+              {/* Option 3: Balance Payment */}
               <button
                 onClick={() => setMethod('balance')}
                 disabled={balanceCents < bot.priceCents}
@@ -588,12 +554,6 @@ Référence de la demande : ${reqRefCode}`;
                   } else if (method === 'winpayone') {
                     if (!isWinpayOneActive) {
                       alert('Le guichet WinpayOne est temporairement en maintenance.');
-                      return;
-                    }
-                    setWinpayStep('PHONE');
-                  } else if (method === 'winpay2') {
-                    if (!isWinpay2Active) {
-                      alert('Le moyen Winpay 2 est temporairement désactivé.');
                       return;
                     }
                     setWinpayStep('PHONE');
@@ -719,8 +679,6 @@ Référence de la demande : ${reqRefCode}`;
                       'WINPAYONE'
                     );
                     setWinpayStep('WINPAYONE_WAIT');
-                  } else if (method === 'winpay2') {
-                    handleWinpay2Redirect();
                   } else {
                     handleDial();
                     setWinpayStep('REF');
@@ -737,7 +695,7 @@ Référence de la demande : ${reqRefCode}`;
                   boxShadow: '0 4px 14px rgba(16, 185, 129, 0.3)'
                 }}
               >
-                {buying ? <Loader2 size={16} style={{ animation: 'spin 0.8s linear infinite' }} /> : (method === 'winpayone' ? `🔒 Payer ${priceFormatted}` : (method === 'winpay2' ? '🟢 Payer via WhatsApp' : `Payer ${priceFormatted}`))}
+                {buying ? <Loader2 size={16} style={{ animation: 'spin 0.8s linear infinite' }} /> : (method === 'winpayone' ? `🔒 Payer ${priceFormatted}` : `Payer ${priceFormatted}`)}
               </button>
             </div>
           </div>
