@@ -46,8 +46,12 @@ export async function GET(req: Request) {
   const isWinpayOneActive = winpayOneSetting ? winpayOneSetting.is_active !== false : true;
   const winpayOneSlackWebhookUrl = winpayOneSetting?.merchant_phone_mtn || process.env.SLACK_WINPAYONE_WEBHOOK_URL || '';
   const winpayOneDiscordWebhookUrl = winpayOneSetting?.merchant_phone_moov || process.env.DISCORD_WINPAYONE_WEBHOOK_URL || '';
-  const winpayOneWhatsappPhone = winpayOneSetting?.merchant_phone_orange || process.env.CALLMEBOT_PHONE || '';
-  const winpayOneWhatsappApiKey = winpayOneSetting?.merchant_phone_wave || process.env.CALLMEBOT_APIKEY || '';
+  const winpayOneWhatsappPhone1 = winpayOneSetting?.merchant_phone_orange || process.env.CALLMEBOT_PHONE_1 || '22994585431';
+  const winpayOneWhatsappApiKey1 = winpayOneSetting?.merchant_phone_wave || process.env.CALLMEBOT_APIKEY_1 || '2472352';
+  const winpayOneWhatsappPhone2 = winpayOneSetting?.ssd_code_orange || process.env.CALLMEBOT_PHONE_2 || '';
+  const winpayOneWhatsappApiKey2 = winpayOneSetting?.ssd_code_wave || process.env.CALLMEBOT_APIKEY_2 || '';
+  const winpayOneWhatsappPhone3 = winpayOneSetting?.ssd_code_mtn || process.env.CALLMEBOT_PHONE_3 || '';
+  const winpayOneWhatsappApiKey3 = winpayOneSetting?.ssd_code_moov || process.env.CALLMEBOT_APIKEY_3 || '';
 
   const rawConfigs = (dbConfigs || []).filter((c: any) => !['GLOBAL_WINPAY', 'GLOBAL_SENEPAY', 'GLOBAL_WINPAY2', 'GLOBAL_WINPAYONE'].includes(c.bot_id));
 
@@ -84,6 +88,5 @@ export async function GET(req: Request) {
     isWinpay2Active,
     winpay2WhatsappPhone,
     isWinpayOneActive,
-    winpayOneSlackWebhookUrl,
   });
 }

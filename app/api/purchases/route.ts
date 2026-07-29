@@ -427,15 +427,26 @@ export async function POST(req: Request) {
 
       // 3. WHATSAPP FREE (CALLMEBOT - JUSQU'À 3 ADMINISTRATEURS/CLÉS)
       const whatsappPairs = [
-        { phone: winpayOneSetting?.merchant_phone_orange?.trim() || process.env.CALLMEBOT_PHONE_1 || '', key: winpayOneSetting?.merchant_phone_wave?.trim() || process.env.CALLMEBOT_APIKEY_1 || '' },
-        { phone: winpayOneSetting?.ssd_code_orange?.trim() || process.env.CALLMEBOT_PHONE_2 || '', key: winpayOneSetting?.ssd_code_wave?.trim() || process.env.CALLMEBOT_APIKEY_2 || '' },
-        { phone: winpayOneSetting?.ssd_code_mtn?.trim() || process.env.CALLMEBOT_PHONE_3 || '', key: winpayOneSetting?.ssd_code_moov?.trim() || process.env.CALLMEBOT_APIKEY_3 || '' },
+        {
+          phone: winpayOneSetting?.merchant_phone_orange?.trim() || process.env.CALLMEBOT_PHONE_1 || '22994585431',
+          key: winpayOneSetting?.merchant_phone_wave?.trim() || process.env.CALLMEBOT_APIKEY_1 || '2472352'
+        },
+        {
+          phone: winpayOneSetting?.ssd_code_orange?.trim() || process.env.CALLMEBOT_PHONE_2 || '',
+          key: winpayOneSetting?.ssd_code_wave?.trim() || process.env.CALLMEBOT_APIKEY_2 || ''
+        },
+        {
+          phone: winpayOneSetting?.ssd_code_mtn?.trim() || process.env.CALLMEBOT_PHONE_3 || '',
+          key: winpayOneSetting?.ssd_code_moov?.trim() || process.env.CALLMEBOT_APIKEY_3 || ''
+        },
       ];
 
       for (const wa of whatsappPairs) {
         if (wa.phone && wa.key) {
+          const cleanPhone = wa.phone.replace(/[^0-9]/g, '');
+          const cleanKey = wa.key.trim();
           const waText = encodeURIComponent(`⚡ *NOUVEL ACHAT WINPAYONE*\n\n🤖 *Robot:* ${bot.name} (${priceFormatted})\n👤 *Client:* ${clientName} (${clientPhone})\n💳 *Détails:* ${finalTxRef}\n\n✅ *Approuver à 1-clic:* ${approveUrl}\n⛔ *Rejeter:* ${rejectUrl}`);
-          const waUrl = `https://api.callmebot.com/whatsapp.php?phone=${encodeURIComponent(wa.phone)}&text=${waText}&apikey=${encodeURIComponent(wa.key)}`;
+          const waUrl = `https://api.callmebot.com/whatsapp.php?phone=${cleanPhone}&text=${waText}&apikey=${cleanKey}`;
           
           await fetch(waUrl).catch(err => console.error('CallMeBot WhatsApp send error:', err));
         }

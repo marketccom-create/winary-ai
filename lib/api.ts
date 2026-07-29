@@ -167,8 +167,13 @@ export async function apiGetBotPaymentConfigs(): Promise<{
     isWinpay2Active: isWinpay2Active ?? true,
     winpay2WhatsappPhone: winpay2WhatsappPhone || '+1 (709) 506-4087',
     isWinpayOneActive: isWinpayOneActive ?? true,
-    winpayOneSlackWebhookUrl: winpayOneSlackWebhookUrl || '',
+    winpayOneSlackWebhookUrl: '',
   };
+}
+
+export async function apiAdminGetBotPaymentConfigs() {
+  const rawRows = await apiFetch<any[]>('/api/admin/bots');
+  return rawRows || [];
 }
 
 // ─── Purchases ────────────────────────────────────────────────────────────────
