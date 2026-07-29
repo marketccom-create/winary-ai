@@ -404,11 +404,21 @@ export async function POST(req: Request) {
           ]
         };
 
-        fetch(slackWebhookUrl, {
+        const slackRes = await fetch(slackWebhookUrl, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(slackPayload),
-        }).catch(err => console.error('Slack Webhook send error:', err));
+        }).catch(err => {
+          console.error('Slack Webhook send network error:', err);
+          return null;
+        });
+
+        if (slackRes && !slackRes.ok) {
+          const resText = await slackRes.text().catch(() => '');
+          console.error('Slack Webhook rejected payload:', slackRes.status, resText);
+        }
+      } else {
+        console.warn('Slack Webhook URL is missing or invalid:', slackWebhookUrl);
       }
     } catch (e) {
       console.error('Error triggering Slack webhook:', e);

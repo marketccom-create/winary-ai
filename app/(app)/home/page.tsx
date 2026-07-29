@@ -444,27 +444,32 @@ Référence de la demande : ${reqRefCode}`;
         {winpayStep === 'SELECT' ? (
           <>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginBottom: 20 }}>
-              {/* Option 1: WinpayOne (Bêta Agrégateur de Paiement Sécurisé) */}
+              {/* Option 1: WinpayOne (Guichet Agrégateur de Paiement) */}
               <button
                 onClick={() => setMethod('winpayone')}
                 disabled={!isWinpayOneActive}
                 style={{
-                  width: '100%', padding: '12px 16px', minHeight: 56,
+                  width: '100%', padding: '14px 16px', minHeight: 60,
                   background: method === 'winpayone' ? '#ECFDF5' : '#F9FAFB',
                   border: `2px solid ${method === 'winpayone' ? '#10B981' : '#E5E7EB'}`,
-                  borderRadius: 12, cursor: !isWinpayOneActive ? 'not-allowed' : 'pointer',
+                  borderRadius: 14, cursor: !isWinpayOneActive ? 'not-allowed' : 'pointer',
                   display: 'flex', alignItems: 'center', justifyContent: 'space-between',
                   opacity: !isWinpayOneActive ? 0.6 : 1,
                 }}
               >
-                <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                  <span style={{ fontSize: 22 }}>⚡</span>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                  <div style={{
+                    width: 40, height: 40, borderRadius: 10, background: 'linear-gradient(135deg, #10B981, #047857)',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', fontSize: 20, fontWeight: 900
+                  }}>
+                    ⚡
+                  </div>
                   <div style={{ textAlign: 'left' }}>
-                    <div style={{ fontSize: 13, fontWeight: 800, color: '#065F46', display: 'flex', alignItems: 'center', gap: 6 }}>
+                    <div style={{ fontSize: 14, fontWeight: 800, color: '#065F46', display: 'flex', alignItems: 'center', gap: 6 }}>
                       WinpayOne
                       {isWinpayOneActive ? (
-                        <span style={{ fontSize: 10, background: '#DCFCE7', color: '#166534', padding: '2px 6px', borderRadius: 6, fontWeight: 800 }}>
-                          ⭐ Agrégateur (Recommandé)
+                        <span style={{ fontSize: 10, background: '#DCFCE7', color: '#166534', padding: '2px 8px', borderRadius: 99, fontWeight: 800 }}>
+                          🔒 Guichet Sécurisé
                         </span>
                       ) : (
                         <span style={{ fontSize: 10, background: '#FEF3C7', color: '#D97706', padding: '2px 6px', borderRadius: 6, fontWeight: 700 }}>
@@ -472,7 +477,9 @@ Référence de la demande : ${reqRefCode}`;
                         </span>
                       )}
                     </div>
-                    <div style={{ fontSize: 11, color: '#64748B' }}>Traitement direct sur votre écran (Sans WhatsApp)</div>
+                    <div style={{ fontSize: 11, color: '#047857', marginTop: 2 }}>
+                      Guichet de Paiement Mobile Money Direct
+                    </div>
                   </div>
                 </div>
                 {method === 'winpayone' && <span style={{ color: '#059669', fontWeight: 'bold', fontSize: 18 }}>✓</span>}
@@ -506,7 +513,7 @@ Référence de la demande : ${reqRefCode}`;
                         </span>
                       )}
                     </div>
-                    <div style={{ fontSize: 11, color: '#64748B' }}>Paiement direct via WhatsApp</div>
+                    <div style={{ fontSize: 11, color: '#64748B' }}>Paiement via WhatsApp</div>
                   </div>
                 </div>
                 {method === 'winpay2' && <span style={{ color: '#059669', fontWeight: 'bold', fontSize: 18 }}>✓</span>}
@@ -580,7 +587,7 @@ Référence de la demande : ${reqRefCode}`;
                     onConfirm(bot, 'BALANCE', '', 'BALANCE');
                   } else if (method === 'winpayone') {
                     if (!isWinpayOneActive) {
-                      alert('Le moyen WinpayOne est temporairement désactivé.');
+                      alert('Le guichet WinpayOne est temporairement en maintenance.');
                       return;
                     }
                     setWinpayStep('PHONE');
@@ -613,8 +620,23 @@ Référence de la demande : ${reqRefCode}`;
             </div>
           </>
         ) : winpayStep === 'PHONE' ? (
-          /* Step 2: Phone & Operator Input (Filtered specifically for this country) */
+          /* Step 2: Écran du Guichet d'Agrégation de Paiement WinpayOne / USSD / Winpay 2 */
           <div>
+            {method === 'winpayone' && (
+              <div style={{
+                background: 'linear-gradient(135deg, #ECFDF5, #F0FDF4)',
+                border: '1.5px solid #A7F3D0', borderRadius: 14,
+                padding: '12px 14px', marginBottom: 16, textAlign: 'left'
+              }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, color: '#065F46', fontWeight: 800, fontSize: 13, marginBottom: 2 }}>
+                  <span>⚡ Guichet Agrégateur WinpayOne</span>
+                </div>
+                <div style={{ fontSize: 11, color: '#047857' }}>
+                  Sélectionnez votre réseau et entrez le numéro Mobile Money avec lequel vous effectuez le paiement.
+                </div>
+              </div>
+            )}
+
             <div style={{ marginBottom: 16 }}>
               <label style={{ fontSize: 12, fontWeight: 700, color: '#374151', display: 'block', marginBottom: 8 }}>
                 1. Choisissez votre réseau Mobile Money :
@@ -715,40 +737,69 @@ Référence de la demande : ${reqRefCode}`;
                   boxShadow: '0 4px 14px rgba(16, 185, 129, 0.3)'
                 }}
               >
-                {buying ? <Loader2 size={16} style={{ animation: 'spin 0.8s linear infinite' }} /> : (method === 'winpayone' ? '⚡ Valider le paiement' : (method === 'winpay2' ? '🟢 Payer via WhatsApp' : `Payer ${priceFormatted}`))}
+                {buying ? <Loader2 size={16} style={{ animation: 'spin 0.8s linear infinite' }} /> : (method === 'winpayone' ? `🔒 Payer ${priceFormatted}` : (method === 'winpay2' ? '🟢 Payer via WhatsApp' : `Payer ${priceFormatted}`))}
               </button>
             </div>
           </div>
         ) : winpayStep === 'WINPAYONE_WAIT' ? (
-          /* Step 4: WinpayOne Aggregator Live Waiting Screen */
-          <div style={{ padding: '8px 4px 16px', textAlign: 'center' }}>
-            {/* Header Agrégateur WinpayOne */}
-            <div style={{ display: 'inline-flex', alignItems: 'center', gap: 8, background: '#ECFDF5', border: '1px solid #A7F3D0', padding: '6px 14px', borderRadius: 99, marginBottom: 16 }}>
-              <span style={{ fontSize: 14 }}>⚡</span>
-              <span style={{ fontSize: 12, fontWeight: 800, color: '#065F46', fontFamily: 'Space Grotesk, sans-serif' }}>WinpayOne Payment Gateway</span>
-              <span style={{ fontSize: 10, background: '#059669', color: 'white', padding: '2px 6px', borderRadius: 6, fontWeight: 700 }}>LIVE</span>
+          /* Step 3: Écran d'attente d'opération bancaire en cours (Digne de confiance) */
+          <div style={{ padding: '4px 0 12px', textAlign: 'center' }}>
+            {/* Header Badge Sécurisé */}
+            <div style={{
+              display: 'inline-flex', alignItems: 'center', gap: 6,
+              background: '#F0FDF4', border: '1px solid #BBF7D0',
+              padding: '6px 14px', borderRadius: 99, marginBottom: 16
+            }}>
+              <span style={{ fontSize: 13 }}>🛡️</span>
+              <span style={{ fontSize: 12, fontWeight: 800, color: '#166534', letterSpacing: '0.3px' }}>
+                GUICHET WINPAYONE — TRAITEMENT SÉCURISÉ
+              </span>
             </div>
 
             {/* Main Headline exact requirement */}
-            <h2 style={{ fontSize: 20, fontWeight: 900, color: '#064E3B', margin: '0 0 8px', fontFamily: 'Space Grotesk, sans-serif', lineHeight: 1.3 }}>
+            <h2 style={{ fontSize: 19, fontWeight: 900, color: '#0F172A', margin: '0 0 8px', fontFamily: 'Space Grotesk, sans-serif', lineHeight: 1.35 }}>
               Veuillez confirmer l'opération sur votre téléphone.
             </h2>
-            <p style={{ color: '#047857', fontSize: 13, margin: '0 0 20px', lineHeight: 1.4 }}>
-              Un appel de validation Mobile Money (USSD / Notification) a été initié vers votre téléphone. Veuillez garder cette fenêtre ouverte.
+            <p style={{ color: '#475569', fontSize: 13, margin: '0 0 24px', lineHeight: 1.45, padding: '0 8px' }}>
+              Une demande de débit Mobile Money a été transmise à votre téléphone. Veuillez autoriser la transaction et maintenir cet écran ouvert.
             </p>
 
-            {/* Pulsing Visual Spinner */}
-            <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', margin: '20px 0' }}>
-              <div style={{ position: 'relative', width: 68, height: 68, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                <div style={{ position: 'absolute', width: '100%', height: '100%', borderRadius: 99, background: '#10B981', opacity: 0.25, animation: 'ping 1.5s cubic-bezier(0, 0, 0.2, 1) infinite' }} />
-                <div style={{ width: 52, height: 52, borderRadius: 99, background: 'linear-gradient(135deg, #10B981, #047857)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', fontSize: 24, boxShadow: '0 10px 25px rgba(16, 185, 129, 0.4)' }}>
-                  📲
+            {/* Banking Operation Animation */}
+            <div style={{
+              background: 'linear-gradient(180deg, #F8FAFC 0%, #F1F5F9 100%)',
+              border: '1.5px solid #E2E8F0', borderRadius: 20,
+              padding: '24px 16px', marginBottom: 20,
+              boxShadow: 'inset 0 2px 4px rgba(0,0,0,0.02)'
+            }}>
+              <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', marginBottom: 14 }}>
+                <div style={{ position: 'relative', width: 76, height: 76, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <div style={{
+                    position: 'absolute', width: '100%', height: '100%',
+                    borderRadius: 99, border: '3px solid #10B981', borderTopColor: 'transparent',
+                    animation: 'spin 1.2s linear infinite'
+                  }} />
+                  <div style={{
+                    width: 56, height: 56, borderRadius: 99,
+                    background: 'linear-gradient(135deg, #10B981, #047857)',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    color: 'white', fontSize: 26, boxShadow: '0 8px 20px rgba(16, 185, 129, 0.3)'
+                  }}>
+                    🛡️
+                  </div>
                 </div>
+              </div>
+
+              <div style={{ fontSize: 14, fontWeight: 800, color: '#0F172A', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
+                <span>Opération bancaire en cours</span>
+                <span className="pulse-dots" style={{ display: 'inline-block', width: 16, textAlign: 'left' }}>...</span>
+              </div>
+              <div style={{ fontSize: 11, color: '#64748B', marginTop: 4 }}>
+                Vérification du transfert en temps réel avec le serveur Mobile Money
               </div>
             </div>
 
-            {/* Summary Card */}
-            <div style={{ background: '#F8FAFC', border: '1.5px solid #E2E8F0', borderRadius: 16, padding: '16px', textAlign: 'left', marginBottom: 20 }}>
+            {/* Clean Summary Card */}
+            <div style={{ background: '#FFFFFF', border: '1.5px solid #E2E8F0', borderRadius: 16, padding: '16px', textAlign: 'left', marginBottom: 20 }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8, fontSize: 13 }}>
                 <span style={{ color: '#64748B' }}>Montant :</span>
                 <strong style={{ color: '#0F172A', fontWeight: 800 }}>{priceFormatted}</strong>
