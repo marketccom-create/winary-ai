@@ -10,7 +10,7 @@ import { useAuthStore } from '@/lib/store';
 import {
   apiAdminGetStats, apiAdminGetUsers, apiAdminGetUserDetails, apiAdminUpdateUser,
   apiAdminGetAnnouncements, apiAdminUpdateAnnouncement, apiAdminDeleteAnnouncement,
-  apiGetBots, apiGetBotPaymentConfigs, apiAdminUpdateBotPaymentConfigs,
+  apiGetBots, apiGetBotPaymentConfigs, apiAdminGetBotPaymentConfigs, apiAdminUpdateBotPaymentConfigs,
   apiAdminGetPendingPurchases, apiAdminGetAllPurchases, apiAdminApprovePurchase, apiAdminRejectPurchase, apiAdminRejectAllPurchases,
   apiAdminGetPendingWithdrawals, apiAdminApproveWithdrawal, apiAdminRejectWithdrawal, apiAdminDeleteWithdrawal,
   apiAdminGetChatConversations, apiAdminGetChatMessages, apiAdminSendChatMessage,
