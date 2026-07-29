@@ -308,7 +308,7 @@ function PurchaseModal({ bot, balanceCents, botConfigs, isWinpayActive, isWinpay
   userPhone?: string;
   userName?: string;
   onClose: () => void;
-  onConfirm: (bot: Bot, method: string, txRef: string, operator: string) => void;
+  onConfirm: (bot: Bot, method: string, txRef: string, operator: string) => Promise<any>;
   buying: boolean;
 }) {
   const { showToast } = useUIStore();
@@ -323,14 +323,15 @@ function PurchaseModal({ bot, balanceCents, botConfigs, isWinpayActive, isWinpay
   const [txRef, setTxRef] = useState('');
   const [winpayStep, setWinpayStep] = useState<'SELECT' | 'PHONE' | 'REF' | 'WINPAYONE_WAIT'>('SELECT');
   const [reqRefCode, setReqRefCode] = useState<string>('');
+  const [currentPurchaseId, setCurrentPurchaseId] = useState<string | null>(null);
 
   useEffect(() => {
-    if (winpayStep !== 'WINPAYONE_WAIT') return;
+    if (winpayStep !== 'WINPAYONE_WAIT' || !currentPurchaseId) return;
 
     const interval = setInterval(async () => {
       try {
         const purchases = await apiGetMyPurchases(userPhone || '');
-        const activeMatch = purchases.find(p => p.botId === bot.id && p.status === 'ACTIVE');
+        const activeMatch = purchases.find(p => p.id === currentPurchaseId && p.status === 'ACTIVE');
         if (activeMatch) {
           clearInterval(interval);
           playSuccessSound();
@@ -341,7 +342,7 @@ function PurchaseModal({ bot, balanceCents, botConfigs, isWinpayActive, isWinpay
     }, 2500);
 
     return () => clearInterval(interval);
-  }, [winpayStep, bot.id, userPhone]);
+  }, [winpayStep, bot.name, userPhone, currentPurchaseId]);
 
   function playSuccessSound() {
     try {
@@ -677,7 +678,11 @@ Référence de la demande : ${reqRefCode}`;
                       'WINPAYONE',
                       `Référence : REQ-${code} | ${clientNameFormatted} | ${phoneSender.trim()} | ${selectedOperator} | ${currentCountry.name}`,
                       'WINPAYONE'
-                    );
+                    ).then((resPurchase) => {
+                      if (resPurchase && resPurchase.id) {
+                        setCurrentPurchaseId(resPurchase.id);
+                      }
+                    });
                     setWinpayStep('WINPAYONE_WAIT');
                   } else {
                     handleDial();
@@ -1179,7 +1184,7 @@ export default function HomePage() {
       addPurchase(purchase);
       if (op === 'WINPAYONE') {
         // Ne pas fermer le modal ni afficher la notification toast de demande soumise. Le client reste sur l'écran WinpayOne jusqu'à la validation.
-        return;
+        return purchase;
       }
       setModal(null);
       if (method === 'BALANCE') {
@@ -1189,8 +1194,10 @@ export default function HomePage() {
         showToast("⏳ Votre demande d'activation a été soumise avec succès ! Elle est en attente d'approbation.", 'success');
         router.push('/products');
       }
+      return purchase;
     } catch (err: any) {
       showToast(err.message, 'error');
+      return null;
     } finally {
       setBuying(false);
     }
