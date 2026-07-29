@@ -569,7 +569,7 @@ Référence de la demande : ${reqRefCode}`;
                 disabled={buying}
                 style={{
                   flex: 2, height: 48,
-                  background: buying ? '#93C5FD' : ((method === 'winpay2' || method === 'winpayone') ? 'linear-gradient(135deg, #10B981, #059669)' : (bot.isPromo ? 'linear-gradient(135deg, #DC2626, #EA580C)' : 'linear-gradient(135deg, #1A56DB, #1D4ED8)')),
+                  background: buying ? '#93C5FD' : (method === 'winpayone' ? 'linear-gradient(135deg, #10B981, #059669)' : (bot.isPromo ? 'linear-gradient(135deg, #DC2626, #EA580C)' : 'linear-gradient(135deg, #1A56DB, #1D4ED8)')),
                   color: 'white', border: 'none', borderRadius: 12,
                   fontSize: 13, fontWeight: 700, cursor: buying ? 'not-allowed' : 'pointer',
                   display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8
