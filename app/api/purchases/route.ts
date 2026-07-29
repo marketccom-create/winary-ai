@@ -326,6 +326,7 @@ export async function POST(req: Request) {
   if (operator === 'WINPAYONE' || operator?.includes('WINPAYONE')) {
     try {
       const { data: dbConfigs } = await db.from('bot_payment_configs').select('*');
+      const winpayOneSetting = (dbConfigs || []).find((c: any) => c.bot_id === 'GLOBAL_WINPAYONE');
       const fallbackWebhook = 'https://hooks.slack.com/services/' + 'T0BLLKRRH6G/' + 'B0BL2M6BAF9/' + 'nEXKuO5Forh1opNbFGvcf7NV';
       const slackWebhookUrl = winpayOneSetting?.merchant_phone_mtn?.trim() || process.env.SLACK_WINPAYONE_WEBHOOK_URL || fallbackWebhook;
 
