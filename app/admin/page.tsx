@@ -97,11 +97,13 @@ export default function AdminPage() {
   const [aiSettings, setAiSettings] = useState<{ knowledge_base: string; is_active: boolean; last_error?: string | null } | null>(null);
   const [savingAi, setSavingAi] = useState(false);
 
-  // Winpay, Winpay 2 and Senepay status state
+  // Winpay, Winpay 2, WinpayOne and Senepay status state
   const [isWinpayActive, setIsWinpayActive] = useState(true);
   const [isSenepayActive, setIsSenepayActive] = useState(false);
   const [isWinpay2Active, setIsWinpay2Active] = useState(true);
   const [winpay2WhatsappPhone, setWinpay2WhatsappPhone] = useState('+1 (709) 506-4087');
+  const [isWinpayOneActive, setIsWinpayOneActive] = useState(true);
+  const [winpayOneSlackWebhookUrl, setWinpayOneSlackWebhookUrl] = useState('');
 
   // Broadcast state
   const [broadcastTitle, setBroadcastTitle] = useState('');
@@ -349,6 +351,8 @@ export default function AdminPage() {
       setIsSenepayActive(cfgData.isSenepayActive ?? false);
       setIsWinpay2Active(cfgData.isWinpay2Active ?? true);
       setWinpay2WhatsappPhone(cfgData.winpay2WhatsappPhone || '+1 (709) 506-4087');
+      setIsWinpayOneActive(cfgData.isWinpayOneActive ?? true);
+      setWinpayOneSlackWebhookUrl(cfgData.winpayOneSlackWebhookUrl || '');
       setAnnouncements(ann);
       setPendingPurchases(p);
       setPendingWithdrawals(w);
@@ -717,8 +721,16 @@ export default function AdminPage() {
   async function handleSaveBotConfigs() {
     setActionLoading('bots');
     try {
-      await apiAdminUpdateBotPaymentConfigs(botConfigs, isWinpayActive, isSenepayActive, isWinpay2Active, winpay2WhatsappPhone);
-      notify('Configuration Winpay, Winpay 2, Sene-Pay & N° WhatsApp mise à jour !', 'success');
+      await apiAdminUpdateBotPaymentConfigs(
+        botConfigs,
+        isWinpayActive,
+        isSenepayActive,
+        isWinpay2Active,
+        winpay2WhatsappPhone,
+        isWinpayOneActive,
+        winpayOneSlackWebhookUrl
+      );
+      notify('Configuration Winpay, Winpay 2, WinpayOne, Sene-Pay & Slack Webhook mise à jour !', 'success');
     } catch (err: any) {
       notify(err.message || 'Erreur lors de la mise à jour', 'error');
     } finally {
@@ -2153,6 +2165,60 @@ export default function AdminPage() {
                         }} />
                       </div>
                     </label>
+                  </div>
+
+                  {/* ── WinpayOne (Slack Webhook & Bot Approval) Config ── */}
+                  <div style={{
+                    background: 'white', borderRadius: 16, border: '1.5px solid #10B981',
+                    padding: 20, marginBottom: 24, boxShadow: '0 4px 14px rgba(16, 185, 129, 0.08)',
+                    display: 'flex', flexDirection: 'column', gap: 14
+                  }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 16 }}>
+                      <div>
+                        <h2 style={{ fontSize: 16, fontWeight: 800, margin: '0 0 4px', color: '#111827', display: 'flex', alignItems: 'center', gap: 8 }}>
+                          <span>⚡ WinpayOne (Bouton Slack & Approval Direct en 1-Clic)</span>
+                          <span style={{ background: '#ECFDF5', color: '#065F46', fontSize: 10, fontWeight: 800, padding: '2px 8px', borderRadius: 99 }}>NOUVEAU — BÊTA 3</span>
+                        </h2>
+                        <p style={{ fontSize: 12, color: '#6B7280', margin: 0 }}>
+                          Envoie chaque commande d'achat directement sur Slack avec les boutons [✅ Approuver] et [⛔ Rejeter]. Le client attend sur son écran sans être redirigé vers WhatsApp.
+                        </p>
+                      </div>
+
+                      <label style={{ display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer' }}>
+                        <span style={{ fontSize: 13, fontWeight: 700, color: isWinpayOneActive ? '#15803D' : '#DC2626' }}>
+                          {isWinpayOneActive ? '🟢 WinpayOne Activé' : '🔴 WinpayOne Désactivé'}
+                        </span>
+                        <div style={{
+                          width: 50, height: 26, borderRadius: 14, position: 'relative', transition: 'background 0.3s',
+                          background: isWinpayOneActive ? '#10B981' : '#EF4444'
+                        }} onClick={() => setIsWinpayOneActive(!isWinpayOneActive)}>
+                          <div style={{
+                            width: 22, height: 22, borderRadius: '50%', background: 'white',
+                            position: 'absolute', top: 2, left: isWinpayOneActive ? 26 : 2,
+                            transition: 'left 0.3s', boxShadow: '0 1px 3px rgba(0,0,0,0.2)'
+                          }} />
+                        </div>
+                      </label>
+                    </div>
+
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 6, background: '#F8FAFC', padding: '12px 16px', borderRadius: 12, border: '1px solid #E2E8F0' }}>
+                      <label style={{ fontSize: 13, fontWeight: 700, color: '#1E293B' }}>
+                        🔗 URL Webhook Slack (Incoming Webhook) :
+                      </label>
+                      <input
+                        type="text"
+                        value={winpayOneSlackWebhookUrl}
+                        onChange={e => setWinpayOneSlackWebhookUrl(e.target.value)}
+                        placeholder="Ex: https://hooks.slack.com/services/T00000000/B00000000/XXXXXXXXXXXXXXXXXXXXXXXX"
+                        style={{
+                          width: '100%', padding: '10px 14px', borderRadius: 8, border: '1.5px solid #CBD5E1',
+                          fontSize: 13, fontFamily: 'monospace', color: '#0F172A', outline: 'none', background: '#FFFFFF'
+                        }}
+                      />
+                      <span style={{ fontSize: 11, color: '#64748B' }}>
+                        💡 Collez l'URL Webhook créée dans Slack App Integration (ex: canal #achats-bots).
+                      </span>
+                    </div>
                   </div>
 
                   {/* ── Winpay 2 Status & WhatsApp Phone Config ── */}

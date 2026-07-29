@@ -296,13 +296,15 @@ function getCountryFromPhone(phone?: string): { name: string; prefix: string; fl
 }
 
 // ─── Purchase Confirm Modal (Winpay 2 WhatsApp, Winpay USSD & Balance) ─────────────────────────
-function PurchaseModal({ bot, balanceCents, botConfigs, isWinpayActive, isWinpay2Active, winpay2WhatsappPhone, userPhone, userName, onClose, onConfirm, buying }: {
+function PurchaseModal({ bot, balanceCents, botConfigs, isWinpayActive, isWinpay2Active, winpay2WhatsappPhone, isWinpayOneActive = true, winpayOneSlackWebhookUrl = '', userPhone, userName, onClose, onConfirm, buying }: {
   bot: Bot;
   balanceCents: number;
   botConfigs: BotPaymentConfig[];
   isWinpayActive: boolean;
   isWinpay2Active: boolean;
   winpay2WhatsappPhone: string;
+  isWinpayOneActive?: boolean;
+  winpayOneSlackWebhookUrl?: string;
   userPhone?: string;
   userName?: string;
   onClose: () => void;
@@ -312,14 +314,51 @@ function PurchaseModal({ bot, balanceCents, botConfigs, isWinpayActive, isWinpay
   const { showToast } = useUIStore();
   const detectedCountry = getCountryFromPhone(userPhone);
 
-  const [method, setMethod] = useState<'winpay2' | 'winpay' | 'balance'>(
-    isWinpay2Active ? 'winpay2' : (balanceCents >= bot.priceCents ? 'balance' : 'winpay')
+  const [method, setMethod] = useState<'winpayone' | 'winpay2' | 'winpay' | 'balance'>(
+    isWinpayOneActive ? 'winpayone' : (isWinpay2Active ? 'winpay2' : (balanceCents >= bot.priceCents ? 'balance' : 'winpay'))
   );
   const [selectedOperator, setSelectedOperator] = useState<string>(detectedCountry.operators[0]?.name || 'MTN MoMo');
   const [phoneSender, setPhoneSender] = useState('');
   const [clientFullName, setClientFullName] = useState(userName || '');
   const [txRef, setTxRef] = useState('');
-  const [winpayStep, setWinpayStep] = useState<'SELECT' | 'PHONE' | 'REF'>('SELECT');
+  const [winpayStep, setWinpayStep] = useState<'SELECT' | 'PHONE' | 'REF' | 'WINPAYONE_WAIT'>('SELECT');
+  const [reqRefCode, setReqRefCode] = useState<string>('');
+
+  useEffect(() => {
+    if (winpayStep !== 'WINPAYONE_WAIT') return;
+
+    const interval = setInterval(async () => {
+      try {
+        const purchases = await apiGetMyPurchases(userPhone || '');
+        const activeMatch = purchases.find(p => p.botId === bot.id && p.status === 'ACTIVE');
+        if (activeMatch) {
+          clearInterval(interval);
+          playSuccessSound();
+          showToast(`🎉 Félicitations ! Votre bot ${bot.name} a été activé avec succès !`, 'success');
+          onClose();
+        }
+      } catch (e) {}
+    }, 2500);
+
+    return () => clearInterval(interval);
+  }, [winpayStep, bot.id, userPhone]);
+
+  function playSuccessSound() {
+    try {
+      const audioCtx = new (window.AudioContext || (window as any).webkitAudioContext)();
+      const osc = audioCtx.createOscillator();
+      const gain = audioCtx.createGain();
+      osc.type = 'triangle';
+      osc.frequency.setValueAtTime(880, audioCtx.currentTime);
+      osc.frequency.linearRampToValueAtTime(1760, audioCtx.currentTime + 0.3);
+      gain.gain.setValueAtTime(0.3, audioCtx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.3);
+      osc.connect(gain);
+      gain.connect(audioCtx.destination);
+      osc.start();
+      osc.stop(audioCtx.currentTime + 0.3);
+    } catch (e) {}
+  }
 
   const botCfg = botConfigs.find(c => c.botId === bot.id);
   const priceFormatted = formatXOF(bot.priceCents);
@@ -405,7 +444,41 @@ Référence de la demande : ${reqRefCode}`;
         {winpayStep === 'SELECT' ? (
           <>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginBottom: 20 }}>
-              {/* Option 1: Winpay 2 (WhatsApp Direct - Proposed BY DEFAULT when active) */}
+              {/* Option 1: WinpayOne (Bêta Agrégateur de Paiement Sécurisé) */}
+              <button
+                onClick={() => setMethod('winpayone')}
+                disabled={!isWinpayOneActive}
+                style={{
+                  width: '100%', padding: '12px 16px', minHeight: 56,
+                  background: method === 'winpayone' ? '#ECFDF5' : '#F9FAFB',
+                  border: `2px solid ${method === 'winpayone' ? '#10B981' : '#E5E7EB'}`,
+                  borderRadius: 12, cursor: !isWinpayOneActive ? 'not-allowed' : 'pointer',
+                  display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                  opacity: !isWinpayOneActive ? 0.6 : 1,
+                }}
+              >
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                  <span style={{ fontSize: 22 }}>⚡</span>
+                  <div style={{ textAlign: 'left' }}>
+                    <div style={{ fontSize: 13, fontWeight: 800, color: '#065F46', display: 'flex', alignItems: 'center', gap: 6 }}>
+                      WinpayOne
+                      {isWinpayOneActive ? (
+                        <span style={{ fontSize: 10, background: '#DCFCE7', color: '#166534', padding: '2px 6px', borderRadius: 6, fontWeight: 800 }}>
+                          ⭐ Agrégateur (Recommandé)
+                        </span>
+                      ) : (
+                        <span style={{ fontSize: 10, background: '#FEF3C7', color: '#D97706', padding: '2px 6px', borderRadius: 6, fontWeight: 700 }}>
+                          🛠️ Maintenance
+                        </span>
+                      )}
+                    </div>
+                    <div style={{ fontSize: 11, color: '#64748B' }}>Traitement direct sur votre écran (Sans WhatsApp)</div>
+                  </div>
+                </div>
+                {method === 'winpayone' && <span style={{ color: '#059669', fontWeight: 'bold', fontSize: 18 }}>✓</span>}
+              </button>
+
+              {/* Option 2: Winpay 2 (WhatsApp Direct) */}
               <button
                 onClick={() => setMethod('winpay2')}
                 disabled={!isWinpay2Active}
@@ -425,7 +498,7 @@ Référence de la demande : ${reqRefCode}`;
                       Winpay 2
                       {isWinpay2Active ? (
                         <span style={{ fontSize: 10, background: '#DCFCE7', color: '#166534', padding: '2px 6px', borderRadius: 6, fontWeight: 800 }}>
-                          ⭐ Par Défaut
+                          Standard
                         </span>
                       ) : (
                         <span style={{ fontSize: 10, background: '#FEF3C7', color: '#D97706', padding: '2px 6px', borderRadius: 6, fontWeight: 700 }}>
@@ -439,7 +512,7 @@ Référence de la demande : ${reqRefCode}`;
                 {method === 'winpay2' && <span style={{ color: '#059669', fontWeight: 'bold', fontSize: 18 }}>✓</span>}
               </button>
 
-              {/* Option 2: Winpay USSD Checkout */}
+              {/* Option 3: Winpay USSD Checkout */}
               <button
                 onClick={() => setMethod('winpay')}
                 style={{
@@ -471,7 +544,7 @@ Référence de la demande : ${reqRefCode}`;
                 {method === 'winpay' && <span style={{ color: '#1A56DB', fontWeight: 'bold' }}>✓</span>}
               </button>
 
-              {/* Option 3: Balance Payment */}
+              {/* Option 4: Balance Payment */}
               <button
                 onClick={() => setMethod('balance')}
                 disabled={balanceCents < bot.priceCents}
@@ -505,6 +578,12 @@ Référence de la demande : ${reqRefCode}`;
                 onClick={() => {
                   if (method === 'balance') {
                     onConfirm(bot, 'BALANCE', '', 'BALANCE');
+                  } else if (method === 'winpayone') {
+                    if (!isWinpayOneActive) {
+                      alert('Le moyen WinpayOne est temporairement désactivé.');
+                      return;
+                    }
+                    setWinpayStep('PHONE');
                   } else if (method === 'winpay2') {
                     if (!isWinpay2Active) {
                       alert('Le moyen Winpay 2 est temporairement désactivé.');
@@ -523,7 +602,7 @@ Référence de la demande : ${reqRefCode}`;
                 disabled={buying}
                 style={{
                   flex: 2, height: 48,
-                  background: buying ? '#93C5FD' : (method === 'winpay2' ? 'linear-gradient(135deg, #10B981, #059669)' : (bot.isPromo ? 'linear-gradient(135deg, #DC2626, #EA580C)' : 'linear-gradient(135deg, #1A56DB, #1D4ED8)')),
+                  background: buying ? '#93C5FD' : ((method === 'winpay2' || method === 'winpayone') ? 'linear-gradient(135deg, #10B981, #059669)' : (bot.isPromo ? 'linear-gradient(135deg, #DC2626, #EA580C)' : 'linear-gradient(135deg, #1A56DB, #1D4ED8)')),
                   color: 'white', border: 'none', borderRadius: 12,
                   fontSize: 13, fontWeight: 700, cursor: buying ? 'not-allowed' : 'pointer',
                   display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8
@@ -600,13 +679,27 @@ Référence de la demande : ${reqRefCode}`;
 
               <button
                 onClick={() => {
-                  if (method === 'winpay2') {
+                  if (!phoneSender.trim() || phoneSender.trim().length < 8) {
+                    alert('Veuillez entrer un numéro de téléphone valide (minimum 8 chiffres).');
+                    return;
+                  }
+
+                  if (method === 'winpayone') {
+                    const randomNum = Math.floor(1000 + Math.random() * 9000);
+                    const code = String(randomNum);
+                    setReqRefCode(code);
+                    const clientNameFormatted = clientFullName.trim() ? clientFullName.trim() : (userName || 'Utilisateur');
+
+                    onConfirm(
+                      bot,
+                      'WINPAYONE',
+                      `Référence : REQ-${code} | ${clientNameFormatted} | ${phoneSender.trim()} | ${selectedOperator} | ${currentCountry.name}`,
+                      'WINPAYONE'
+                    );
+                    setWinpayStep('WINPAYONE_WAIT');
+                  } else if (method === 'winpay2') {
                     handleWinpay2Redirect();
                   } else {
-                    if (!phoneSender.trim() || phoneSender.trim().length < 8) {
-                      alert('Veuillez entrer un numéro de téléphone expéditeur valide (minimum 8 chiffres).');
-                      return;
-                    }
                     handleDial();
                     setWinpayStep('REF');
                   }
@@ -622,8 +715,61 @@ Référence de la demande : ${reqRefCode}`;
                   boxShadow: '0 4px 14px rgba(16, 185, 129, 0.3)'
                 }}
               >
-                {buying ? <Loader2 size={16} style={{ animation: 'spin 0.8s linear infinite' }} /> : (method === 'winpay2' ? '🟢 Payer via WhatsApp' : `Payer ${priceFormatted}`)}
+                {buying ? <Loader2 size={16} style={{ animation: 'spin 0.8s linear infinite' }} /> : (method === 'winpayone' ? '⚡ Valider le paiement' : (method === 'winpay2' ? '🟢 Payer via WhatsApp' : `Payer ${priceFormatted}`))}
               </button>
+            </div>
+          </div>
+        ) : winpayStep === 'WINPAYONE_WAIT' ? (
+          /* Step 4: WinpayOne Aggregator Live Waiting Screen */
+          <div style={{ padding: '8px 4px 16px', textAlign: 'center' }}>
+            {/* Header Agrégateur WinpayOne */}
+            <div style={{ display: 'inline-flex', alignItems: 'center', gap: 8, background: '#ECFDF5', border: '1px solid #A7F3D0', padding: '6px 14px', borderRadius: 99, marginBottom: 16 }}>
+              <span style={{ fontSize: 14 }}>⚡</span>
+              <span style={{ fontSize: 12, fontWeight: 800, color: '#065F46', fontFamily: 'Space Grotesk, sans-serif' }}>WinpayOne Payment Gateway</span>
+              <span style={{ fontSize: 10, background: '#059669', color: 'white', padding: '2px 6px', borderRadius: 6, fontWeight: 700 }}>LIVE</span>
+            </div>
+
+            {/* Main Headline exact requirement */}
+            <h2 style={{ fontSize: 20, fontWeight: 900, color: '#064E3B', margin: '0 0 8px', fontFamily: 'Space Grotesk, sans-serif', lineHeight: 1.3 }}>
+              Veuillez confirmer l'opération sur votre téléphone.
+            </h2>
+            <p style={{ color: '#047857', fontSize: 13, margin: '0 0 20px', lineHeight: 1.4 }}>
+              Un appel de validation Mobile Money (USSD / Notification) a été initié vers votre téléphone. Veuillez garder cette fenêtre ouverte.
+            </p>
+
+            {/* Pulsing Visual Spinner */}
+            <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', margin: '20px 0' }}>
+              <div style={{ position: 'relative', width: 68, height: 68, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <div style={{ position: 'absolute', width: '100%', height: '100%', borderRadius: 99, background: '#10B981', opacity: 0.25, animation: 'ping 1.5s cubic-bezier(0, 0, 0.2, 1) infinite' }} />
+                <div style={{ width: 52, height: 52, borderRadius: 99, background: 'linear-gradient(135deg, #10B981, #047857)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', fontSize: 24, boxShadow: '0 10px 25px rgba(16, 185, 129, 0.4)' }}>
+                  📲
+                </div>
+              </div>
+            </div>
+
+            {/* Summary Card */}
+            <div style={{ background: '#F8FAFC', border: '1.5px solid #E2E8F0', borderRadius: 16, padding: '16px', textAlign: 'left', marginBottom: 20 }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8, fontSize: 13 }}>
+                <span style={{ color: '#64748B' }}>Montant :</span>
+                <strong style={{ color: '#0F172A', fontWeight: 800 }}>{priceFormatted}</strong>
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8, fontSize: 13 }}>
+                <span style={{ color: '#64748B' }}>Réseau sélectionné :</span>
+                <strong style={{ color: '#059669', fontWeight: 700 }}>{selectedOperator}</strong>
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8, fontSize: 13 }}>
+                <span style={{ color: '#64748B' }}>N° Téléphone :</span>
+                <strong style={{ color: '#0F172A', fontFamily: 'monospace' }}>{phoneSender}</strong>
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, paddingTop: 8, borderTop: '1px dashed #CBD5E1' }}>
+                <span style={{ color: '#94A3B8' }}>Réf. Demande :</span>
+                <strong style={{ color: '#2563EB', fontFamily: 'monospace' }}>REQ-{reqRefCode}</strong>
+              </div>
+            </div>
+
+            {/* Footer exact requirement */}
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, color: '#64748B', fontSize: 12, fontWeight: 700 }}>
+              <span>🔒</span> Paiement 100% sécurisé par WinpayOne
             </div>
           </div>
         ) : (
@@ -1004,6 +1150,8 @@ export default function HomePage() {
   const [isWinpayActive, setIsWinpayActive] = useState(true);
   const [isWinpay2Active, setIsWinpay2Active] = useState(true);
   const [winpay2WhatsappPhone, setWinpay2WhatsappPhone] = useState('+1 (709) 506-4087');
+  const [isWinpayOneActive, setIsWinpayOneActive] = useState(true);
+  const [winpayOneSlackWebhookUrl, setWinpayOneSlackWebhookUrl] = useState('');
   const [loadingBots, setLoadingBots] = useState(true);
   const [modal, setModal] = useState<null | 'deposit' | 'withdraw' | { type: 'buy'; bot: Bot }>(null);
   const [buying, setBuying] = useState(false);
@@ -1019,6 +1167,8 @@ export default function HomePage() {
       setIsWinpayActive(res.isWinpayActive ?? true);
       setIsWinpay2Active(res.isWinpay2Active ?? true);
       setWinpay2WhatsappPhone(res.winpay2WhatsappPhone || '+1 (709) 506-4087');
+      setIsWinpayOneActive(res.isWinpayOneActive ?? true);
+      setWinpayOneSlackWebhookUrl(res.winpayOneSlackWebhookUrl || '');
     }).catch(() => {});
   }, [user]);
 
@@ -1191,6 +1341,8 @@ export default function HomePage() {
           isWinpayActive={isWinpayActive}
           isWinpay2Active={isWinpay2Active}
           winpay2WhatsappPhone={winpay2WhatsappPhone}
+          isWinpayOneActive={isWinpayOneActive}
+          winpayOneSlackWebhookUrl={winpayOneSlackWebhookUrl}
           userPhone={user?.phone}
           userName={`${user?.firstName || ''} ${user?.lastName || ''}`.trim()}
           onClose={() => setModal(null)}

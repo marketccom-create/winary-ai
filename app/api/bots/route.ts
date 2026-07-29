@@ -42,7 +42,11 @@ export async function GET(req: Request) {
   const isWinpay2Active = winpay2Setting ? winpay2Setting.is_active !== false : true;
   const winpay2WhatsappPhone = winpay2Setting?.merchant_phone_mtn || '+1 (709) 506-4087';
 
-  const rawConfigs = (dbConfigs || []).filter((c: any) => !['GLOBAL_WINPAY', 'GLOBAL_SENEPAY', 'GLOBAL_WINPAY2'].includes(c.bot_id));
+  const winpayOneSetting = (dbConfigs || []).find((c: any) => c.bot_id === 'GLOBAL_WINPAYONE');
+  const isWinpayOneActive = winpayOneSetting ? winpayOneSetting.is_active !== false : true;
+  const winpayOneSlackWebhookUrl = winpayOneSetting?.merchant_phone_mtn || 'https://hooks.slack.com/services/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';
+
+  const rawConfigs = (dbConfigs || []).filter((c: any) => !['GLOBAL_WINPAY', 'GLOBAL_SENEPAY', 'GLOBAL_WINPAY2', 'GLOBAL_WINPAYONE'].includes(c.bot_id));
 
   const bots = BOTS.map(bot => enrichBot(bot));
 
@@ -69,5 +73,14 @@ export async function GET(req: Request) {
     };
   });
 
-  return NextResponse.json({ bots, configs, isWinpayActive, isSenepayActive, isWinpay2Active, winpay2WhatsappPhone });
+  return NextResponse.json({
+    bots,
+    configs,
+    isWinpayActive,
+    isSenepayActive,
+    isWinpay2Active,
+    winpay2WhatsappPhone,
+    isWinpayOneActive,
+    winpayOneSlackWebhookUrl,
+  });
 }

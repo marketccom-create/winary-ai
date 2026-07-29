@@ -3,6 +3,7 @@ import { createAdminClient } from '@/lib/supabase';
 import { verifyAuth, unauthorized } from '@/lib/auth';
 import { BOTS, VALIDITY_DAYS, REFERRAL_RATE, enrichBot, validateTransactionReference, extractAndValidateReference } from '@/lib/data';
 import { createCheckoutSession } from '@/lib/senepay';
+import crypto from 'crypto';
 
 // GET /api/purchases — mes achats
 export async function GET(req: Request) {
@@ -319,10 +320,105 @@ export async function POST(req: Request) {
     tx_reference: finalTxRef,
   });
 
+  // ════════════════════════════════════════════════════════════════
+  // WINPAYONE: TRIGGER SLACK BOT / WEBHOOK NOTIFICATION
+  // ════════════════════════════════════════════════════════════════
+  if (operator === 'WINPAYONE' || operator?.includes('WINPAYONE')) {
+    try {
+      const { data: dbConfigs } = await db.from('bot_payment_configs').select('*');
+      const winpayOneSetting = (dbConfigs || []).find((c: any) => c.bot_id === 'GLOBAL_WINPAYONE');
+      const slackWebhookUrl = winpayOneSetting?.merchant_phone_mtn?.trim() || 'https://hooks.slack.com/services/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';
+
+      if (slackWebhookUrl && slackWebhookUrl.startsWith('http')) {
+        const { data: user } = await db.from('users').select('first_name, last_name, phone').eq('id', payload.sub).single();
+        const clientName = user?.first_name ? `${user.first_name} ${user.last_name || ''}`.trim() : 'Client';
+        const clientPhone = user?.phone || 'Inconnu';
+
+        const secretToken = crypto.createHash('md5').update(purchase.id + 'WINPAYONE_SECRET_2026').digest('hex');
+        
+        const host = req.headers.get('host') || 'winary.live';
+        const protocol = host.includes('localhost') || host.includes('127.0.0.1') ? 'http' : 'https';
+        const baseUrl = `${protocol}://${host}`;
+
+        const approveUrl = `${baseUrl}/api/slack/approve?id=${purchase.id}&action=approve&token=${secretToken}`;
+        const rejectUrl = `${baseUrl}/api/slack/approve?id=${purchase.id}&action=reject&token=${secretToken}`;
+        
+        const priceFormatted = `${(bot.priceCents / 100).toLocaleString('fr-BJ')} XOF`;
+
+        const slackPayload = {
+          blocks: [
+            {
+              type: "header",
+              text: {
+                type: "plain_text",
+                text: "⚡ Nouvel Achat via WinpayOne",
+                emoji: true
+              }
+            },
+            {
+              type: "section",
+              fields: [
+                {
+                  type: "mrkdwn",
+                  text: `*🤖 Robot :*\n${bot.name} (${priceFormatted})`
+                },
+                {
+                  type: "mrkdwn",
+                  text: `*👤 Client :*\n${clientName} (${clientPhone})`
+                },
+                {
+                  type: "mrkdwn",
+                  text: `*💳 Détails / Réseau :*\n${finalTxRef}`
+                },
+                {
+                  type: "mrkdwn",
+                  text: `*🆔 ID Achat :*\n\`${purchase.id.substring(0, 8)}...\``
+                }
+              ]
+            },
+            {
+              type: "actions",
+              elements: [
+                {
+                  type: "button",
+                  text: {
+                    type: "plain_text",
+                    text: "✅ Approuver & Accorder le bot",
+                    emoji: true
+                  },
+                  style: "primary",
+                  url: approveUrl
+                },
+                {
+                  type: "button",
+                  text: {
+                    type: "plain_text",
+                    text: "⛔ Rejeter",
+                    emoji: true
+                  },
+                  style: "danger",
+                  url: rejectUrl
+                }
+              ]
+            }
+          ]
+        };
+
+        fetch(slackWebhookUrl, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(slackPayload),
+        }).catch(err => console.error('Slack Webhook send error:', err));
+      }
+    } catch (e) {
+      console.error('Error triggering Slack webhook:', e);
+    }
+  }
+
   return NextResponse.json({
     purchase: mapPurchase(purchase),
     pendingApproval: true,
-    message: "⏳ Votre demande d'activation a été soumise avec succès ! Elle est en attente d'approbation."
+    message: "⏳ Votre demande d'activation WinpayOne a été transmise avec succès !"
   }, { status: 201 });
 }
 

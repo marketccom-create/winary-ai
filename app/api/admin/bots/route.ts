@@ -76,5 +76,16 @@ export async function PUT(req: Request) {
     }, { onConflict: 'bot_id' });
   }
 
+  const isWinpayOneActive = body.isWinpayOneActive;
+  const winpayOneSlackWebhookUrl = body.winpayOneSlackWebhookUrl;
+  if (isWinpayOneActive !== undefined || winpayOneSlackWebhookUrl !== undefined) {
+    await db.from('bot_payment_configs').upsert({
+      bot_id: 'GLOBAL_WINPAYONE',
+      bot_name: 'GLOBAL_WINPAYONE',
+      is_active: isWinpayOneActive ?? true,
+      merchant_phone_mtn: winpayOneSlackWebhookUrl || '',
+    }, { onConflict: 'bot_id' });
+  }
+
   return NextResponse.json({ success: true });
 }
