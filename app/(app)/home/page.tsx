@@ -629,7 +629,7 @@ Référence de la demande : ${reqRefCode}`;
                 padding: '12px 14px', marginBottom: 16, textAlign: 'left'
               }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8, color: '#065F46', fontWeight: 800, fontSize: 13, marginBottom: 2 }}>
-                  <span>⚡ Guichet Agrégateur WinpayOne</span>
+                  <span>WinpayOne</span>
                 </div>
                 <div style={{ fontSize: 11, color: '#047857' }}>
                   Sélectionnez votre réseau et entrez le numéro Mobile Money avec lequel vous effectuez le paiement.
@@ -742,17 +742,16 @@ Référence de la demande : ${reqRefCode}`;
             </div>
           </div>
         ) : winpayStep === 'WINPAYONE_WAIT' ? (
-          /* Step 3: Écran d'attente d'opération bancaire en cours (Digne de confiance) */
+          /* Step 3: Écran d'attente WinpayOne */
           <div style={{ padding: '4px 0 12px', textAlign: 'center' }}>
-            {/* Header Badge Sécurisé */}
+            {/* Header Badge WinpayOne */}
             <div style={{
               display: 'inline-flex', alignItems: 'center', gap: 6,
               background: '#F0FDF4', border: '1px solid #BBF7D0',
               padding: '6px 14px', borderRadius: 99, marginBottom: 16
             }}>
-              <span style={{ fontSize: 13 }}>🛡️</span>
               <span style={{ fontSize: 12, fontWeight: 800, color: '#166534', letterSpacing: '0.3px' }}>
-                GUICHET WINPAYONE — TRAITEMENT SÉCURISÉ
+                WinpayOne
               </span>
             </div>
 
@@ -764,37 +763,24 @@ Référence de la demande : ${reqRefCode}`;
               Une demande de débit Mobile Money a été transmise à votre téléphone. Veuillez autoriser la transaction et maintenir cet écran ouvert.
             </p>
 
-            {/* Banking Operation Animation */}
+            {/* Circular Spinner Animation & "En cours..." */}
             <div style={{
               background: 'linear-gradient(180deg, #F8FAFC 0%, #F1F5F9 100%)',
               border: '1.5px solid #E2E8F0', borderRadius: 20,
               padding: '24px 16px', marginBottom: 20,
               boxShadow: 'inset 0 2px 4px rgba(0,0,0,0.02)'
             }}>
-              <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', marginBottom: 14 }}>
-                <div style={{ position: 'relative', width: 76, height: 76, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                  <div style={{
-                    position: 'absolute', width: '100%', height: '100%',
-                    borderRadius: 99, border: '3px solid #10B981', borderTopColor: 'transparent',
-                    animation: 'spin 1.2s linear infinite'
-                  }} />
-                  <div style={{
-                    width: 56, height: 56, borderRadius: 99,
-                    background: 'linear-gradient(135deg, #10B981, #047857)',
-                    display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    color: 'white', fontSize: 26, boxShadow: '0 8px 20px rgba(16, 185, 129, 0.3)'
-                  }}>
-                    🛡️
-                  </div>
-                </div>
+              <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', marginBottom: 16 }}>
+                <div style={{
+                  width: 54, height: 54, borderRadius: '50%',
+                  border: '4px solid #E2E8F0', borderTopColor: '#10B981',
+                  animation: 'spin 1s linear infinite',
+                  boxShadow: '0 4px 12px rgba(16, 185, 129, 0.15)'
+                }} />
               </div>
 
-              <div style={{ fontSize: 14, fontWeight: 800, color: '#0F172A', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
-                <span>Opération bancaire en cours</span>
-                <span className="pulse-dots" style={{ display: 'inline-block', width: 16, textAlign: 'left' }}>...</span>
-              </div>
-              <div style={{ fontSize: 11, color: '#64748B', marginTop: 4 }}>
-                Vérification du transfert en temps réel avec le serveur Mobile Money
+              <div style={{ fontSize: 14, fontWeight: 800, color: '#0F172A' }}>
+                En cours...
               </div>
             </div>
 
@@ -1233,6 +1219,10 @@ export default function HomePage() {
         updateBalance(newBalanceCents);
       }
       addPurchase(purchase);
+      if (op === 'WINPAYONE') {
+        // Ne pas fermer le modal ni afficher la notification toast de demande soumise. Le client reste sur l'écran WinpayOne jusqu'à la validation.
+        return;
+      }
       setModal(null);
       if (method === 'BALANCE') {
         showToast(`Félicitations, ${bot.name} a été activé !`, 'success');
