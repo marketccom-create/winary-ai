@@ -78,12 +78,37 @@ export async function PUT(req: Request) {
 
   const isWinpayOneActive = body.isWinpayOneActive;
   const winpayOneSlackWebhookUrl = body.winpayOneSlackWebhookUrl;
-  if (isWinpayOneActive !== undefined || winpayOneSlackWebhookUrl !== undefined) {
+  const winpayOneDiscordWebhookUrl = body.winpayOneDiscordWebhookUrl;
+  const winpayOneWhatsappPhone1 = body.winpayOneWhatsappPhone1 || body.winpayOneWhatsappPhone;
+  const winpayOneWhatsappApiKey1 = body.winpayOneWhatsappApiKey1 || body.winpayOneWhatsappApiKey;
+  const winpayOneWhatsappPhone2 = body.winpayOneWhatsappPhone2;
+  const winpayOneWhatsappApiKey2 = body.winpayOneWhatsappApiKey2;
+  const winpayOneWhatsappPhone3 = body.winpayOneWhatsappPhone3;
+  const winpayOneWhatsappApiKey3 = body.winpayOneWhatsappApiKey3;
+
+  if (
+    isWinpayOneActive !== undefined ||
+    winpayOneSlackWebhookUrl !== undefined ||
+    winpayOneDiscordWebhookUrl !== undefined ||
+    winpayOneWhatsappPhone1 !== undefined ||
+    winpayOneWhatsappApiKey1 !== undefined ||
+    winpayOneWhatsappPhone2 !== undefined ||
+    winpayOneWhatsappApiKey2 !== undefined ||
+    winpayOneWhatsappPhone3 !== undefined ||
+    winpayOneWhatsappApiKey3 !== undefined
+  ) {
     await db.from('bot_payment_configs').upsert({
       bot_id: 'GLOBAL_WINPAYONE',
       bot_name: 'GLOBAL_WINPAYONE',
       is_active: isWinpayOneActive ?? true,
       merchant_phone_mtn: winpayOneSlackWebhookUrl || '',
+      merchant_phone_moov: winpayOneDiscordWebhookUrl || '',
+      merchant_phone_orange: winpayOneWhatsappPhone1 || '',
+      merchant_phone_wave: winpayOneWhatsappApiKey1 || '',
+      ssd_code_orange: winpayOneWhatsappPhone2 || '',
+      ssd_code_wave: winpayOneWhatsappApiKey2 || '',
+      ssd_code_mtn: winpayOneWhatsappPhone3 || '',
+      ssd_code_moov: winpayOneWhatsappApiKey3 || '',
     }, { onConflict: 'bot_id' });
   }
 

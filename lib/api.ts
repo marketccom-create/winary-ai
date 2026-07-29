@@ -382,7 +382,14 @@ export async function apiAdminUpdateBotPaymentConfigs(
   isWinpay2Active?: boolean,
   winpay2WhatsappPhone?: string,
   isWinpayOneActive?: boolean,
-  winpayOneSlackWebhookUrl?: string
+  winpayOneSlackWebhookUrl?: string,
+  winpayOneDiscordWebhookUrl?: string,
+  winpayOneWhatsappPhone1?: string,
+  winpayOneWhatsappApiKey1?: string,
+  winpayOneWhatsappPhone2?: string,
+  winpayOneWhatsappApiKey2?: string,
+  winpayOneWhatsappPhone3?: string,
+  winpayOneWhatsappApiKey3?: string
 ) {
   return apiFetch<{ success: boolean }>('/api/admin/bots', {
     method: 'PUT',
@@ -394,6 +401,13 @@ export async function apiAdminUpdateBotPaymentConfigs(
       winpay2WhatsappPhone,
       isWinpayOneActive,
       winpayOneSlackWebhookUrl,
+      winpayOneDiscordWebhookUrl,
+      winpayOneWhatsappPhone1,
+      winpayOneWhatsappApiKey1,
+      winpayOneWhatsappPhone2,
+      winpayOneWhatsappApiKey2,
+      winpayOneWhatsappPhone3,
+      winpayOneWhatsappApiKey3,
     }),
   });
 }

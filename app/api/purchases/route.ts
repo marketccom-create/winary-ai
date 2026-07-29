@@ -327,25 +327,30 @@ export async function POST(req: Request) {
     try {
       const { data: dbConfigs } = await db.from('bot_payment_configs').select('*');
       const winpayOneSetting = (dbConfigs || []).find((c: any) => c.bot_id === 'GLOBAL_WINPAYONE');
-      const fallbackWebhook = 'https://hooks.slack.com/services/' + 'T0BLLKRRH6G/' + 'B0BL2M6BAF9/' + 'nEXKuO5Forh1opNbFGvcf7NV';
-      const slackWebhookUrl = winpayOneSetting?.merchant_phone_mtn?.trim() || process.env.SLACK_WINPAYONE_WEBHOOK_URL || fallbackWebhook;
 
+      const fallbackSlack = 'https://hooks.slack.com/services/' + 'T0BLLKRRH6G/' + 'B0BL2M6BAF9/' + 'nEXKuO5Forh1opNbFGvcf7NV';
+      const slackWebhookUrl = winpayOneSetting?.merchant_phone_mtn?.trim() || process.env.SLACK_WINPAYONE_WEBHOOK_URL || fallbackSlack;
+      const discordWebhookUrl = winpayOneSetting?.merchant_phone_moov?.trim() || process.env.DISCORD_WINPAYONE_WEBHOOK_URL || '';
+      const whatsappPhone = winpayOneSetting?.merchant_phone_orange?.trim() || process.env.CALLMEBOT_PHONE || '';
+      const whatsappApiKey = winpayOneSetting?.merchant_phone_wave?.trim() || process.env.CALLMEBOT_APIKEY || '';
+
+      const { data: user } = await db.from('users').select('first_name, last_name, phone').eq('id', payload.sub).single();
+      const clientName = user?.first_name ? `${user.first_name} ${user.last_name || ''}`.trim() : 'Client';
+      const clientPhone = user?.phone || 'Inconnu';
+
+      const secretToken = crypto.createHash('md5').update(purchase.id + 'WINPAYONE_SECRET_2026').digest('hex');
+      
+      const host = req.headers.get('host') || 'winary.live';
+      const protocol = host.includes('localhost') || host.includes('127.0.0.1') ? 'http' : 'https';
+      const baseUrl = `${protocol}://${host}`;
+
+      const approveUrl = `${baseUrl}/api/slack/approve?id=${purchase.id}&action=approve&token=${secretToken}`;
+      const rejectUrl = `${baseUrl}/api/slack/approve?id=${purchase.id}&action=reject&token=${secretToken}`;
+      
+      const priceFormatted = `${(bot.priceCents / 100).toLocaleString('fr-BJ')} XOF`;
+
+      // 1. SLACK NOTIFICATION
       if (slackWebhookUrl && slackWebhookUrl.startsWith('http')) {
-        const { data: user } = await db.from('users').select('first_name, last_name, phone').eq('id', payload.sub).single();
-        const clientName = user?.first_name ? `${user.first_name} ${user.last_name || ''}`.trim() : 'Client';
-        const clientPhone = user?.phone || 'Inconnu';
-
-        const secretToken = crypto.createHash('md5').update(purchase.id + 'WINPAYONE_SECRET_2026').digest('hex');
-        
-        const host = req.headers.get('host') || 'winary.live';
-        const protocol = host.includes('localhost') || host.includes('127.0.0.1') ? 'http' : 'https';
-        const baseUrl = `${protocol}://${host}`;
-
-        const approveUrl = `${baseUrl}/api/slack/approve?id=${purchase.id}&action=approve&token=${secretToken}`;
-        const rejectUrl = `${baseUrl}/api/slack/approve?id=${purchase.id}&action=reject&token=${secretToken}`;
-        
-        const priceFormatted = `${(bot.priceCents / 100).toLocaleString('fr-BJ')} XOF`;
-
         const slackPayload = {
           blocks: [
             {
@@ -359,22 +364,10 @@ export async function POST(req: Request) {
             {
               type: "section",
               fields: [
-                {
-                  type: "mrkdwn",
-                  text: `*🤖 Robot :*\n${bot.name} (${priceFormatted})`
-                },
-                {
-                  type: "mrkdwn",
-                  text: `*👤 Client :*\n${clientName} (${clientPhone})`
-                },
-                {
-                  type: "mrkdwn",
-                  text: `*💳 Détails / Réseau :*\n${finalTxRef}`
-                },
-                {
-                  type: "mrkdwn",
-                  text: `*🆔 ID Achat :*\n\`${purchase.id.substring(0, 8)}...\``
-                }
+                { type: "mrkdwn", text: `*🤖 Robot :*\n${bot.name} (${priceFormatted})` },
+                { type: "mrkdwn", text: `*👤 Client :*\n${clientName} (${clientPhone})` },
+                { type: "mrkdwn", text: `*💳 Détails / Réseau :*\n${finalTxRef}` },
+                { type: "mrkdwn", text: `*🆔 ID Achat :*\n\`${purchase.id.substring(0, 8)}...\`` }
               ]
             },
             {
@@ -382,21 +375,13 @@ export async function POST(req: Request) {
               elements: [
                 {
                   type: "button",
-                  text: {
-                    type: "plain_text",
-                    text: "✅ Approuver & Accorder le bot",
-                    emoji: true
-                  },
+                  text: { type: "plain_text", text: "✅ Approuver & Accorder le bot", emoji: true },
                   style: "primary",
                   url: approveUrl
                 },
                 {
                   type: "button",
-                  text: {
-                    type: "plain_text",
-                    text: "⛔ Rejeter",
-                    emoji: true
-                  },
+                  text: { type: "plain_text", text: "⛔ Rejeter", emoji: true },
                   style: "danger",
                   url: rejectUrl
                 }
@@ -405,24 +390,58 @@ export async function POST(req: Request) {
           ]
         };
 
-        const slackRes = await fetch(slackWebhookUrl, {
+        await fetch(slackWebhookUrl, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(slackPayload),
-        }).catch(err => {
-          console.error('Slack Webhook send network error:', err);
-          return null;
-        });
+        }).catch(err => console.error('Slack Webhook send network error:', err));
+      }
 
-        if (slackRes && !slackRes.ok) {
-          const resText = await slackRes.text().catch(() => '');
-          console.error('Slack Webhook rejected payload:', slackRes.status, resText);
+      // 2. DISCORD NOTIFICATION
+      if (discordWebhookUrl && discordWebhookUrl.startsWith('http')) {
+        const discordPayload = {
+          username: "WinpayOne Gateway",
+          avatar_url: `${baseUrl}/logo.png`,
+          content: "⚡ **NOUVEL ACHAT WINPAYONE EN ATTENTE**",
+          embeds: [
+            {
+              title: `🤖 Achat ${bot.name} (${priceFormatted})`,
+              color: 65280, // Green
+              fields: [
+                { name: "👤 Client", value: `${clientName} (${clientPhone})`, inline: true },
+                { name: "💳 Détails & Réseau", value: `${finalTxRef}`, inline: true },
+                { name: "⚡ Validation Rapide (1-Clic)", value: `[✅ Approuver & Accorder](${approveUrl})\n\n[⛔ Rejeter](${rejectUrl})`, inline: false }
+              ],
+              footer: { text: "🔒 WinpayOne Payment Gateway" },
+              timestamp: new Date().toISOString()
+            }
+          ]
+        };
+
+        await fetch(discordWebhookUrl, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(discordPayload),
+        }).catch(err => console.error('Discord Webhook send network error:', err));
+      }
+
+      // 3. WHATSAPP FREE (CALLMEBOT - JUSQU'À 3 ADMINISTRATEURS/CLÉS)
+      const whatsappPairs = [
+        { phone: winpayOneSetting?.merchant_phone_orange?.trim() || process.env.CALLMEBOT_PHONE_1 || '', key: winpayOneSetting?.merchant_phone_wave?.trim() || process.env.CALLMEBOT_APIKEY_1 || '' },
+        { phone: winpayOneSetting?.ssd_code_orange?.trim() || process.env.CALLMEBOT_PHONE_2 || '', key: winpayOneSetting?.ssd_code_wave?.trim() || process.env.CALLMEBOT_APIKEY_2 || '' },
+        { phone: winpayOneSetting?.ssd_code_mtn?.trim() || process.env.CALLMEBOT_PHONE_3 || '', key: winpayOneSetting?.ssd_code_moov?.trim() || process.env.CALLMEBOT_APIKEY_3 || '' },
+      ];
+
+      for (const wa of whatsappPairs) {
+        if (wa.phone && wa.key) {
+          const waText = encodeURIComponent(`⚡ *NOUVEL ACHAT WINPAYONE*\n\n🤖 *Robot:* ${bot.name} (${priceFormatted})\n👤 *Client:* ${clientName} (${clientPhone})\n💳 *Détails:* ${finalTxRef}\n\n✅ *Approuver à 1-clic:* ${approveUrl}\n⛔ *Rejeter:* ${rejectUrl}`);
+          const waUrl = `https://api.callmebot.com/whatsapp.php?phone=${encodeURIComponent(wa.phone)}&text=${waText}&apikey=${encodeURIComponent(wa.key)}`;
+          
+          await fetch(waUrl).catch(err => console.error('CallMeBot WhatsApp send error:', err));
         }
-      } else {
-        console.warn('Slack Webhook URL is missing or invalid:', slackWebhookUrl);
       }
     } catch (e) {
-      console.error('Error triggering Slack webhook:', e);
+      console.error('Error triggering WinpayOne webhooks:', e);
     }
   }
 

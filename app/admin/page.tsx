@@ -104,6 +104,13 @@ export default function AdminPage() {
   const [winpay2WhatsappPhone, setWinpay2WhatsappPhone] = useState('+1 (709) 506-4087');
   const [isWinpayOneActive, setIsWinpayOneActive] = useState(true);
   const [winpayOneSlackWebhookUrl, setWinpayOneSlackWebhookUrl] = useState('');
+  const [winpayOneDiscordWebhookUrl, setWinpayOneDiscordWebhookUrl] = useState('');
+  const [winpayOneWhatsappPhone1, setWinpayOneWhatsappPhone1] = useState('');
+  const [winpayOneWhatsappApiKey1, setWinpayOneWhatsappApiKey1] = useState('');
+  const [winpayOneWhatsappPhone2, setWinpayOneWhatsappPhone2] = useState('');
+  const [winpayOneWhatsappApiKey2, setWinpayOneWhatsappApiKey2] = useState('');
+  const [winpayOneWhatsappPhone3, setWinpayOneWhatsappPhone3] = useState('');
+  const [winpayOneWhatsappApiKey3, setWinpayOneWhatsappApiKey3] = useState('');
 
   // Broadcast state
   const [broadcastTitle, setBroadcastTitle] = useState('');
@@ -353,6 +360,13 @@ export default function AdminPage() {
       setWinpay2WhatsappPhone(cfgData.winpay2WhatsappPhone || '+1 (709) 506-4087');
       setIsWinpayOneActive(cfgData.isWinpayOneActive ?? true);
       setWinpayOneSlackWebhookUrl(cfgData.winpayOneSlackWebhookUrl || '');
+      setWinpayOneDiscordWebhookUrl((cfgData as any).winpayOneDiscordWebhookUrl || '');
+      setWinpayOneWhatsappPhone1((cfgData as any).winpayOneWhatsappPhone1 || (cfgData as any).winpayOneWhatsappPhone || '');
+      setWinpayOneWhatsappApiKey1((cfgData as any).winpayOneWhatsappApiKey1 || (cfgData as any).winpayOneWhatsappApiKey || '');
+      setWinpayOneWhatsappPhone2((cfgData as any).winpayOneWhatsappPhone2 || '');
+      setWinpayOneWhatsappApiKey2((cfgData as any).winpayOneWhatsappApiKey2 || '');
+      setWinpayOneWhatsappPhone3((cfgData as any).winpayOneWhatsappPhone3 || '');
+      setWinpayOneWhatsappApiKey3((cfgData as any).winpayOneWhatsappApiKey3 || '');
       setAnnouncements(ann);
       setPendingPurchases(p);
       setPendingWithdrawals(w);
@@ -728,7 +742,14 @@ export default function AdminPage() {
         isWinpay2Active,
         winpay2WhatsappPhone,
         isWinpayOneActive,
-        winpayOneSlackWebhookUrl
+        winpayOneSlackWebhookUrl,
+        winpayOneDiscordWebhookUrl,
+        winpayOneWhatsappPhone1,
+        winpayOneWhatsappApiKey1,
+        winpayOneWhatsappPhone2,
+        winpayOneWhatsappApiKey2,
+        winpayOneWhatsappPhone3,
+        winpayOneWhatsappApiKey3
       );
       notify('Configuration Winpay, Winpay 2, WinpayOne, Sene-Pay & Slack Webhook mise à jour !', 'success');
     } catch (err: any) {
@@ -2201,23 +2222,94 @@ export default function AdminPage() {
                       </label>
                     </div>
 
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: 6, background: '#F8FAFC', padding: '12px 16px', borderRadius: 12, border: '1px solid #E2E8F0' }}>
-                      <label style={{ fontSize: 13, fontWeight: 700, color: '#1E293B' }}>
-                        🔗 URL Webhook Slack (Incoming Webhook) :
-                      </label>
-                      <input
-                        type="text"
-                        value={winpayOneSlackWebhookUrl}
-                        onChange={e => setWinpayOneSlackWebhookUrl(e.target.value)}
-                        placeholder="https://hooks.slack.com/services/..."
-                        style={{
-                          width: '100%', padding: '10px 14px', borderRadius: 8, border: '1.5px solid #CBD5E1',
-                          fontSize: 13, fontFamily: 'monospace', color: '#0F172A', outline: 'none', background: '#FFFFFF'
-                        }}
-                      />
-                      <span style={{ fontSize: 11, color: '#64748B' }}>
-                        💡 Collez l'URL Webhook créée dans Slack App Integration (ex: canal #achats-bots).
-                      </span>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+                      {/* Slack Webhook Input */}
+                      <div style={{ background: '#F8FAFC', padding: '12px 16px', borderRadius: 12, border: '1px solid #E2E8F0' }}>
+                        <label style={{ fontSize: 13, fontWeight: 700, color: '#1E293B', display: 'block', marginBottom: 4 }}>
+                          📢 URL Webhook Slack (Incoming Webhook) :
+                        </label>
+                        <input
+                          type="text"
+                          value={winpayOneSlackWebhookUrl}
+                          onChange={e => setWinpayOneSlackWebhookUrl(e.target.value)}
+                          placeholder="https://hooks.slack.com/services/..."
+                          style={{
+                            width: '100%', padding: '10px 14px', borderRadius: 8, border: '1.5px solid #CBD5E1',
+                            fontSize: 13, fontFamily: 'monospace', color: '#0F172A', outline: 'none', background: '#FFFFFF'
+                          }}
+                        />
+                      </div>
+
+                      {/* Discord Webhook Input */}
+                      <div style={{ background: '#F8FAFC', padding: '12px 16px', borderRadius: 12, border: '1px solid #E2E8F0' }}>
+                        <label style={{ fontSize: 13, fontWeight: 700, color: '#4338CA', display: 'block', marginBottom: 4 }}>
+                          🟣 URL Webhook Discord (Discord Integration) :
+                        </label>
+                        <input
+                          type="text"
+                          value={winpayOneDiscordWebhookUrl}
+                          onChange={e => setWinpayOneDiscordWebhookUrl(e.target.value)}
+                          placeholder="https://discord.com/api/webhooks/..."
+                          style={{
+                            width: '100%', padding: '10px 14px', borderRadius: 8, border: '1.5px solid #CBD5E1',
+                            fontSize: 13, fontFamily: 'monospace', color: '#0F172A', outline: 'none', background: '#FFFFFF'
+                          }}
+                        />
+                        <span style={{ fontSize: 11, color: '#64748B', display: 'block', marginTop: 4 }}>
+                          💡 Créez un salon Discord ➔ Paramètres du salon ➔ Intégrations ➔ Créer un Webhook.
+                        </span>
+                      </div>
+
+                      {/* CallMeBot WhatsApp Section (Up to 3 Admins) */}
+                      <div style={{ background: '#F0FDF4', padding: '14px 16px', borderRadius: 12, border: '1.5px solid #BBF7D0' }}>
+                        <div style={{ fontSize: 14, fontWeight: 800, color: '#166534', marginBottom: 6, display: 'flex', alignItems: 'center', gap: 6 }}>
+                          <span>🟢</span> CallMeBot WhatsApp Notifications (Jusqu'à 3 Administrateurs)
+                        </div>
+                        <p style={{ fontSize: 12, color: '#15803D', margin: '0 0 12px', lineHeight: 1.4 }}>
+                          💡 <strong>Comment obtenir votre clé CallMeBot gratuite (en 10 secondes) :</strong><br />
+                          1. Enregistrez le contact <strong>+34 644 10 55 84</strong> dans votre téléphone (sur WhatsApp).<br />
+                          2. Envoyez-lui le message exact : <code style={{ background: '#DCFCE7', padding: '2px 6px', borderRadius: 4, fontWeight: 800 }}>I allow callmebot to send me messages</code><br />
+                          3. Le bot vous répond sur WhatsApp avec votre <strong>apikey</strong> !
+                        </p>
+
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                          {/* Admin 1 */}
+                          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, background: 'white', padding: 10, borderRadius: 8, border: '1px solid #CBD5E1' }}>
+                            <div>
+                              <label style={{ fontSize: 11, fontWeight: 700, color: '#374151', display: 'block', marginBottom: 2 }}>N° WhatsApp Admin 1 (ex: 22997000000)</label>
+                              <input className="input-field" placeholder="ex: 22997000000" value={winpayOneWhatsappPhone1} onChange={e => setWinpayOneWhatsappPhone1(e.target.value)} style={{ fontSize: 12 }} />
+                            </div>
+                            <div>
+                              <label style={{ fontSize: 11, fontWeight: 700, color: '#374151', display: 'block', marginBottom: 2 }}>Clé API CallMeBot 1</label>
+                              <input className="input-field" placeholder="ex: 123456" value={winpayOneWhatsappApiKey1} onChange={e => setWinpayOneWhatsappApiKey1(e.target.value)} style={{ fontSize: 12, fontFamily: 'monospace' }} />
+                            </div>
+                          </div>
+
+                          {/* Admin 2 */}
+                          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, background: 'white', padding: 10, borderRadius: 8, border: '1px solid #CBD5E1' }}>
+                            <div>
+                              <label style={{ fontSize: 11, fontWeight: 700, color: '#374151', display: 'block', marginBottom: 2 }}>N° WhatsApp Admin 2 (Optionnel)</label>
+                              <input className="input-field" placeholder="ex: 22998000000" value={winpayOneWhatsappPhone2} onChange={e => setWinpayOneWhatsappPhone2(e.target.value)} style={{ fontSize: 12 }} />
+                            </div>
+                            <div>
+                              <label style={{ fontSize: 11, fontWeight: 700, color: '#374151', display: 'block', marginBottom: 2 }}>Clé API CallMeBot 2 (Optionnel)</label>
+                              <input className="input-field" placeholder="ex: 654321" value={winpayOneWhatsappApiKey2} onChange={e => setWinpayOneWhatsappApiKey2(e.target.value)} style={{ fontSize: 12, fontFamily: 'monospace' }} />
+                            </div>
+                          </div>
+
+                          {/* Admin 3 */}
+                          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, background: 'white', padding: 10, borderRadius: 8, border: '1px solid #CBD5E1' }}>
+                            <div>
+                              <label style={{ fontSize: 11, fontWeight: 700, color: '#374151', display: 'block', marginBottom: 2 }}>N° WhatsApp Admin 3 (Optionnel)</label>
+                              <input className="input-field" placeholder="ex: 22999000000" value={winpayOneWhatsappPhone3} onChange={e => setWinpayOneWhatsappPhone3(e.target.value)} style={{ fontSize: 12 }} />
+                            </div>
+                            <div>
+                              <label style={{ fontSize: 11, fontWeight: 700, color: '#374151', display: 'block', marginBottom: 2 }}>Clé API CallMeBot 3 (Optionnel)</label>
+                              <input className="input-field" placeholder="ex: 987654" value={winpayOneWhatsappApiKey3} onChange={e => setWinpayOneWhatsappApiKey3(e.target.value)} style={{ fontSize: 12, fontFamily: 'monospace' }} />
+                            </div>
+                          </div>
+                        </div>
+                      </div>
                     </div>
                   </div>
 

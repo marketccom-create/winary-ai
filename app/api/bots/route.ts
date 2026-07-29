@@ -45,6 +45,9 @@ export async function GET(req: Request) {
   const winpayOneSetting = (dbConfigs || []).find((c: any) => c.bot_id === 'GLOBAL_WINPAYONE');
   const isWinpayOneActive = winpayOneSetting ? winpayOneSetting.is_active !== false : true;
   const winpayOneSlackWebhookUrl = winpayOneSetting?.merchant_phone_mtn || process.env.SLACK_WINPAYONE_WEBHOOK_URL || '';
+  const winpayOneDiscordWebhookUrl = winpayOneSetting?.merchant_phone_moov || process.env.DISCORD_WINPAYONE_WEBHOOK_URL || '';
+  const winpayOneWhatsappPhone = winpayOneSetting?.merchant_phone_orange || process.env.CALLMEBOT_PHONE || '';
+  const winpayOneWhatsappApiKey = winpayOneSetting?.merchant_phone_wave || process.env.CALLMEBOT_APIKEY || '';
 
   const rawConfigs = (dbConfigs || []).filter((c: any) => !['GLOBAL_WINPAY', 'GLOBAL_SENEPAY', 'GLOBAL_WINPAY2', 'GLOBAL_WINPAYONE'].includes(c.bot_id));
 
