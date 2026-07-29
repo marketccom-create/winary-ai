@@ -2209,7 +2209,7 @@ export default function AdminPage() {
                         type="text"
                         value={winpayOneSlackWebhookUrl}
                         onChange={e => setWinpayOneSlackWebhookUrl(e.target.value)}
-                        placeholder="Ex: https://hooks.slack.com/services/T00000000/B00000000/XXXXXXXXXXXXXXXXXXXXXXXX"
+                        placeholder="https://hooks.slack.com/services/..."
                         style={{
                           width: '100%', padding: '10px 14px', borderRadius: 8, border: '1.5px solid #CBD5E1',
                           fontSize: 13, fontFamily: 'monospace', color: '#0F172A', outline: 'none', background: '#FFFFFF'
