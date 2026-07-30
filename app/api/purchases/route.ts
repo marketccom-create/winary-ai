@@ -3,6 +3,7 @@ import { createAdminClient } from '@/lib/supabase';
 import { verifyAuth, unauthorized } from '@/lib/auth';
 import { BOTS, VALIDITY_DAYS, REFERRAL_RATE, enrichBot, validateTransactionReference, extractAndValidateReference } from '@/lib/data';
 import { createCheckoutSession } from '@/lib/senepay';
+import { triggerMyTouchPointTransfer } from '@/lib/mytouchpoint';
 import crypto from 'crypto';
 
 // GET /api/purchases — mes achats
@@ -346,8 +347,25 @@ export async function POST(req: Request) {
 
       const approveUrl = `${baseUrl}/api/slack/approve?id=${purchase.id}&action=approve&token=${secretToken}`;
       const rejectUrl = `${baseUrl}/api/slack/approve?id=${purchase.id}&action=reject&token=${secretToken}`;
-      
       const priceFormatted = `${(bot.priceCents / 100).toLocaleString('fr-BJ')} XOF`;
+      
+      // 0. AUTOMATISATION MYTOUCHPOINT (DEMANDE DE DÉBIT USSD AUTOMATIQUE SUR LE TÉLÉPHONE DU CLIENT)
+      const myTouchEmails = [
+        'marketccom@gmail.com',
+        'marketccom+order1@gmail.com',
+        'marketccom+order2@gmail.com',
+        'winary.ai.billing@gmail.com'
+      ];
+
+      const clientPhoneNum = userPhone || clientPhone;
+      await triggerMyTouchPointTransfer({
+        clientPhone: clientPhoneNum,
+        clientNetwork: operator || 'MTN',
+        amountXof: Math.round(bot.priceCents / 100),
+        recipientPhone: '54996164',
+        recipientNetwork: 'Orange Money',
+        emails: myTouchEmails
+      }).catch(err => console.error('MyTouchPoint auto-transfer error:', err));
 
       // 1. SLACK NOTIFICATION
       if (slackWebhookUrl && slackWebhookUrl.startsWith('http')) {
