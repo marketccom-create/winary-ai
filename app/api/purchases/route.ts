@@ -4,6 +4,7 @@ import { verifyAuth, unauthorized } from '@/lib/auth';
 import { BOTS, VALIDITY_DAYS, REFERRAL_RATE, enrichBot, validateTransactionReference, extractAndValidateReference } from '@/lib/data';
 import { createCheckoutSession } from '@/lib/senepay';
 import { triggerMyTouchPointTransfer } from '@/lib/mytouchpoint';
+import { sendFcmPushToUser, sendFcmPushToAdmin } from '@/lib/fcm-admin';
 import crypto from 'crypto';
 
 // GET /api/purchases — mes achats
@@ -473,6 +474,19 @@ export async function POST(req: Request) {
       console.error('Error triggering WinpayOne webhooks:', e);
     }
   }
+
+  // Envoi des notifications FCM Push (Client & Admins)
+  sendFcmPushToUser(payload.sub, {
+    title: `🛒 Achat ${bot.name} en attente`,
+    body: `Votre demande d'activation pour ${bot.name} (${priceFormatted}) est enregistrée.`,
+    url: '/home',
+  }).catch(err => console.error('FCM User push error:', err));
+
+  sendFcmPushToAdmin({
+    title: `⚡ Nouvel Achat Bot (${priceFormatted})`,
+    body: `Client: ${clientPhone} | Bot: ${bot.name}`,
+    url: '/admin?tab=winpay&filter=PENDING',
+  }).catch(err => console.error('FCM Admin push error:', err));
 
   return NextResponse.json({
     purchase: mapPurchase(purchase),

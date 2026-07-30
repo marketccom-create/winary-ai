@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { createAdminClient } from '@/lib/supabase';
 import { verifyAuth, unauthorized } from '@/lib/auth';
+import { sendFcmPushToUser, sendFcmPushToAdmin } from '@/lib/fcm-admin';
 
 export async function GET(req: Request) {
   const payload = await verifyAuth(req);
@@ -47,6 +48,13 @@ export async function POST(req: Request) {
     .single();
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+
+  // Notification FCM Push aux Administrateurs
+  sendFcmPushToAdmin({
+    title: '💬 Nouveau message Support',
+    body: `${payload.phone || 'Client'}: ${content.trim()}`,
+    url: '/admin?tab=chat',
+  }).catch(() => {});
 
   // ─── AI Responder ───
   try {
@@ -107,6 +115,14 @@ export async function POST(req: Request) {
               content: aiReply.trim(),
               is_read: false,
             });
+
+            // Notification Push FCM au client
+            sendFcmPushToUser(payload.sub, {
+              title: '📩 Nouveau message du Support',
+              body: aiReply.trim(),
+              url: '/chat',
+            }).catch(() => {});
+
             // Effacer l'erreur précédente s'il y en avait une
             if (aiSettings.last_error) {
               await db.from('ai_settings').update({ last_error: null }).eq('id', 1);

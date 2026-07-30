@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { createAdminClient } from '@/lib/supabase';
 import { verifyAuth, unauthorized } from '@/lib/auth';
+import { sendFcmPushToUser } from '@/lib/fcm-admin';
 
 export async function GET(req: Request, { params }: { params: Promise<{ userId: string }> }) {
   const { userId } = await params;
@@ -48,5 +49,13 @@ export async function POST(req: Request, { params }: { params: Promise<{ userId:
     .single();
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+
+  // Envoi de la notification Push FCM au destinataire
+  sendFcmPushToUser(userId, {
+    title: '📩 Réponse de l\'Assistance WINARY AI',
+    body: content.trim(),
+    url: '/chat',
+  }).catch(() => {});
+
   return NextResponse.json({ message: data });
 }

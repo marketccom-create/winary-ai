@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { createAdminClient } from '@/lib/supabase';
 import { REFERRAL_RATE } from '@/lib/data';
+import { sendFcmPushToUser } from '@/lib/fcm-admin';
 import crypto from 'crypto';
 
 export const dynamic = 'force-dynamic';
@@ -78,8 +79,20 @@ export async function GET(req: Request) {
           amount_cents: commission,
           description: `Commission parrainage (${buyer.phone})`,
         });
+
+        sendFcmPushToUser(sponsor.id, {
+          title: '🎁 Commission de Parrainage !',
+          body: `Vous avez reçu une commission suite au premier achat de ${buyer.phone}.`,
+          url: '/account',
+        }).catch(() => {});
       }
     }
+
+    sendFcmPushToUser(purchase.user_id, {
+      title: '🎉 Bot Activé avec Succès !',
+      body: `Votre robot ${purchase.bot_name} est désormais actif. Commencez à générer vos revenus dès maintenant !`,
+      url: '/home',
+    }).catch(() => {});
 
     return new NextResponse(renderHtmlResponse(
       '✅ Achat Approuvé avec Succès !',
@@ -103,6 +116,12 @@ export async function GET(req: Request) {
       .eq('user_id', purchase.user_id)
       .eq('type', 'BOT_PURCHASE')
       .eq('tx_reference', purchase.tx_reference);
+
+    sendFcmPushToUser(purchase.user_id, {
+      title: '⛔ Achat Non Validé',
+      body: `Votre demande d'activation pour ${purchase.bot_name} n'a pas pu être validée. Contactez le support.`,
+      url: '/chat',
+    }).catch(() => {});
 
     return new NextResponse(renderHtmlResponse(
       '⛔ Demande d\'achat Rejetée',

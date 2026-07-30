@@ -18,6 +18,9 @@ import {
   apiAdminGetAiSettings, apiAdminUpdateAiSettings, apiAdminBroadcastMessage
 } from '@/lib/api';
 import { formatXOF } from '@/lib/data';
+import { requestAndRegisterFcmToken } from '@/lib/firebase';
+import { supabase } from '@/lib/supabase';
+import { playWhatsappPopSound } from '@/lib/sound';
 import type { BotPaymentConfig, Announcement } from '@/lib/data';
 
 type Tab = 'dashboard' | 'users' | 'winpay' | 'pending' | 'withdrawals' | 'bots' | 'announcements' | 'chat';
@@ -119,6 +122,80 @@ export default function AdminPage() {
 
   // PWA Notification & Stripe Cash Sound State
   const [notificationPermission, setNotificationPermission] = useState<NotificationPermission>('default');
+
+  const selectedChatUserRef = useRef<string | null>(null);
+  useEffect(() => {
+    selectedChatUserRef.current = selectedChatUser;
+  }, [selectedChatUser]);
+
+  // Realtime Supabase WebSockets pour le Chat Admin
+  useEffect(() => {
+    const channel = supabase
+      .channel('admin-support-chat-live')
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'support_messages',
+        },
+        (payload) => {
+          const newMsg = payload.new;
+          if (newMsg.sender_role === 'USER') {
+            playWhatsappPopSound();
+
+            if (selectedChatUserRef.current === newMsg.user_id) {
+              setChatMessages((prev) => {
+                if (prev.some((m) => m.id === newMsg.id)) return prev;
+                return [...prev, newMsg];
+              });
+              setTimeout(() => {
+                messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+              }, 100);
+            }
+
+            setChatConversations((prev) => {
+              const existingIdx = prev.findIndex((c) => c.userId === newMsg.user_id);
+              if (existingIdx >= 0) {
+                const updated = [...prev];
+                const conv = { ...updated[existingIdx] };
+                conv.lastMessage = newMsg.content;
+                conv.lastMessageAt = newMsg.created_at;
+                if (selectedChatUserRef.current !== newMsg.user_id) {
+                  conv.unreadCount = (conv.unreadCount || 0) + 1;
+                }
+                updated.splice(existingIdx, 1);
+                return [conv, ...updated];
+              } else {
+                apiAdminGetChatConversations().then(setChatConversations).catch(() => {});
+                return prev;
+              }
+            });
+          }
+        }
+      )
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'support_messages',
+        },
+        (payload) => {
+          const updatedMsg = payload.new;
+          if (selectedChatUserRef.current === updatedMsg.user_id) {
+            setChatMessages((prev) =>
+              prev.map((m) => (m.id === updatedMsg.id ? updatedMsg : m))
+            );
+          }
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, []);
 
   useEffect(() => {
     if (typeof window !== 'undefined' && 'serviceWorker' in navigator) {
@@ -224,8 +301,9 @@ export default function AdminPage() {
       const perm = await Notification.requestPermission();
       setNotificationPermission(perm);
       if (perm === 'granted') {
-        notify('🔔 Mode Veille 24/7 & Sonnerie Forte activés !', 'success');
+        notify('🔔 Mode Veille 24/7 & Notifications Push FCM activés !', 'success');
         playSuccessSound();
+        requestAndRegisterFcmToken(undefined, true);
         triggerNativeNotification(
           '🔔 Alerte Veille Admin Activée',
           'Vous recevrez les notifications sonores fortes en direct pour chaque paiement.'
@@ -3291,9 +3369,20 @@ export default function AdminPage() {
                                   </div>
                                 </div>
                               )}
-                              <span style={{ fontSize: 10, color: '#94A3B8', marginTop: 4, fontWeight: 600 }}>
-                                {new Date(msg.created_at).toLocaleTimeString('fr-BJ', { hour: '2-digit', minute: '2-digit' })}
-                              </span>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: 4, marginTop: 4 }}>
+                                <span style={{ fontSize: 10, color: '#94A3B8', fontWeight: 600 }}>
+                                  {new Date(msg.created_at).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}
+                                </span>
+                                {isAdmin && (
+                                  <span style={{ fontSize: 12, fontWeight: 800, marginLeft: 2 }} title={msg.is_read ? 'Lu par le client' : 'Envoyé (Non lu)'}>
+                                    {msg.is_read ? (
+                                      <span style={{ color: '#0284C7' }}>✓✓</span>
+                                    ) : (
+                                      <span style={{ color: '#94A3B8' }}>✓</span>
+                                    )}
+                                  </span>
+                                )}
+                              </div>
                             </div>
                           );
                         })

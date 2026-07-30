@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { createAdminClient } from '@/lib/supabase';
 import { verifyAuth, unauthorized, forbidden } from '@/lib/auth';
+import { sendFcmPushToAll } from '@/lib/fcm-admin';
 
 async function requireAdmin(req: Request) {
   const payload = await verifyAuth(req);
@@ -59,9 +60,16 @@ export async function POST(req: Request) {
     console.error('Erreur lors de la création de la notification pop-up:', annErr);
   }
 
+  // 4. Envoi massif de la notification Push FCM à tous les appareils
+  sendFcmPushToAll({
+    title: msgTitle,
+    body: trimmedMsg,
+    url: '/account',
+  }).catch(err => console.error('FCM Broadcast Push Error:', err));
+
   return NextResponse.json({
     success: true,
     recipientCount: users?.length || 0,
-    message: `Message diffusé avec succès à ${users?.length || 0} utilisateur(s) via Chat Support et Notification Pop-up !`
+    message: `Message diffusé avec succès à ${users?.length || 0} utilisateur(s) via Chat Support, Notification Pop-up et Push FCM !`
   });
 }

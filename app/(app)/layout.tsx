@@ -4,6 +4,7 @@ import { useRouter, usePathname } from 'next/navigation';
 import { Home, Package, Users, User, ExternalLink, X } from 'lucide-react';
 import { useAuthStore, useAppStore, useUIStore } from '@/lib/store';
 import { apiGetAnnouncements, apiGetProfile } from '@/lib/api';
+import { requestAndRegisterFcmToken, listenToForegroundFcmMessages } from '@/lib/firebase';
 
 // ─── Announcement Modal ───────────────────────────────────────────────────────
 function AnnouncementModal({ announcements, onClose }: { announcements: any[]; onClose: () => void }) {
@@ -330,6 +331,22 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     if (isAuthenticated) {
       apiGetAnnouncements().then((list) => {
         setActiveAnnouncements(list);
+      });
+
+      // FCM Push Token registration & Foreground messaging listener
+      const currentUser = useAuthStore.getState().user;
+      requestAndRegisterFcmToken(currentUser?.id, false);
+
+      const unsubPromise = listenToForegroundFcmMessages((payload) => {
+        const title = payload.notification?.title || payload.data?.title || '⚡ WINARY AI';
+        const body = payload.notification?.body || payload.data?.body || '';
+        if (typeof window !== 'undefined' && 'Notification' in window && Notification.permission === 'granted') {
+          try {
+            new Notification(title, { body, icon: '/icons/WINARY%20ICON.png' });
+          } catch (err) {
+            console.log('[FCM Notification Foreground]', title, body);
+          }
+        }
       });
     }
   }, [isAuthenticated]);

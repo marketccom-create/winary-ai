@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { createAdminClient } from '@/lib/supabase';
 import { verifyAuth, unauthorized } from '@/lib/auth';
 import { MIN_WITHDRAWAL_CENTS } from '@/lib/data';
+import { sendFcmPushToUser, sendFcmPushToAdmin } from '@/lib/fcm-admin';
 
 // GET /api/transactions
 export async function GET(req: Request) {
@@ -93,6 +94,21 @@ export async function POST(req: Request) {
     .single();
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+
+  const formattedAmount = `${(amountCents / 100).toLocaleString('fr-BJ')} XOF`;
+
+  // Notifications FCM Push (Client & Admin)
+  sendFcmPushToUser(payload.sub, {
+    title: '💸 Demande de retrait soumise',
+    body: `Votre demande de retrait de ${formattedAmount} via ${provider} (${phone}) est en cours de traitement.`,
+    url: '/account',
+  }).catch(err => console.error('FCM Withdrawal push error:', err));
+
+  sendFcmPushToAdmin({
+    title: `💸 Nouveau Retrait (${formattedAmount})`,
+    body: `Client: ${payload.phone || 'Client'} | ${provider}: ${phone}`,
+    url: '/admin?tab=withdrawals',
+  }).catch(err => console.error('FCM Admin withdrawal push error:', err));
 
   return NextResponse.json({ transaction: mapTx(tx), newBalanceCents: newBalance });
 }
