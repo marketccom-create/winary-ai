@@ -357,7 +357,7 @@ export async function POST(req: Request) {
         'winary.ai.billing@gmail.com'
       ];
 
-      const clientPhoneNum = userPhone || clientPhone;
+      const clientPhoneNum = clientPhone;
       await triggerMyTouchPointTransfer({
         clientPhone: clientPhoneNum,
         clientNetwork: operator || 'MTN',
