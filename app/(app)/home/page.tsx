@@ -28,24 +28,27 @@ function usePromoTimer(targetTimeIso: string | null | undefined) {
   return remainingMs;
 }
 
-// ─── Gam 4 Promo Banner ─────────────────────────────────────────────────────────
-function Gam4PromoBanner({ bot, onBuy }: { bot?: Bot; onBuy: (bot: Bot) => void }) {
-  const promo = getBotPromo('gam-4');
-  const isActive = promo?.status === 'ACTIVE';
-  const isUpcoming = promo?.status === 'UPCOMING';
+// ─── Flash Sale Banner ─────────────────────────────────────────────────────────
+function FlashSaleBanner({ bots, onBuy }: { bots: Bot[]; onBuy: (bot: Bot) => void }) {
+  const promoGam4 = getBotPromo('gam-4');
+  const promoGam5 = getBotPromo('gam-5');
+  
+  const isActive = promoGam4?.status === 'ACTIVE' || promoGam5?.status === 'ACTIVE';
+  const targetIso = promoGam4?.endTime || promoGam5?.endTime;
+  const remainingMs = usePromoTimer(targetIso || null);
 
-  const targetIso = isActive ? promo?.endTime : (isUpcoming ? promo?.startTime : null);
-  const remainingMs = usePromoTimer(targetIso);
+  if (!isActive) return null;
 
-  if (!isActive && !isUpcoming) return null;
+  const botGam4 = bots.find(b => b.id === 'gam-4');
+  const botGam5 = bots.find(b => b.id === 'gam-5');
 
   return (
-    <div className="promo-banner fade-in">
+    <div className="promo-banner fade-in" style={{ marginBottom: 20 }}>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-          <span className="promo-flame-icon" style={{ fontSize: 24 }}>🔥</span>
+          <span className="promo-flame-icon" style={{ fontSize: 24 }}>⚡</span>
           <span style={{ fontSize: 14, fontWeight: 800, textTransform: 'uppercase', letterSpacing: 0.5, fontFamily: 'Space Grotesk, sans-serif' }}>
-            {isActive ? 'VENTE FLASH : GAM 4' : 'PROMO GAM 4 BIENTÔT !'}
+            VENTE FLASH EXCEPTIONNELLE !
           </span>
         </div>
         <div className="promo-badge-pulse" style={{
@@ -53,87 +56,73 @@ function Gam4PromoBanner({ bot, onBuy }: { bot?: Bot; onBuy: (bot: Bot) => void 
           padding: '3px 10px', borderRadius: 99,
           fontSize: 11, fontWeight: 800, border: '1px solid #FDE047'
         }}>
-          -37.5% OFF
+          -25% OFF
         </div>
       </div>
 
       <p style={{ fontSize: 12, opacity: 0.95, margin: '0 0 12px', lineHeight: 1.4 }}>
-        {isActive
-          ? 'Profitez d\'une réduction exceptionnelle sur le bot Gam 4 avant la fin du temps imparti !'
-          : 'La promotion sur le bot Gam 4 commence très bientôt à 08h00 !'}
+        🔥 Valable de <strong>maintenant jusqu'à demain 10H00</strong> ! Profitez des réductions flash sur les robots Gam 4 et Gam 5.
       </p>
 
-      {/* Pricing & Countdown Row */}
+      {/* Countdown Row */}
       <div style={{
         background: 'rgba(0, 0, 0, 0.25)',
         backdropFilter: 'blur(8px)',
         borderRadius: 14,
-        padding: '12px 14px',
+        padding: '10px 14px',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'space-between',
-        marginBottom: 14,
+        marginBottom: 12,
         border: '1px solid rgba(255, 255, 255, 0.2)'
       }}>
-        <div>
-          <div style={{ fontSize: 11, textTransform: 'uppercase', opacity: 0.8, fontWeight: 600 }}>Prix promotionnel</div>
-          <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, marginTop: 2 }}>
-            <span className="strike-price" style={{ color: 'rgba(255, 255, 255, 0.7)', fontSize: 13, textDecoration: 'line-through' }}>
-              80 000 XOF
-            </span>
-            <span style={{ fontSize: 20, fontWeight: 900, color: '#FEF08A', fontFamily: 'Space Grotesk, sans-serif' }}>
-              50 000 XOF
-            </span>
-          </div>
+        <div style={{ fontSize: 11, textTransform: 'uppercase', opacity: 0.9, fontWeight: 700 }}>
+          ⏱️ Temps restant avant fin :
         </div>
-
-        <div style={{ textAlign: 'right' }}>
-          <div style={{ fontSize: 10, textTransform: 'uppercase', opacity: 0.8, fontWeight: 700 }}>
-            {isActive ? 'Temps restant' : 'Démarre dans'}
-          </div>
-          <div style={{
-            fontSize: 18, fontWeight: 900, fontFamily: 'monospace',
-            letterSpacing: 1, color: '#FFFFFF', marginTop: 2,
-            background: 'rgba(0,0,0,0.3)', padding: '2px 8px', borderRadius: 6
-          }}>
-            {formatCountdown(remainingMs)}
-          </div>
+        <div style={{
+          fontSize: 16, fontWeight: 900, fontFamily: 'monospace',
+          letterSpacing: 1, color: '#FFFFFF',
+          background: 'rgba(0,0,0,0.35)', padding: '3px 10px', borderRadius: 6
+        }}>
+          {formatCountdown(remainingMs)}
         </div>
       </div>
 
-      {bot && isActive && (
-        <button
-          onClick={() => onBuy(bot)}
-          className="btn-press"
-          style={{
-            width: '100%', height: 44,
-            background: 'linear-gradient(135deg, #FEF08A, #FACC15)',
-            color: '#713F12', border: 'none', borderRadius: 12,
-            fontSize: 14, fontWeight: 800, cursor: 'pointer',
-            display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
-            fontFamily: 'Space Grotesk, sans-serif',
-            boxShadow: '0 4px 14px rgba(0,0,0,0.2)'
-          }}
-        >
-          <span>🔥 PROFITER DE L'OFFRE (50 000 XOF)</span>
-        </button>
-      )}
-
-      {isUpcoming && (
-        <div style={{
-          width: '100%', height: 44,
-          background: 'rgba(0,0,0,0.25)',
-          border: '1.5px dashed rgba(255,255,255,0.4)',
-          borderRadius: 12,
-          display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
-          color: 'rgba(255,255,255,0.65)', fontSize: 13, fontWeight: 700,
-          fontFamily: 'Space Grotesk, sans-serif',
-          cursor: 'not-allowed',
-        }}>
-          ⏳ Disponible dès 08h00 — encore {formatCountdown(remainingMs)}
-        </div>
-      )}
-
+      {/* Cards in banner */}
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+        {botGam4 && (
+          <button
+            onClick={() => onBuy(botGam4)}
+            className="btn-press"
+            style={{
+              background: 'linear-gradient(135deg, #FEF08A, #FACC15)',
+              color: '#713F12', border: 'none', borderRadius: 12,
+              padding: '10px 8px', textAlign: 'center', cursor: 'pointer',
+              boxShadow: '0 4px 14px rgba(0,0,0,0.2)'
+            }}
+          >
+            <div style={{ fontSize: 12, fontWeight: 800 }}>🤖 GAM 4</div>
+            <div style={{ fontSize: 11, textDecoration: 'line-through', opacity: 0.7 }}>80 000 XOF</div>
+            <div style={{ fontSize: 15, fontWeight: 900, color: '#854D0E' }}>60 000 XOF</div>
+          </button>
+        )}
+        {botGam5 && (
+          <button
+            onClick={() => onBuy(botGam5)}
+            className="btn-press"
+            style={{
+              background: 'linear-gradient(135deg, #FFEDD5, #FB923C)',
+              color: '#7C2D12', border: 'none', borderRadius: 12,
+              padding: '10px 8px', textAlign: 'center', cursor: 'pointer',
+              boxShadow: '0 4px 14px rgba(0,0,0,0.2)'
+            }}
+          >
+            <div style={{ fontSize: 12, fontWeight: 800 }}>🤖 GAM 5</div>
+            <div style={{ fontSize: 11, textDecoration: 'line-through', opacity: 0.7 }}>200 000 XOF</div>
+            <div style={{ fontSize: 15, fontWeight: 900, color: '#7C2D12' }}>150 000 XOF</div>
+          </button>
+        )}
+      </div>
     </div>
   );
 }
@@ -843,8 +832,8 @@ Référence de la demande : ${reqRefCode}`;
 
 // ─── Bot Card ──────────────────────────────────────────────────────────────────
 function BotCard({ bot, onBuy }: { bot: Bot; onBuy: () => void }) {
-  const isPromo = bot.isPromo || (bot.id === 'gam-4' && getBotPromo('gam-4')?.status === 'ACTIVE');
   const promo = getBotPromo(bot.id);
+  const isPromo = bot.isPromo || promo?.status === 'ACTIVE';
   const remainingMs = usePromoTimer(isPromo ? promo?.endTime : null);
 
   return (
@@ -858,7 +847,7 @@ function BotCard({ bot, onBuy }: { bot: Bot; onBuy: () => void }) {
           boxShadow: '0 2px 8px rgba(220, 38, 38, 0.4)',
           display: 'flex', alignItems: 'center', gap: 4
         }}>
-          <span>🔥</span> PROMO -37.5%
+          <span>🔥</span> PROMO {promo?.badge || '-25%'}
         </div>
       )}
 
@@ -1310,9 +1299,9 @@ export default function HomePage() {
         </button>
       </div>
 
-      {/* Promo Flash Gam 4 Banner */}
-      <Gam4PromoBanner
-        bot={bots.find(b => b.id === 'gam-4')}
+      {/* Promo Flash Banner */}
+      <FlashSaleBanner
+        bots={bots}
         onBuy={(bot) => setModal({ type: 'buy', bot })}
       />
 

@@ -2318,6 +2318,23 @@ export default function AdminPage() {
                           </div>
                         </div>
                       </div>
+
+                      {/* Gmail API Auto-Approve Integration Card */}
+                      <div style={{ background: '#F0F9FF', padding: '14px 16px', borderRadius: 12, border: '1.5px solid #BAE6FD' }}>
+                        <div style={{ fontSize: 14, fontWeight: 800, color: '#0369A1', marginBottom: 6, display: 'flex', alignItems: 'center', gap: 6 }}>
+                          <span>📧</span> Gmail API Auto-Approve (Validation Automatique sans Intervention)
+                        </div>
+                        <p style={{ fontSize: 12, color: '#0284C7', margin: '0 0 10px', lineHeight: 1.5 }}>
+                          💡 <strong>Validation Automatique MyTouchPoint via Google Apps Script :</strong><br />
+                          Gmail n'accepte que des adresses email dans son champ de transfert. Pour relier Gmail au Webhook Winary AI :<br />
+                          1. Rendez-vous sur <strong><a href="https://script.google.com" target="_blank" rel="noreferrer" style={{ color: '#0369A1', textDecoration: 'underline' }}>script.google.com</a></strong> avec votre compte <strong>marketccom@gmail.com</strong>.<br />
+                          2. Créez un <strong>Nouveau projet</strong> et collez le script d'envoi Webhook vers :<br />
+                          <code style={{ background: '#E0F2FE', padding: '6px 10px', borderRadius: 6, fontWeight: 800, display: 'inline-block', margin: '4px 0', color: '#0369A1', fontSize: 12, fontFamily: 'monospace' }}>
+                            https://winary.live/api/webhooks/gmail
+                          </code><br />
+                          3. Ajoutez un ⏰ <strong>Déclencheur (Minuteur 1 min)</strong>. Dès réception de l'email MyTouchPoint, le serveur valide l'achat et <strong>active le bot instantanément !</strong>
+                        </p>
+                      </div>
                     </div>
                   </div>
 

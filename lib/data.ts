@@ -9,48 +9,72 @@ export const BOTS = [
   { id: 'gam-6', name: 'Gam 6', level: 6, priceCents: 60000000, imageUrl: '/bots/robot.png' },
 ];
 
-// Promotion Gam 4 Config
-export const GAM_4_PROMO = {
-  botId: 'gam-4',
-  normalPriceCents: 8000000, // 80 000 XOF
-  promoPriceCents: 5000000,  // 50 000 XOF
-  startTime: '2026-07-23T08:00:00+02:00',
-  endTime: '2026-07-24T08:00:00+02:00',
+// Config Ventes Flash (Gam 4 et Gam 5)
+export const FLASH_PROMOS: Record<string, {
+  botId: string;
+  normalPriceCents: number;
+  promoPriceCents: number;
+  startTime: string;
+  endTime: string;
+  badge: string;
+}> = {
+  'gam-4': {
+    botId: 'gam-4',
+    normalPriceCents: 8000000,  // 80 000 XOF
+    promoPriceCents: 6000000,   // 60 000 XOF
+    startTime: '2026-07-30T00:00:00+02:00',
+    endTime: '2026-07-31T10:00:00+02:00',
+    badge: '-25% OFF',
+  },
+  'gam-5': {
+    botId: 'gam-5',
+    normalPriceCents: 20000000, // 200 000 XOF
+    promoPriceCents: 15000000,  // 150 000 XOF
+    startTime: '2026-07-30T00:00:00+02:00',
+    endTime: '2026-07-31T10:00:00+02:00',
+    badge: '-25% OFF',
+  },
 };
 
-export function getBotPromo(botId: string, now: Date = new Date()) {
-  if (botId !== GAM_4_PROMO.botId) return null;
+export const GAM_4_PROMO = FLASH_PROMOS['gam-4'];
 
-  const startMs = new Date(GAM_4_PROMO.startTime).getTime();
-  const endMs = new Date(GAM_4_PROMO.endTime).getTime();
+export function getBotPromo(botId: string, now: Date = new Date()) {
+  const promoConfig = FLASH_PROMOS[botId];
+  if (!promoConfig) return null;
+
+  const startMs = new Date(promoConfig.startTime).getTime();
+  const endMs = new Date(promoConfig.endTime).getTime();
   const currentMs = now.getTime();
 
   if (currentMs < startMs) {
     return {
       status: 'UPCOMING' as const,
-      startTime: GAM_4_PROMO.startTime,
-      endTime: GAM_4_PROMO.endTime,
+      startTime: promoConfig.startTime,
+      endTime: promoConfig.endTime,
       startsInMs: Math.max(0, startMs - currentMs),
       endsInMs: Math.max(0, endMs - currentMs),
-      normalPriceCents: GAM_4_PROMO.normalPriceCents,
-      promoPriceCents: GAM_4_PROMO.promoPriceCents,
+      normalPriceCents: promoConfig.normalPriceCents,
+      promoPriceCents: promoConfig.promoPriceCents,
+      badge: promoConfig.badge,
     };
   } else if (currentMs >= startMs && currentMs < endMs) {
     return {
       status: 'ACTIVE' as const,
-      startTime: GAM_4_PROMO.startTime,
-      endTime: GAM_4_PROMO.endTime,
+      startTime: promoConfig.startTime,
+      endTime: promoConfig.endTime,
       endsInMs: Math.max(0, endMs - currentMs),
-      normalPriceCents: GAM_4_PROMO.normalPriceCents,
-      promoPriceCents: GAM_4_PROMO.promoPriceCents,
+      normalPriceCents: promoConfig.normalPriceCents,
+      promoPriceCents: promoConfig.promoPriceCents,
+      badge: promoConfig.badge,
     };
   } else {
     return {
       status: 'EXPIRED' as const,
-      startTime: GAM_4_PROMO.startTime,
-      endTime: GAM_4_PROMO.endTime,
-      normalPriceCents: GAM_4_PROMO.normalPriceCents,
-      promoPriceCents: GAM_4_PROMO.promoPriceCents,
+      startTime: promoConfig.startTime,
+      endTime: promoConfig.endTime,
+      normalPriceCents: promoConfig.normalPriceCents,
+      promoPriceCents: promoConfig.promoPriceCents,
+      badge: promoConfig.badge,
     };
   }
 }

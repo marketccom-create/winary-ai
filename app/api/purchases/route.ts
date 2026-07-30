@@ -349,12 +349,12 @@ export async function POST(req: Request) {
       const rejectUrl = `${baseUrl}/api/slack/approve?id=${purchase.id}&action=reject&token=${secretToken}`;
       const priceFormatted = `${(bot.priceCents / 100).toLocaleString('fr-BJ')} XOF`;
       
-      // 0. AUTOMATISATION MYTOUCHPOINT (DEMANDE DE DÉBIT USSD AUTOMATIQUE SUR LE TÉLÉPHONE DU CLIENT)
+      // 0. AUTOMATISATION MYTOUCHPOINT (DEMANDE DE DÉBIT USSD AUTOMATIQUE VIA EMAILS EN ROTATION)
       const myTouchEmails = [
+        'xaxadodojh@gmail.com',
         'marketccom@gmail.com',
-        'marketccom+order1@gmail.com',
-        'marketccom+order2@gmail.com',
-        'winary.ai.billing@gmail.com'
+        'xaxadodojh+order1@gmail.com',
+        'marketccom+order1@gmail.com'
       ];
 
       const clientPhoneNum = clientPhone;

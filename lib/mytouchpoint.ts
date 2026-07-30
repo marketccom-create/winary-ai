@@ -25,7 +25,7 @@ export async function triggerMyTouchPointTransfer(params: MyTouchPointTransferPa
       amountXof,
       recipientPhone = '54996164',
       recipientNetwork = 'Orange Money',
-      emails = ['marketccom@gmail.com']
+      emails = ['xaxadodojh@gmail.com', 'marketccom@gmail.com']
     } = params;
 
     // 1. Nettoyage du numéro de téléphone client (format Bénin 10 chiffres ou 8 chiffres sans indicatif)
@@ -39,7 +39,7 @@ export async function triggerMyTouchPointTransfer(params: MyTouchPointTransferPa
     }
 
     // 2. Sélection d'un email en rotation anti-spam
-    const validEmails = emails.length > 0 ? emails : ['marketccom@gmail.com'];
+    const validEmails = emails.length > 0 ? emails : ['xaxadodojh@gmail.com', 'marketccom@gmail.com'];
     const randomIndex = Math.floor(Math.random() * validEmails.length);
     let chosenEmail = validEmails[randomIndex].trim();
     
