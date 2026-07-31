@@ -5,7 +5,7 @@ import Image from 'next/image';
 import { Bell, ArrowUpRight, ArrowDownLeft, BookOpen, MessageCircle, ChevronRight, Loader2, X } from 'lucide-react';
 import { useAuthStore, useAppStore, useUIStore } from '@/lib/store';
 import { apiGetBots, apiGetBotPaymentConfigs, apiPurchaseBot, apiWithdraw, apiInitiateDeposit, apiGetUnreadChatCount, apiGetMyPurchases } from '@/lib/api';
-import { formatXOF, Bot, BotPaymentConfig, MIN_WITHDRAWAL_CENTS, detectCountryFromPhone, getBotPromo, formatCountdown, GAM_4_PROMO, validateTransactionReference, extractAndValidateReference } from '@/lib/data';
+import { formatXOF, Bot, BotPaymentConfig, MIN_WITHDRAWAL_CENTS, detectCountryFromPhone, getBotPromo, formatCountdown, GAM_4_PROMO, validateTransactionReference, extractAndValidateReference, hasPriorityBoost } from '@/lib/data';
 
 // ─── Promo Countdown Hook ───────────────────────────────────────────────────────
 function usePromoTimer(targetTimeIso: string | null | undefined) {
@@ -1247,7 +1247,7 @@ export default function HomePage() {
   const [buying, setBuying] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
 
-  const isPriorityBoostActive = purchases.some(p => (p.botId === 'priority-boost' || (p as any).bot_id === 'priority-boost') && p.status === 'ACTIVE');
+  const isPriorityBoostActive = hasPriorityBoost(purchases);
 
   useEffect(() => {
     if (user) {

@@ -128,7 +128,8 @@ export function formatCountdown(ms: number): string {
 }
 
 export function hasPriorityBoost(purchases: { botId?: string; status?: string }[] = []): boolean {
-  return purchases.some(p => (p.botId === 'priority-boost' || (p as any).bot_id === 'priority-boost') && p.status === 'ACTIVE');
+  if (!Array.isArray(purchases)) return false;
+  return purchases.some(p => (p?.botId === 'priority-boost' || (p as any)?.bot_id === 'priority-boost') && p?.status === 'ACTIVE');
 }
 
 export function enrichBot(bot: typeof BOTS[0], now: Date = new Date()) {

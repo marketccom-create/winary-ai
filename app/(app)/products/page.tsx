@@ -3,7 +3,7 @@ import { useEffect, useState } from 'react';
 import { Loader2, Zap, Clock, CheckCircle } from 'lucide-react';
 import { useAuthStore, useAppStore, useUIStore } from '@/lib/store';
 import { apiGetMyPurchases, apiStartWork, apiClaimWork } from '@/lib/api';
-import { formatXOF, formatCountdown, workRevenueCents } from '@/lib/data';
+import { formatXOF, formatCountdown, workRevenueCents, hasPriorityBoost } from '@/lib/data';
 import type { UserPurchase } from '@/lib/data';
 
 // ─── Countdown timer hook ──────────────────────────────────────────────────────
@@ -325,9 +325,10 @@ export default function ProductsPage() {
     });
   }, [user, setPurchases]);
 
-  const active = purchases.filter(p => p.status === 'ACTIVE');
-  const pending = purchases.filter(p => p.status === 'PENDING');
-  const isPriorityBoostActive = purchases.some(p => (p.botId === 'priority-boost' || (p as any).bot_id === 'priority-boost') && p.status === 'ACTIVE');
+  const safePurchases = Array.isArray(purchases) ? purchases : [];
+  const active = safePurchases.filter(p => p?.status === 'ACTIVE');
+  const pending = safePurchases.filter(p => p?.status === 'PENDING');
+  const isPriorityBoostActive = hasPriorityBoost(purchases);
 
   return (
     <div className="main-content">

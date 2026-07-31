@@ -123,7 +123,8 @@ export default function AccountPage() {
     }).catch(() => {});
   }, [user, setTransactions, setPurchases]);
 
-  const isPriorityBoostActive = purchases.some(p => (p.botId === 'priority-boost' || (p as any).bot_id === 'priority-boost') && p.status === 'ACTIVE');
+  const safeTransactions = Array.isArray(transactions) ? transactions : [];
+  const isPriorityBoostActive = hasPriorityBoost(purchases);
 
   function handleLogout() {
     logout();
@@ -222,7 +223,7 @@ export default function AccountPage() {
             <div style={{ display: 'flex', justifyContent: 'center', padding: 24 }}>
               <Loader2 size={24} color="#1A56DB" style={{ animation: 'spin 0.8s linear infinite' }} />
             </div>
-          ) : transactions.length === 0 ? (
+          ) : safeTransactions.length === 0 ? (
             <div style={{
               textAlign: 'center', padding: 24, background: 'white',
               borderRadius: 14, border: '1.5px solid #E5E7EB',
@@ -233,15 +234,15 @@ export default function AccountPage() {
             <div style={{
               background: 'white', borderRadius: 16, border: '1.5px solid #E5E7EB', overflow: 'hidden',
             }}>
-              {transactions.map((tx, i) => {
+              {safeTransactions.map((tx, i) => {
                 const meta = TX_ICONS[tx.type] || TX_ICONS.ADMIN_ADJUSTMENT;
-                const statusMeta = STATUS_LABELS[tx.status];
+                const statusMeta = STATUS_LABELS[tx.status] || { label: tx.status || 'Complété', color: '#15803D' };
                 const isCredit = tx.amountCents > 0;
                 return (
-                  <div key={tx.id} style={{
+                  <div key={tx.id || i} style={{
                     display: 'flex', alignItems: 'center', gap: 12,
                     padding: '14px 16px',
-                    borderBottom: i < transactions.length - 1 ? '1px solid #F3F4F6' : 'none',
+                    borderBottom: i < safeTransactions.length - 1 ? '1px solid #F3F4F6' : 'none',
                   }}>
                     <div style={{
                       width: 40, height: 40, borderRadius: 12,
@@ -253,9 +254,9 @@ export default function AccountPage() {
                         {tx.description || meta.label}
                       </div>
                       <div style={{ fontSize: 11, color: '#9CA3AF', marginTop: 2 }}>
-                        {new Date(tx.createdAt).toLocaleDateString('fr-BJ', {
+                        {tx.createdAt ? new Date(tx.createdAt).toLocaleDateString('fr-BJ', {
                           day: '2-digit', month: 'short', year: 'numeric',
-                        })} · <span style={{ color: statusMeta.color }}>{statusMeta.label}</span>
+                        }) : '—'} · <span style={{ color: statusMeta.color }}>{statusMeta.label}</span>
                       </div>
                     </div>
                     <div style={{
@@ -263,7 +264,7 @@ export default function AccountPage() {
                       color: isCredit ? '#15803D' : '#B91C1C',
                       flexShrink: 0,
                     }}>
-                      {isCredit ? '+' : ''}{formatXOF(Math.abs(tx.amountCents))}
+                      {isCredit ? '+' : ''}{formatXOF(Math.abs(tx.amountCents || 0))}
                     </div>
                   </div>
                 );
