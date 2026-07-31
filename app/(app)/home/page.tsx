@@ -30,15 +30,17 @@ function usePromoTimer(targetTimeIso: string | null | undefined) {
 
 // ─── Flash Sale Banner ─────────────────────────────────────────────────────────
 function FlashSaleBanner({ bots, onBuy }: { bots: Bot[]; onBuy: (bot: Bot) => void }) {
+  const promoGam3 = getBotPromo('gam-3');
   const promoGam4 = getBotPromo('gam-4');
   const promoGam5 = getBotPromo('gam-5');
   
-  const isActive = promoGam4?.status === 'ACTIVE' || promoGam5?.status === 'ACTIVE';
-  const targetIso = promoGam4?.endTime || promoGam5?.endTime;
+  const isActive = promoGam3?.status === 'ACTIVE' || promoGam4?.status === 'ACTIVE' || promoGam5?.status === 'ACTIVE';
+  const targetIso = promoGam3?.endTime || promoGam4?.endTime || promoGam5?.endTime;
   const remainingMs = usePromoTimer(targetIso || null);
 
   if (!isActive) return null;
 
+  const botGam3 = bots.find(b => b.id === 'gam-3');
   const botGam4 = bots.find(b => b.id === 'gam-4');
   const botGam5 = bots.find(b => b.id === 'gam-5');
 
@@ -47,7 +49,7 @@ function FlashSaleBanner({ bots, onBuy }: { bots: Bot[]; onBuy: (bot: Bot) => vo
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
           <span className="promo-flame-icon" style={{ fontSize: 24 }}>⚡</span>
-          <span style={{ fontSize: 14, fontWeight: 800, textTransform: 'uppercase', letterSpacing: 0.5, fontFamily: 'Space Grotesk, sans-serif' }}>
+          <span style={{ fontSize: 13, fontWeight: 800, textTransform: 'uppercase', letterSpacing: 0.5, fontFamily: 'Space Grotesk, sans-serif' }}>
             VENTE FLASH EXCEPTIONNELLE !
           </span>
         </div>
@@ -56,12 +58,12 @@ function FlashSaleBanner({ bots, onBuy }: { bots: Bot[]; onBuy: (bot: Bot) => vo
           padding: '3px 10px', borderRadius: 99,
           fontSize: 11, fontWeight: 800, border: '1px solid #FDE047'
         }}>
-          -25% OFF
+          JUSQU'À -50% OFF
         </div>
       </div>
 
       <p style={{ fontSize: 12, opacity: 0.95, margin: '0 0 12px', lineHeight: 1.4 }}>
-        🔥 Valable de <strong>maintenant jusqu'à demain 10H00</strong> ! Profitez des réductions flash sur les robots Gam 4 et Gam 5.
+        🔥 Valable <strong>aujourd'hui 18h00 à demain 18h00</strong> ! Réductions flash sur les robots Gam 3, Gam 4 et Gam 5.
       </p>
 
       {/* Countdown Row */}
@@ -77,7 +79,7 @@ function FlashSaleBanner({ bots, onBuy }: { bots: Bot[]; onBuy: (bot: Bot) => vo
         border: '1px solid rgba(255, 255, 255, 0.2)'
       }}>
         <div style={{ fontSize: 11, textTransform: 'uppercase', opacity: 0.9, fontWeight: 700 }}>
-          ⏱️ Temps restant avant fin :
+          ⏱️ Temps restant :
         </div>
         <div style={{
           fontSize: 16, fontWeight: 900, fontFamily: 'monospace',
@@ -89,7 +91,23 @@ function FlashSaleBanner({ bots, onBuy }: { bots: Bot[]; onBuy: (bot: Bot) => vo
       </div>
 
       {/* Cards in banner */}
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8 }}>
+        {botGam3 && (
+          <button
+            onClick={() => onBuy(botGam3)}
+            className="btn-press"
+            style={{
+              background: 'linear-gradient(135deg, #E0E7FF, #818CF8)',
+              color: '#1E1B4B', border: 'none', borderRadius: 12,
+              padding: '10px 6px', textAlign: 'center', cursor: 'pointer',
+              boxShadow: '0 4px 14px rgba(0,0,0,0.2)'
+            }}
+          >
+            <div style={{ fontSize: 11, fontWeight: 800 }}>🤖 GAM 3</div>
+            <div style={{ fontSize: 10, textDecoration: 'line-through', opacity: 0.7 }}>30 000 XOF</div>
+            <div style={{ fontSize: 13, fontWeight: 900, color: '#1E1B4B' }}>15 000 XOF</div>
+          </button>
+        )}
         {botGam4 && (
           <button
             onClick={() => onBuy(botGam4)}
@@ -97,13 +115,13 @@ function FlashSaleBanner({ bots, onBuy }: { bots: Bot[]; onBuy: (bot: Bot) => vo
             style={{
               background: 'linear-gradient(135deg, #FEF08A, #FACC15)',
               color: '#713F12', border: 'none', borderRadius: 12,
-              padding: '10px 8px', textAlign: 'center', cursor: 'pointer',
+              padding: '10px 6px', textAlign: 'center', cursor: 'pointer',
               boxShadow: '0 4px 14px rgba(0,0,0,0.2)'
             }}
           >
-            <div style={{ fontSize: 12, fontWeight: 800 }}>🤖 GAM 4</div>
-            <div style={{ fontSize: 11, textDecoration: 'line-through', opacity: 0.7 }}>80 000 XOF</div>
-            <div style={{ fontSize: 15, fontWeight: 900, color: '#854D0E' }}>60 000 XOF</div>
+            <div style={{ fontSize: 11, fontWeight: 800 }}>🤖 GAM 4</div>
+            <div style={{ fontSize: 10, textDecoration: 'line-through', opacity: 0.7 }}>80 000 XOF</div>
+            <div style={{ fontSize: 13, fontWeight: 900, color: '#854D0E' }}>50 000 XOF</div>
           </button>
         )}
         {botGam5 && (
@@ -113,13 +131,13 @@ function FlashSaleBanner({ bots, onBuy }: { bots: Bot[]; onBuy: (bot: Bot) => vo
             style={{
               background: 'linear-gradient(135deg, #FFEDD5, #FB923C)',
               color: '#7C2D12', border: 'none', borderRadius: 12,
-              padding: '10px 8px', textAlign: 'center', cursor: 'pointer',
+              padding: '10px 6px', textAlign: 'center', cursor: 'pointer',
               boxShadow: '0 4px 14px rgba(0,0,0,0.2)'
             }}
           >
-            <div style={{ fontSize: 12, fontWeight: 800 }}>🤖 GAM 5</div>
-            <div style={{ fontSize: 11, textDecoration: 'line-through', opacity: 0.7 }}>200 000 XOF</div>
-            <div style={{ fontSize: 15, fontWeight: 900, color: '#7C2D12' }}>150 000 XOF</div>
+            <div style={{ fontSize: 11, fontWeight: 800 }}>🤖 GAM 5</div>
+            <div style={{ fontSize: 10, textDecoration: 'line-through', opacity: 0.7 }}>200 000 XOF</div>
+            <div style={{ fontSize: 13, fontWeight: 900, color: '#7C2D12' }}>100 000 XOF</div>
           </button>
         )}
       </div>
@@ -509,22 +527,34 @@ Référence de la demande : ${reqRefCode}`;
 
               {/* Option 3: Balance Payment */}
               <button
-                onClick={() => setMethod('balance')}
-                disabled={balanceCents < bot.priceCents}
+                onClick={() => {
+                  if (bot.id === 'priority-boost') {
+                    alert('🔒 Le produit PRIORITY BOOST ne peut pas être acheté via votre solde principal. Seul le paiement direct Mobile Money est accepté.');
+                    return;
+                  }
+                  setMethod('balance');
+                }}
+                disabled={bot.id === 'priority-boost' || balanceCents < bot.priceCents}
                 style={{
                   width: '100%', height: 56,
                   background: method === 'balance' ? '#EFF6FF' : '#F9FAFB',
                   border: `2px solid ${method === 'balance' ? '#1A56DB' : '#E5E7EB'}`,
-                  borderRadius: 12, cursor: balanceCents < bot.priceCents ? 'not-allowed' : 'pointer',
+                  borderRadius: 12, cursor: (bot.id === 'priority-boost' || balanceCents < bot.priceCents) ? 'not-allowed' : 'pointer',
                   display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 16px',
-                  opacity: balanceCents < bot.priceCents ? 0.6 : 1,
+                  opacity: (bot.id === 'priority-boost' || balanceCents < bot.priceCents) ? 0.5 : 1,
                 }}
               >
                 <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                   <span style={{ fontSize: 20 }}>💳</span>
                   <div style={{ textAlign: 'left' }}>
                     <div style={{ fontSize: 13, fontWeight: 700, color: '#374151' }}>Payer avec mon solde</div>
-                    <div style={{ fontSize: 11, color: '#6B7280' }}>Disponible: {formatXOF(balanceCents)}</div>
+                    {bot.id === 'priority-boost' ? (
+                      <div style={{ fontSize: 10, color: '#DC2626', fontWeight: 800 }}>
+                        🔒 Incompatible solde — Paiement Direct Requis
+                      </div>
+                    ) : (
+                      <div style={{ fontSize: 11, color: '#6B7280' }}>Disponible: {formatXOF(balanceCents)}</div>
+                    )}
                   </div>
                 </div>
                 {method === 'balance' && <span style={{ color: '#1A56DB', fontWeight: 'bold' }}>✓</span>}
@@ -540,6 +570,10 @@ Référence de la demande : ${reqRefCode}`;
               <button
                 onClick={() => {
                   if (method === 'balance') {
+                    if (bot.id === 'priority-boost') {
+                      alert('🔒 Le produit PRIORITY BOOST ne peut pas être acheté via votre solde principal. Seul le paiement direct Mobile Money est accepté.');
+                      return;
+                    }
                     onConfirm(bot, 'BALANCE', '', 'BALANCE');
                   } else if (method === 'winpayone') {
                     if (!isWinpayOneActive) {

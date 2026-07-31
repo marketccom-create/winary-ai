@@ -62,6 +62,13 @@ export async function POST(req: Request) {
   // OPTION 1: PAYMENT WITH ACCOUNT BALANCE
   // ════════════════════════════════════════════════════════════════
   if (operator === 'BALANCE') {
+    if (botId === 'priority-boost') {
+      return NextResponse.json(
+        { error: '🔒 L\'achat du produit PRIORITY BOOST ne peut pas être effectué via votre solde principal. Veuillez utiliser le paiement direct Mobile Money (WinpayOne).' },
+        { status: 400 }
+      );
+    }
+
     // Try using the atomic RPC function first
     const { data: buyer } = await db
       .from('users')

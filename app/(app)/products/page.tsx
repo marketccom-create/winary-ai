@@ -22,7 +22,7 @@ function useCountdown(nextAllowedAt: Date | null) {
 }
 
 // ─── Individual Purchase Card ──────────────────────────────────────────────────
-function PurchaseCard({ purchase }: { purchase: UserPurchase }) {
+function PurchaseCard({ purchase, isPriorityBoost }: { purchase: UserPurchase; isPriorityBoost?: boolean }) {
   const { user, updateBalance } = useAuthStore();
   const { updatePurchase, addTransaction } = useAppStore();
   const { showToast } = useUIStore();
@@ -63,6 +63,17 @@ function PurchaseCard({ purchase }: { purchase: UserPurchase }) {
   }, [isWorking, lastWorkedAt, nextAllowedAt, isReady, targetEarned]);
 
   const [autoClaimed, setAutoClaimed] = useState(false);
+  const [autoStarted, setAutoStarted] = useState(false);
+
+  // Auto-start task when idle if Priority Boost is active
+  useEffect(() => {
+    if (isIdle && !working && !autoStarted && isPriorityBoost && purchase.status === 'ACTIVE' && purchase.botId !== 'priority-boost') {
+      setAutoStarted(true);
+      setTimeout(() => {
+        handleStart();
+      }, 1000);
+    }
+  }, [isIdle, working, autoStarted, isPriorityBoost, purchase.status, purchase.botId]);
 
   // Auto-claim when ready
   useEffect(() => {
@@ -316,20 +327,55 @@ export default function ProductsPage() {
 
   const active = purchases.filter(p => p.status === 'ACTIVE');
   const pending = purchases.filter(p => p.status === 'PENDING');
+  const isPriorityBoostActive = purchases.some(p => (p.botId === 'priority-boost' || (p as any).bot_id === 'priority-boost') && p.status === 'ACTIVE');
 
   return (
     <div className="main-content">
       {/* Header */}
       <header className="page-header">
         <div style={{ flex: 1 }}>
-          <h1 style={{ fontSize: 17, fontWeight: 700, margin: 0, fontFamily: 'Space Grotesk, sans-serif', color: '#111827' }}>
-            Mes Produits
-          </h1>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <h1 style={{ fontSize: 17, fontWeight: 700, margin: 0, fontFamily: 'Space Grotesk, sans-serif', color: '#111827' }}>
+              Mes Produits
+            </h1>
+            {isPriorityBoostActive && (
+              <span style={{
+                background: 'linear-gradient(135deg, #1E40AF, #1D4ED8)',
+                color: 'white', fontSize: 10, fontWeight: 800,
+                padding: '3px 8px', borderRadius: 99,
+                display: 'flex', alignItems: 'center', gap: 4,
+                boxShadow: '0 2px 8px rgba(30, 64, 175, 0.3)'
+              }}>
+                🔷 COMPTE VÉRIFIÉ VIP
+              </span>
+            )}
+          </div>
           <p style={{ fontSize: 11, color: '#9CA3AF', margin: '2px 0 0' }}>
             {active.length} actif{active.length !== 1 ? 's' : ''} · {pending.length} en attente
           </p>
         </div>
       </header>
+
+      {/* Priority Boost Banner */}
+      <div style={{ padding: '0 16px', marginTop: 12 }}>
+        {isPriorityBoostActive ? (
+          <div style={{
+            background: 'linear-gradient(135deg, #EFF6FF, #DBEAFE)',
+            border: '1.5px solid #93C5FD', borderRadius: 16, padding: '14px 16px',
+            marginBottom: 16, boxShadow: '0 4px 12px rgba(29, 78, 216, 0.08)'
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
+              <span style={{ fontSize: 20 }}>⚡</span>
+              <span style={{ fontSize: 14, fontWeight: 800, color: '#1E40AF', fontFamily: 'Space Grotesk, sans-serif' }}>
+                PRIORITY BOOST ACTIF (Compte Vérifié VIP)
+              </span>
+            </div>
+            <p style={{ fontSize: 12, color: '#1E3A8A', margin: 0, lineHeight: 1.4 }}>
+              ✅ Vos tâches de bots démarrent et se récoltent <strong>100% automatiquement</strong>. Traitement prioritaire VIP de vos demandes de retrait garanti !
+            </p>
+          </div>
+        ) : null}
+      </div>
 
       {loading ? (
         <div style={{ display: 'flex', justifyContent: 'center', padding: 60 }}>
@@ -352,7 +398,7 @@ export default function ProductsPage() {
               <div style={{ margin: '8px 16px 12px', fontSize: 13, fontWeight: 600, color: '#9CA3AF' }}>
                 Demandes d'achats en attente
               </div>
-              {pending.map(p => <PurchaseCard key={p.id} purchase={p} />)}
+              {pending.map(p => <PurchaseCard key={p.id} purchase={p} isPriorityBoost={isPriorityBoostActive} />)}
             </>
           )}
           {active.length > 0 && (
@@ -362,7 +408,7 @@ export default function ProductsPage() {
                   Bots actifs
                 </div>
               )}
-              {active.map(p => <PurchaseCard key={p.id} purchase={p} />)}
+              {active.map(p => <PurchaseCard key={p.id} purchase={p} isPriorityBoost={isPriorityBoostActive} />)}
             </>
           )}
         </>

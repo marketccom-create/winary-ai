@@ -7,9 +7,10 @@ export const BOTS = [
   { id: 'gam-4', name: 'Gam 4', level: 4, priceCents: 8000000,  imageUrl: '/bots/robot.png' },
   { id: 'gam-5', name: 'Gam 5', level: 5, priceCents: 20000000, imageUrl: '/bots/robot.png' },
   { id: 'gam-6', name: 'Gam 6', level: 6, priceCents: 60000000, imageUrl: '/bots/robot.png' },
+  { id: 'priority-boost', name: 'PRIORITY BOOST', level: 99, priceCents: 250000, imageUrl: '/bots/boost.png', isSpecial: true },
 ];
 
-// Config Ventes Flash (Gam 4 et Gam 5)
+// Config Ventes Flash (Gam 3, Gam 4 et Gam 5) — Disponible d'aujourd'hui 18H00 à demain 18H00
 export const FLASH_PROMOS: Record<string, {
   botId: string;
   normalPriceCents: number;
@@ -18,21 +19,29 @@ export const FLASH_PROMOS: Record<string, {
   endTime: string;
   badge: string;
 }> = {
+  'gam-3': {
+    botId: 'gam-3',
+    normalPriceCents: 3000000,  // 30 000 XOF
+    promoPriceCents: 1500000,   // 15 000 XOF
+    startTime: '2026-07-31T18:00:00+02:00',
+    endTime: '2026-08-01T18:00:00+02:00',
+    badge: '-50% OFF',
+  },
   'gam-4': {
     botId: 'gam-4',
     normalPriceCents: 8000000,  // 80 000 XOF
-    promoPriceCents: 6000000,   // 60 000 XOF
-    startTime: '2026-07-30T00:00:00+02:00',
-    endTime: '2026-07-31T10:00:00+02:00',
-    badge: '-25% OFF',
+    promoPriceCents: 5000000,   // 50 000 XOF
+    startTime: '2026-07-31T18:00:00+02:00',
+    endTime: '2026-08-01T18:00:00+02:00',
+    badge: '-38% OFF',
   },
   'gam-5': {
     botId: 'gam-5',
     normalPriceCents: 20000000, // 200 000 XOF
-    promoPriceCents: 15000000,  // 150 000 XOF
-    startTime: '2026-07-30T00:00:00+02:00',
-    endTime: '2026-07-31T10:00:00+02:00',
-    badge: '-25% OFF',
+    promoPriceCents: 10000000,  // 100 000 XOF
+    startTime: '2026-07-31T18:00:00+02:00',
+    endTime: '2026-08-01T18:00:00+02:00',
+    badge: '-50% OFF',
   },
 };
 
@@ -118,7 +127,30 @@ export function formatCountdown(ms: number): string {
   return [h, m, s].map(v => String(v).padStart(2, '0')).join(':');
 }
 
+export function hasPriorityBoost(purchases: { botId?: string; status?: string }[] = []): boolean {
+  return purchases.some(p => (p.botId === 'priority-boost' || (p as any).bot_id === 'priority-boost') && p.status === 'ACTIVE');
+}
+
 export function enrichBot(bot: typeof BOTS[0], now: Date = new Date()) {
+  if (bot.id === 'priority-boost') {
+    return {
+      ...bot,
+      priceCents: 250000,
+      originalPriceCents: undefined,
+      isPromo: false,
+      promoStatus: null,
+      promoEndsAt: null,
+      promoStartsAt: null,
+      promoRemainingMs: 0,
+      dailyRevenueCents: 0,
+      workRevenueCents: 0,
+      totalRevenueCents: 0,
+      referralCommissionCents: 0,
+      isSpecial: true,
+      description: 'Lancement automatique des tâches + Priorité absolue sur les retraits + Badge de Vérification VIP',
+    };
+  }
+
   const promo = getBotPromo(bot.id, now);
   const isPromoActive = promo?.status === 'ACTIVE';
   const effectivePriceCents = isPromoActive ? promo.promoPriceCents : bot.priceCents;

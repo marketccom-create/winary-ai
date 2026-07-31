@@ -47,6 +47,13 @@ export async function GET(req: Request) {
         .eq('type', 'WITHDRAWAL')
         .eq('status', 'COMPLETED');
 
+      const { count: priorityBoostCount } = await db
+        .from('purchases')
+        .select('id', { count: 'exact', head: true })
+        .eq('user_id', userId)
+        .eq('bot_id', 'priority-boost')
+        .eq('status', 'ACTIVE');
+
       return {
         id: t.id,
         userId,
@@ -64,6 +71,7 @@ export async function GET(req: Request) {
         commissionsCents,                    // Total commissions de parrainage
         isEligible: commissionsCents > 0,    // Éligible si au moins 1 filleul a acheté
         approvedWithdrawalsCount: approvedCount || 0, // Nombre de retraits déjà approuvés
+        isPriorityBoost: (priorityBoostCount || 0) > 0, // VIP Priority Boost Actif
       };
     })
   );

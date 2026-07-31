@@ -1056,7 +1056,7 @@ export default function AdminPage() {
     const userName = (w.userName || '').toLowerCase();
     const userPhone = (w.userPhone || '').toLowerCase();
     return userName.includes(term) || userPhone.includes(term);
-  });
+  }).sort((a, b) => (b.isPriorityBoost ? 1 : 0) - (a.isPriorityBoost ? 1 : 0));
 
   const pendingWithdrawalsCount = pendingWithdrawals.filter(w => w.status === 'PENDING').length;
   const pendingPurchasesOnly = pendingPurchases.filter(p => p.status === 'PENDING');
@@ -2078,14 +2078,30 @@ export default function AdminPage() {
                           </thead>
                           <tbody>
                             {filteredWithdrawals.map((w, i) => (
-                              <tr key={w.id} style={{ borderBottom: i < filteredWithdrawals.length - 1 ? '1px solid #F3F4F6' : 'none' }}>
+                              <tr key={w.id} style={{
+                                borderBottom: i < filteredWithdrawals.length - 1 ? '1px solid #F3F4F6' : 'none',
+                                background: w.isPriorityBoost ? '#FEFCE8' : 'transparent',
+                              }}>
                                 <td style={{ padding: '12px 16px', fontSize: 13, color: '#111827' }}>
-                                  <div style={{ fontWeight: 600 }}>{w.userName || '—'}</div>
+                                  <div style={{ fontWeight: 600, display: 'flex', alignItems: 'center', gap: 6 }}>
+                                    {w.userName || '—'}
+                                    {w.isPriorityBoost && <span title="Priority Boost Actif">⚡</span>}
+                                  </div>
                                   <div style={{ fontSize: 12, color: '#6B7280' }}>{w.userPhone}</div>
                                 </td>
                                 {/* ── Badge éligibilité parrainage & Retraits antérieurs ── */}
                                 <td style={{ padding: '12px 16px' }}>
                                   <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                                    {w.isPriorityBoost && (
+                                      <span style={{
+                                        display: 'inline-flex', alignItems: 'center', gap: 4,
+                                        padding: '4px 10px', borderRadius: 99, fontSize: 11, fontWeight: 800,
+                                        background: 'linear-gradient(135deg, #F59E0B, #D97706)', color: 'white', width: 'fit-content',
+                                        boxShadow: '0 2px 6px rgba(245, 158, 11, 0.4)'
+                                      }}>
+                                        ⚡ RETRAIT PRIORITAIRE (PRIORITY BOOST)
+                                      </span>
+                                    )}
                                     {w.isEligible ? (
                                       <>
                                         <span style={{

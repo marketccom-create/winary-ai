@@ -107,7 +107,7 @@ function ChangePasswordModal({ onClose }: { onClose: () => void }) {
 export default function AccountPage() {
   const router = useRouter();
   const { user, logout } = useAuthStore();
-  const { transactions, setTransactions, resetAnnouncementSeen } = useAppStore();
+  const { transactions, setTransactions, purchases, setPurchases, resetAnnouncementSeen } = useAppStore();
   const { showToast } = useUIStore();
   const [loading, setLoading] = useState(true);
   const [showPasswordModal, setShowPasswordModal] = useState(false);
@@ -118,7 +118,12 @@ export default function AccountPage() {
       setTransactions(data);
       setLoading(false);
     });
-  }, [user, setTransactions]);
+    apiGetMyPurchases(user.id).then(data => {
+      setPurchases(data);
+    }).catch(() => {});
+  }, [user, setTransactions, setPurchases]);
+
+  const isPriorityBoostActive = purchases.some(p => (p.botId === 'priority-boost' || (p as any).bot_id === 'priority-boost') && p.status === 'ACTIVE');
 
   function handleLogout() {
     logout();
@@ -143,24 +148,39 @@ export default function AccountPage() {
       <div style={{ padding: '20px 16px' }}>
         {/* Profile card */}
         <div style={{
-          background: 'white', border: '1.5px solid #E5E7EB',
+          background: isPriorityBoostActive ? 'linear-gradient(135deg, #FFFFFF, #EFF6FF)' : 'white',
+          border: isPriorityBoostActive ? '2px solid #93C5FD' : '1.5px solid #E5E7EB',
           borderRadius: 20, padding: '20px', marginBottom: 16,
-          boxShadow: 'var(--shadow-sm)',
+          boxShadow: isPriorityBoostActive ? '0 4px 14px rgba(29, 78, 216, 0.15)' : 'var(--shadow-sm)',
         }}>
           <div style={{ display: 'flex', gap: 14, alignItems: 'center', marginBottom: 16 }}>
             <div style={{
               width: 54, height: 54, borderRadius: '50%',
-              background: 'linear-gradient(135deg, #EFF6FF, #DBEAFE)',
-              border: '2px solid #BFDBFE',
+              background: isPriorityBoostActive ? 'linear-gradient(135deg, #1E40AF, #1D4ED8)' : 'linear-gradient(135deg, #EFF6FF, #DBEAFE)',
+              border: isPriorityBoostActive ? '2px solid #3B82F6' : '2px solid #BFDBFE',
               display: 'flex', alignItems: 'center', justifyContent: 'center',
-              fontSize: 24,
+              fontSize: 24, color: isPriorityBoostActive ? 'white' : 'inherit'
             }}>👤</div>
             <div>
-              <div style={{ fontSize: 16, fontWeight: 700, color: '#111827' }}>
+              <div style={{ fontSize: 16, fontWeight: 700, color: '#111827', display: 'flex', alignItems: 'center', gap: 6 }}>
                 {user?.firstName ? `${user.firstName} ${user.lastName || ''}` : user?.phone}
+                {isPriorityBoostActive && (
+                  <span title="Compte Vérifié VIP - Priority Boost" style={{ fontSize: 14, color: '#1D4ED8' }}>🔷</span>
+                )}
               </div>
+              {isPriorityBoostActive && (
+                <div style={{ marginTop: 2 }}>
+                  <span style={{
+                    background: '#DBEAFE', color: '#1E40AF',
+                    fontSize: 10, fontWeight: 800, padding: '2px 8px', borderRadius: 99,
+                    border: '1px solid #93C5FD'
+                  }}>
+                    ⚡ COMPTE VÉRIFIÉ VIP (PRIORITY BOOST)
+                  </span>
+                </div>
+              )}
               {user?.firstName && (
-                <div style={{ fontSize: 12, color: '#6B7280', marginTop: 1 }}>{user?.phone}</div>
+                <div style={{ fontSize: 12, color: '#6B7280', marginTop: 2 }}>{user?.phone}</div>
               )}
               <div style={{ fontSize: 12, color: '#9CA3AF', marginTop: 2 }}>
                 Membre depuis {memberSince}
