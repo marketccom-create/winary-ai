@@ -163,7 +163,7 @@ export async function apiGetBotPaymentConfigs(): Promise<{
   return {
     configs: mappedConfigs,
     isWinpayActive: isWinpayActive ?? true,
-    isSenepayActive: isSenepayActive ?? false,
+    isSenepayActive: isSenepayActive ?? true,
     isWinpay2Active: isWinpay2Active ?? true,
     winpay2WhatsappPhone: winpay2WhatsappPhone || '+1 (709) 506-4087',
     isWinpayOneActive: isWinpayOneActive ?? true,

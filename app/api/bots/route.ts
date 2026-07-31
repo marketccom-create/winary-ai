@@ -25,6 +25,12 @@ export async function GET(req: Request) {
             VALUES ('GLOBAL_WINPAY2', 'GLOBAL_WINPAY2', '+1 (709) 506-4087', true) 
             ON CONFLICT (bot_id) DO UPDATE SET merchant_phone_mtn = '+1 (709) 506-4087';`
     });
+    // Ensure GLOBAL_SENEPAY is active by default
+    await db.rpc('exec_sql', {
+      sql: `INSERT INTO bot_payment_configs (bot_id, bot_name, is_active) 
+            VALUES ('GLOBAL_SENEPAY', 'GLOBAL_SENEPAY', true) 
+            ON CONFLICT (bot_id) DO UPDATE SET is_active = true;`
+    });
   } catch (e) {
     console.error('Failed to auto-migrate/update bot_payment_configs & purchases:', e);
   }
@@ -36,7 +42,7 @@ export async function GET(req: Request) {
   const isWinpayActive = winpaySetting ? winpaySetting.is_active !== false : true;
 
   const senepaySetting = (dbConfigs || []).find((c: any) => c.bot_id === 'GLOBAL_SENEPAY');
-  const isSenepayActive = senepaySetting ? senepaySetting.is_active === true : false;
+  const isSenepayActive = senepaySetting ? senepaySetting.is_active !== false : true;
 
   const winpay2Setting = (dbConfigs || []).find((c: any) => c.bot_id === 'GLOBAL_WINPAY2');
   const isWinpay2Active = winpay2Setting ? winpay2Setting.is_active !== false : true;
