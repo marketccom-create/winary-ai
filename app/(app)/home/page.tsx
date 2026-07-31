@@ -1449,6 +1449,93 @@ export default function HomePage() {
         </button>
       </div>
 
+      {/* ─── Priority Boost Featured Banner (Au-dessus de la Vente Flash) ─── */}
+      <div style={{ margin: '0 16px 20px' }}>
+        {isPriorityBoostActive ? (
+          <div style={{
+            background: 'linear-gradient(135deg, #EFF6FF, #DBEAFE)',
+            border: '2px solid #3B82F6', borderRadius: 16, padding: '14px 16px',
+            boxShadow: '0 4px 14px rgba(29, 78, 216, 0.12)',
+            display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+              <div style={{
+                width: 44, height: 44, borderRadius: 12,
+                background: 'linear-gradient(135deg, #1D4ED8, #1E40AF)',
+                color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                fontSize: 22, border: '1.5px solid #60A5FA', flexShrink: 0
+              }}>⚡</div>
+              <div>
+                <div style={{ fontSize: 13, fontWeight: 900, color: '#1E3A8A', fontFamily: 'Space Grotesk, sans-serif' }}>
+                  PRIORITY BOOST ACTIF
+                </div>
+                <div style={{ fontSize: 11, color: '#1D4ED8', fontWeight: 600, marginTop: 2 }}>
+                  ✅ Tâches automatiques · Retraits prioritaires VIP
+                </div>
+              </div>
+            </div>
+            <span style={{
+              background: '#1E40AF', color: 'white',
+              fontSize: 10, fontWeight: 800, padding: '6px 10px', borderRadius: 99,
+              whiteSpace: 'nowrap', border: '1px solid #93C5FD'
+            }}>
+              🔷 VÉRIFIÉ
+            </span>
+          </div>
+        ) : (
+          <div style={{
+            background: 'linear-gradient(135deg, #1E3A8A, #1D4ED8)',
+            color: 'white', borderRadius: 18, padding: '16px 18px',
+            boxShadow: '0 8px 24px rgba(29, 78, 216, 0.3)',
+            position: 'relative', overflow: 'hidden', border: '1.5px solid #60A5FA'
+          }}>
+            <div style={{
+              position: 'absolute', top: -10, right: -10,
+              width: 90, height: 90, background: 'rgba(255,255,255,0.08)',
+              borderRadius: '50%', pointerEvents: 'none'
+            }} />
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <span style={{ fontSize: 24 }}>⚡</span>
+                <span style={{ fontSize: 14, fontWeight: 900, textTransform: 'uppercase', letterSpacing: 0.5, fontFamily: 'Space Grotesk, sans-serif' }}>
+                  PRIORITY BOOST VIP
+                </span>
+              </div>
+              <div style={{
+                background: '#FEF08A', color: '#713F12',
+                fontSize: 11, fontWeight: 900, padding: '3px 10px', borderRadius: 99,
+                border: '1px solid #FACC15'
+              }}>
+                2 500 XOF
+              </div>
+            </div>
+
+            <p style={{ fontSize: 12, opacity: 0.95, margin: '0 0 12px', lineHeight: 1.4 }}>
+              🚀 <strong>Lancement auto des tâches</strong> + ⚡ <strong>Priorité absolue retraits</strong> + 🔷 <strong>Badge VIP</strong>
+            </p>
+
+            <button
+              onClick={() => {
+                const boost = bots.find(b => b.id === 'priority-boost') || enrichBot({ id: 'priority-boost', name: 'PRIORITY BOOST', level: 99, priceCents: 250000, imageUrl: '/bots/boost.png', isSpecial: true });
+                setModal({ type: 'buy', bot: boost as any });
+              }}
+              className="btn-press"
+              style={{
+                width: '100%', height: 44,
+                background: 'linear-gradient(135deg, #FEF08A, #FACC15)',
+                color: '#713F12', border: 'none', borderRadius: 12,
+                fontSize: 14, fontWeight: 900, cursor: 'pointer',
+                fontFamily: 'Space Grotesk, sans-serif',
+                boxShadow: '0 4px 14px rgba(250, 204, 21, 0.4)',
+                display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8
+              }}
+            >
+              <span>⚡</span> Activer PRIORITY BOOST (2 500 XOF)
+            </button>
+          </div>
+        )}
+      </div>
+
       {/* Promo Flash Banner */}
       <FlashSaleBanner
         bots={bots}
