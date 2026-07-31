@@ -17,7 +17,7 @@ import {
   apiAdminGrantBot, apiAdminEditChatMessage, apiAdminDeleteChatMessage, apiAdminRevokePurchase,
   apiAdminGetAiSettings, apiAdminUpdateAiSettings, apiAdminBroadcastMessage
 } from '@/lib/api';
-import { formatXOF } from '@/lib/data';
+import { formatXOF, safeFormatDate } from '@/lib/data';
 import { requestAndRegisterFcmToken } from '@/lib/firebase';
 import { supabase } from '@/lib/supabase';
 import { playWhatsappPopSound } from '@/lib/sound';
@@ -2730,7 +2730,7 @@ export default function AdminPage() {
                             <td style={{ padding: '12px 16px', fontSize: 13, fontWeight: 700, color: '#111827' }}>{ann.title}</td>
                             <td style={{ padding: '12px 16px', fontSize: 13, color: '#374151' }}>{ann.ctaLabel || '—'}</td>
                             <td style={{ padding: '12px 16px', fontSize: 12, color: '#6B7280', maxWidth: 150, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{ann.ctaUrl || '—'}</td>
-                            <td style={{ padding: '12px 16px', fontSize: 12, color: '#9CA3AF' }}>{new Date(ann.createdAt).toLocaleDateString('fr-BJ')}</td>
+                            <td style={{ padding: '12px 16px', fontSize: 12, color: '#9CA3AF' }}>{safeFormatDate(ann?.createdAt)}</td>
                             <td style={{ padding: '12px 16px' }}>
                               <button
                                 onClick={() => handleToggleAnnStatus(ann)}
@@ -2930,7 +2930,7 @@ export default function AdminPage() {
                   </div>
                   <div style={{ background: '#F9FAFB', border: '1px solid #E5E7EB', borderRadius: 10, padding: 12 }}>
                     <span style={{ fontSize: 11, color: '#9CA3AF', display: 'block' }}>Inscrit le</span>
-                    <strong style={{ fontSize: 13, color: '#374151' }}>{new Date(selectedUserDetail.user.createdAt).toLocaleDateString('fr-BJ')}</strong>
+                    <strong style={{ fontSize: 13, color: '#374151' }}>{safeFormatDate(selectedUserDetail.user?.createdAt)}</strong>
                   </div>
                 </div>
 
@@ -3012,7 +3012,7 @@ export default function AdminPage() {
                             <tr key={idx} style={{ borderBottom: idx < selectedUserDetail.referees.length - 1 ? '1px solid #F3F4F6' : 'none' }}>
                               <td style={{ padding: '8px 12px', fontWeight: 600, color: '#111827' }}>{ref.phone}</td>
                               <td style={{ padding: '8px 12px', color: '#9CA3AF', textAlign: 'right' }}>
-                                Inscrit le {new Date(ref.createdAt).toLocaleDateString('fr-BJ')}
+                                Inscrit le {safeFormatDate(ref?.createdAt)}
                               </td>
                             </tr>
                           ))}

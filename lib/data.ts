@@ -127,6 +127,29 @@ export function formatCountdown(ms: number): string {
   return [h, m, s].map(v => String(v).padStart(2, '0')).join(':');
 }
 
+export function safeFormatDate(
+  dateInput: string | Date | number | null | undefined,
+  options?: Intl.DateTimeFormatOptions,
+  fallback = '—'
+): string {
+  if (!dateInput) return fallback;
+  try {
+    let d: Date;
+    if (dateInput instanceof Date) {
+      d = dateInput;
+    } else if (typeof dateInput === 'string') {
+      const isoStr = dateInput.trim().replace(/^(\d{4}-\d{2}-\d{2})\s+(\d{2}:)/, '$1T');
+      d = new Date(isoStr);
+    } else {
+      d = new Date(dateInput);
+    }
+    if (isNaN(d.getTime())) return fallback;
+    return d.toLocaleDateString('fr-BJ', options);
+  } catch (e) {
+    return fallback;
+  }
+}
+
 export function hasPriorityBoost(purchases: { botId?: string; status?: string }[] = []): boolean {
   if (!Array.isArray(purchases)) return false;
   return purchases.some(p => (p?.botId === 'priority-boost' || (p as any)?.bot_id === 'priority-boost') && p?.status === 'ACTIVE');

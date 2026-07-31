@@ -3,7 +3,7 @@ import { useEffect, useState } from 'react';
 import { Copy, Share2, Users, Loader2, CheckCircle } from 'lucide-react';
 import { useAuthStore, useUIStore } from '@/lib/store';
 import { apiGetReferrals } from '@/lib/api';
-import { formatXOF } from '@/lib/data';
+import { formatXOF, safeFormatDate } from '@/lib/data';
 
 type ReferralData = {
   code: string;
@@ -208,7 +208,7 @@ export default function InvitePage() {
                   <div>
                     <div style={{ fontSize: 14, fontWeight: 600, color: '#111827' }}>{ref.phone}</div>
                     <div style={{ fontSize: 11, color: '#9CA3AF' }}>
-                      {ref.botName} · {new Date(ref.date).toLocaleDateString('fr-BJ')}
+                      {ref.botName} · {safeFormatDate(ref?.date)}
                     </div>
                   </div>
                 </div>

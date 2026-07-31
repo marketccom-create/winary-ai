@@ -3,7 +3,7 @@ import { useEffect, useState } from 'react';
 import { Loader2, Zap, Clock, CheckCircle } from 'lucide-react';
 import { useAuthStore, useAppStore, useUIStore } from '@/lib/store';
 import { apiGetMyPurchases, apiStartWork, apiClaimWork } from '@/lib/api';
-import { formatXOF, formatCountdown, workRevenueCents, hasPriorityBoost } from '@/lib/data';
+import { formatXOF, formatCountdown, workRevenueCents, hasPriorityBoost, safeFormatDate } from '@/lib/data';
 import type { UserPurchase } from '@/lib/data';
 
 // ─── Countdown timer hook ──────────────────────────────────────────────────────
@@ -159,7 +159,7 @@ function PurchaseCard({ purchase, isPriorityBoost }: { purchase: UserPurchase; i
               {purchase.botName}
             </div>
             <div style={{ fontSize: 11, color: '#9CA3AF', marginTop: 2 }}>
-              Acheté le {new Date(purchase.purchasedAt).toLocaleDateString('fr-BJ')}
+              Acheté le {safeFormatDate(purchase?.purchasedAt)}
             </div>
           </div>
         </div>

@@ -4,7 +4,7 @@ import { useRouter } from 'next/navigation';
 import { LogOut, ArrowUpRight, ArrowDownLeft, Zap, Gift, Users, Settings, Loader2 } from 'lucide-react';
 import { useAuthStore, useAppStore, useUIStore } from '@/lib/store';
 import { apiGetTransactions } from '@/lib/api';
-import { formatXOF, hasPriorityBoost } from '@/lib/data';
+import { formatXOF, hasPriorityBoost, safeFormatDate } from '@/lib/data';
 import { apiChangePassword } from '@/lib/api';
 import type { Transaction } from '@/lib/data';
 
@@ -133,9 +133,7 @@ export default function AccountPage() {
     showToast('Déconnexion réussie', 'info');
   }
 
-  const memberSince = user?.createdAt
-    ? new Date(user.createdAt).toLocaleDateString('fr-BJ', { year: 'numeric', month: 'long' })
-    : '—';
+  const memberSince = safeFormatDate(user?.createdAt, { year: 'numeric', month: 'long' });
 
   return (
     <div className="main-content">
@@ -254,9 +252,7 @@ export default function AccountPage() {
                         {tx.description || meta.label}
                       </div>
                       <div style={{ fontSize: 11, color: '#9CA3AF', marginTop: 2 }}>
-                        {tx.createdAt ? new Date(tx.createdAt).toLocaleDateString('fr-BJ', {
-                          day: '2-digit', month: 'short', year: 'numeric',
-                        }) : '—'} · <span style={{ color: statusMeta.color }}>{statusMeta.label}</span>
+                        {safeFormatDate(tx?.createdAt, { day: '2-digit', month: 'short', year: 'numeric' })} · <span style={{ color: statusMeta.color }}>{statusMeta.label}</span>
                       </div>
                     </div>
                     <div style={{

@@ -2,7 +2,7 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Image from 'next/image';
-import { Bell, ArrowUpRight, ArrowDownLeft, BookOpen, MessageCircle, ChevronRight, Loader2, X } from 'lucide-react';
+import { Bell, ArrowUpRight, ArrowDownLeft, BookOpen, MessageCircle, ChevronRight, Loader2, X, LogOut } from 'lucide-react';
 import { useAuthStore, useAppStore, useUIStore } from '@/lib/store';
 import { apiGetBots, apiGetBotPaymentConfigs, apiPurchaseBot, apiWithdraw, apiInitiateDeposit, apiGetUnreadChatCount, apiGetMyPurchases } from '@/lib/api';
 import { formatXOF, Bot, BotPaymentConfig, MIN_WITHDRAWAL_CENTS, detectCountryFromPhone, getBotPromo, formatCountdown, GAM_4_PROMO, validateTransactionReference, extractAndValidateReference, hasPriorityBoost } from '@/lib/data';
@@ -1231,8 +1231,8 @@ function WithdrawModal({ onClose, balanceCents }: { onClose: () => void; balance
 // ─── Main Dashboard ────────────────────────────────────────────────────────────
 export default function HomePage() {
   const router = useRouter();
-  const { user, updateBalance } = useAuthStore();
-  const { purchases, addPurchase, addTransaction } = useAppStore();
+  const { user, updateBalance, logout } = useAuthStore();
+  const { purchases, addPurchase, addTransaction, resetAnnouncementSeen } = useAppStore();
   const { showToast } = useUIStore();
   const [bots, setBots] = useState<Bot[]>([]);
   const [botConfigs, setBotConfigs] = useState<BotPaymentConfig[]>([]);
@@ -1318,29 +1318,50 @@ export default function HomePage() {
             WINARY AI
           </span>
         </div>
-        <button 
-          onClick={() => router.push('/chat')}
-          style={{
-            background: '#F3F4F6', border: '1px solid #E5E7EB',
-            borderRadius: '50%', width: 38, height: 38,
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            cursor: 'pointer', color: '#374151', position: 'relative'
-          }}
-        >
-          <Bell size={18} />
-          {unreadCount > 0 && (
-            <span style={{
-              position: 'absolute', top: -2, right: -2,
-              background: '#EF4444', color: 'white',
-              fontSize: 10, fontWeight: 'bold',
-              minWidth: 16, height: 16, borderRadius: '50%',
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          <button 
+            onClick={() => router.push('/chat')}
+            style={{
+              background: '#F3F4F6', border: '1px solid #E5E7EB',
+              borderRadius: '50%', width: 38, height: 38,
               display: 'flex', alignItems: 'center', justifyContent: 'center',
-              padding: '0 4px',
-            }}>
-              {unreadCount}
-            </span>
-          )}
-        </button>
+              cursor: 'pointer', color: '#374151', position: 'relative'
+            }}
+            title="Support & Notifications"
+          >
+            <Bell size={18} />
+            {unreadCount > 0 && (
+              <span style={{
+                position: 'absolute', top: -2, right: -2,
+                background: '#EF4444', color: 'white',
+                fontSize: 10, fontWeight: 'bold',
+                minWidth: 16, height: 16, borderRadius: '50%',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                padding: '0 4px',
+              }}>
+                {unreadCount}
+              </span>
+            )}
+          </button>
+
+          <button 
+            onClick={() => {
+              logout();
+              resetAnnouncementSeen();
+              router.replace('/login');
+              showToast('Déconnexion réussie', 'info');
+            }}
+            style={{
+              background: '#FEF2F2', border: '1px solid #FCA5A5',
+              borderRadius: '50%', width: 38, height: 38,
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              cursor: 'pointer', color: '#DC2626'
+            }}
+            title="Se déconnecter"
+          >
+            <LogOut size={17} />
+          </button>
+        </div>
       </header>
 
       {/* Hero Banner */}

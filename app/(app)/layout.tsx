@@ -1,10 +1,75 @@
 'use client';
-import { useEffect, useState } from 'react';
+import React, { Component, ErrorInfo, ReactNode, useEffect, useState } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import { Home, Package, Users, User, ExternalLink, X } from 'lucide-react';
 import { useAuthStore, useAppStore, useUIStore } from '@/lib/store';
 import { apiGetAnnouncements, apiGetProfile } from '@/lib/api';
 import { requestAndRegisterFcmToken, listenToForegroundFcmMessages } from '@/lib/firebase';
+
+// ─── Error Boundary ───────────────────────────────────────────────────────────
+class AppErrorBoundary extends Component<{ children: ReactNode }, { hasError: boolean }> {
+  public state = { hasError: false };
+
+  public static getDerivedStateFromError(): { hasError: boolean } {
+    return { hasError: true };
+  }
+
+  public componentDidCatch(error: Error, errorInfo: ErrorInfo) {
+    console.error('[AppErrorBoundary] Error captured:', error, errorInfo);
+  }
+
+  public render() {
+    if (this.state.hasError) {
+      return (
+        <div style={{
+          minHeight: '100dvh', display: 'flex', flexDirection: 'column',
+          alignItems: 'center', justifyContent: 'center', padding: 24,
+          background: '#F9FAFB', textAlign: 'center', fontFamily: 'system-ui, sans-serif'
+        }}>
+          <div style={{ fontSize: 48, marginBottom: 12 }}>⚡</div>
+          <h2 style={{ fontSize: 18, fontWeight: 800, color: '#111827', margin: '0 0 8px', fontFamily: 'Space Grotesk, sans-serif' }}>
+            Un problème temporaire d'affichage est survenu
+          </h2>
+          <p style={{ fontSize: 13, color: '#6B7280', margin: '0 0 20px', maxWidth: 320, lineHeight: 1.5 }}>
+            Cliquez ci-dessous pour recharger la page ou vous déconnecter et réaccéder à votre compte.
+          </p>
+          <div style={{ display: 'flex', gap: 10, width: '100%', maxWidth: 320 }}>
+            <button
+              onClick={() => {
+                this.setState({ hasError: false });
+                window.location.reload();
+              }}
+              style={{
+                flex: 1, height: 48, background: '#1A56DB', color: 'white',
+                border: 'none', borderRadius: 12, fontSize: 14, fontWeight: 700,
+                cursor: 'pointer'
+              }}
+            >
+              Réessayer
+            </button>
+            <button
+              onClick={() => {
+                if (typeof window !== 'undefined') {
+                  localStorage.clear();
+                  window.location.href = '/login';
+                }
+              }}
+              style={{
+                flex: 1, height: 48, background: '#FEE2E2', color: '#DC2626',
+                border: '1px solid #FCA5A5', borderRadius: 12, fontSize: 14, fontWeight: 700,
+                cursor: 'pointer'
+              }}
+            >
+              Se Déconnecter
+            </button>
+          </div>
+        </div>
+      );
+    }
+
+    return this.props.children;
+  }
+}
 
 // ─── Announcement Modal ───────────────────────────────────────────────────────
 function AnnouncementModal({ announcements, onClose }: { announcements: any[]; onClose: () => void }) {
@@ -381,7 +446,9 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
 
   return (
     <div style={{ minHeight: '100dvh', background: '#F9FAFB' }}>
-      {children}
+      <AppErrorBoundary>
+        {children}
+      </AppErrorBoundary>
       {!hideBottomNav && <BottomNav />}
       <Toast />
       {showAnnouncement && activeAnnouncements.length > 0 && (
