@@ -165,7 +165,6 @@ function Toast() {
 
   useEffect(() => {
     if (toastMessage) {
-      // 8 secondes pour laisser largement le temps de lire 2 à 3 fois
       const t = setTimeout(clearToast, 8000);
       return () => clearTimeout(t);
     }
@@ -173,19 +172,19 @@ function Toast() {
 
   if (!toastMessage) return null;
 
-  // Design rassurant (vert émeraude apaisant)
-  const isErrorOrMaintenance = toastType === 'error' || toastMessage.includes('maintenance') || toastMessage.includes('Mobile Money');
+  const msgStr = typeof toastMessage === 'string' ? toastMessage : String(toastMessage || '');
+  const isErrorOrMaintenance = toastType === 'error' || msgStr.includes('maintenance') || msgStr.includes('Mobile Money');
 
-  const config = isErrorOrMaintenance ? {
-    bg: '#ECFDF5',
-    border: '#6EE7B7',
-    text: '#065F46',
-    icon: '🛡️',
-  } : {
+  const defaultConfig = { bg: '#ECFDF5', border: '#6EE7B7', text: '#065F46', icon: '✅' };
+  const configMap: Record<string, typeof defaultConfig> = {
     success: { bg: '#ECFDF5', border: '#6EE7B7', text: '#065F46', icon: '✅' },
-    error:   { bg: '#ECFDF5', border: '#6EE7B7', text: '#065F46', icon: '🛡️' },
+    error:   { bg: '#FEF2F2', border: '#FCA5A5', text: '#991B1B', icon: '🛡️' },
     info:    { bg: '#EFF6FF', border: '#93C5FD', text: '#1E40AF', icon: '💡' },
-  }[toastType];
+  };
+
+  const config = isErrorOrMaintenance
+    ? { bg: '#ECFDF5', border: '#6EE7B7', text: '#065F46', icon: '🛡️' }
+    : (configMap[toastType || 'info'] || defaultConfig);
 
   return (
     <div
@@ -228,7 +227,7 @@ function Toast() {
         color: '#1F2937',
         fontFamily: 'system-ui, -apple-system, sans-serif'
       }}>
-        {toastMessage}
+        {msgStr}
       </div>
 
       <div style={{
