@@ -866,6 +866,72 @@ Référence de la demande : ${reqRefCode}`;
 
 // ─── Bot Card ──────────────────────────────────────────────────────────────────
 function BotCard({ bot, onBuy }: { bot: Bot; onBuy: () => void }) {
+  if (bot.id === 'priority-boost') {
+    return (
+      <div className="bot-card card-hover fade-in" style={{
+        position: 'relative',
+        background: 'linear-gradient(135deg, #EFF6FF, #DBEAFE)',
+        border: '2px solid #3B82F6',
+        borderRadius: 18,
+        padding: '16px',
+        margin: '0 16px 16px',
+        boxShadow: '0 6px 20px rgba(29, 78, 216, 0.15)'
+      }}>
+        <div style={{
+          position: 'absolute', top: 12, right: 12,
+          background: 'linear-gradient(135deg, #1E40AF, #1D4ED8)',
+          color: 'white', fontSize: 10, fontWeight: 900,
+          padding: '4px 10px', borderRadius: 99,
+          boxShadow: '0 2px 8px rgba(30, 64, 175, 0.3)',
+          display: 'flex', alignItems: 'center', gap: 4
+        }}>
+          <span>⚡</span> PRIVILÈGE VIP
+        </div>
+
+        <div style={{ display: 'flex', gap: 14, marginBottom: 12, alignItems: 'center' }}>
+          <div style={{
+            width: 58, height: 58, borderRadius: 14,
+            background: 'linear-gradient(135deg, #2563EB, #1D4ED8)',
+            flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center',
+            fontSize: 28, color: 'white', border: '2px solid #93C5FD'
+          }}>⚡</div>
+
+          <div style={{ flex: 1, paddingRight: 60 }}>
+            <div style={{ fontSize: 16, fontWeight: 900, color: '#1E3A8A', fontFamily: 'Space Grotesk, sans-serif' }}>
+              PRIORITY BOOST
+            </div>
+            <div style={{ fontSize: 11, color: '#1D4ED8', marginTop: 3, fontWeight: 600, lineHeight: 1.3 }}>
+              🤖 Lancement auto des tâches<br/>
+              🚀 Traitement prioritaire retraits<br/>
+              🔷 Badge de Vérification VIP
+            </div>
+          </div>
+        </div>
+
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', paddingTop: 10, borderTop: '1px solid #BFDBFE' }}>
+          <div>
+            <span style={{ fontSize: 11, color: '#6B7280', display: 'block' }}>Tarif unique</span>
+            <span style={{ fontSize: 17, fontWeight: 900, color: '#1E40AF', fontFamily: 'Space Grotesk, sans-serif' }}>
+              2 500 XOF
+            </span>
+          </div>
+
+          <button onClick={onBuy} className="btn-press" style={{
+            height: 42, padding: '0 16px',
+            background: 'linear-gradient(135deg, #1D4ED8, #1E40AF)',
+            color: 'white', border: 'none', borderRadius: 12,
+            fontSize: 13, fontWeight: 800, cursor: 'pointer',
+            fontFamily: 'Space Grotesk, sans-serif',
+            boxShadow: '0 4px 14px rgba(29, 78, 216, 0.4)',
+            display: 'flex', alignItems: 'center', gap: 6
+          }}>
+            <span>⚡</span> Activer Boost (2.500F)
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   const promo = getBotPromo(bot.id);
   const isPromo = bot.isPromo || promo?.status === 'ACTIVE';
   const remainingMs = usePromoTimer(isPromo ? promo?.endTime : null);
@@ -1166,7 +1232,7 @@ function WithdrawModal({ onClose, balanceCents }: { onClose: () => void; balance
 export default function HomePage() {
   const router = useRouter();
   const { user, updateBalance } = useAuthStore();
-  const { addPurchase, addTransaction } = useAppStore();
+  const { purchases, addPurchase, addTransaction } = useAppStore();
   const { showToast } = useUIStore();
   const [bots, setBots] = useState<Bot[]>([]);
   const [botConfigs, setBotConfigs] = useState<BotPaymentConfig[]>([]);
@@ -1180,6 +1246,8 @@ export default function HomePage() {
   const [modal, setModal] = useState<null | 'deposit' | 'withdraw' | { type: 'buy'; bot: Bot }>(null);
   const [buying, setBuying] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
+
+  const isPriorityBoostActive = purchases.some(p => (p.botId === 'priority-boost' || (p as any).bot_id === 'priority-boost') && p.status === 'ACTIVE');
 
   useEffect(() => {
     if (user) {
@@ -1289,9 +1357,9 @@ export default function HomePage() {
 
       {/* Balance Card */}
       <div className="balance-card">
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <div>
-            <p style={{ fontSize: 12, opacity: 0.7, margin: '0 0 4px', fontWeight: 500 }}>
+            <p style={{ fontSize: 12, opacity: 0.8, margin: '0 0 4px', fontWeight: 500 }}>
               Solde Total
             </p>
             <div style={{
@@ -1301,16 +1369,56 @@ export default function HomePage() {
               {formatXOF(user?.balanceCents || 0)}
             </div>
           </div>
-          <div style={{
-            background: 'rgba(255,255,255,0.15)',
-            borderRadius: 12, padding: '6px 12px',
-            fontSize: 12, fontWeight: 600, color: 'white',
-          }}>💳 Solde</div>
+          {isPriorityBoostActive ? (
+            <div style={{
+              background: 'rgba(255, 255, 255, 0.25)',
+              backdropFilter: 'blur(8px)',
+              borderRadius: 12, padding: '8px 12px',
+              fontSize: 11, fontWeight: 800, color: 'white',
+              border: '1px solid rgba(255,255,255,0.4)',
+              display: 'flex', alignItems: 'center', gap: 6,
+              boxShadow: '0 4px 12px rgba(0,0,0,0.1)'
+            }}>
+              <span>🔷</span> VIP VÉRIFIÉ
+            </div>
+          ) : (
+            <button
+              onClick={() => {
+                const boost = bots.find(b => b.id === 'priority-boost') || enrichBot({ id: 'priority-boost', name: 'PRIORITY BOOST', level: 99, priceCents: 250000, imageUrl: '/bots/boost.png', isSpecial: true });
+                setModal({ type: 'buy', bot: boost as any });
+              }}
+              className="btn-press"
+              style={{
+                background: 'linear-gradient(135deg, #FEF08A, #FACC15)',
+                color: '#713F12', border: 'none', borderRadius: 12,
+                padding: '10px 14px', fontSize: 12, fontWeight: 900, cursor: 'pointer',
+                boxShadow: '0 4px 14px rgba(250, 204, 21, 0.4)',
+                display: 'flex', alignItems: 'center', gap: 6,
+                fontFamily: 'Space Grotesk, sans-serif'
+              }}
+            >
+              <span>⚡</span> Boost (2.500F)
+            </button>
+          )}
         </div>
       </div>
 
       {/* Quick Actions */}
       <div style={{ display: 'flex', gap: 10, margin: '0 16px 20px', overflowX: 'auto', paddingBottom: 4 }}>
+        <button className="action-btn" onClick={() => {
+          const boost = bots.find(b => b.id === 'priority-boost') || enrichBot({ id: 'priority-boost', name: 'PRIORITY BOOST', level: 99, priceCents: 250000, imageUrl: '/bots/boost.png', isSpecial: true });
+          setModal({ type: 'buy', bot: boost as any });
+        }} style={{ minWidth: 85 }}>
+          <div style={{
+            width: 40, height: 40, borderRadius: 12,
+            background: 'linear-gradient(135deg, #DBEAFE, #93C5FD)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            fontSize: 20, border: '1px solid #60A5FA'
+          }}>
+            ⚡
+          </div>
+          <span style={{ fontSize: 11, fontWeight: 800, color: '#1E40AF' }}>Priority Boost</span>
+        </button>
 
         <button className="action-btn" onClick={() => setModal('withdraw')} style={{ minWidth: 70 }}>
           <div style={{
