@@ -113,14 +113,38 @@ export default function AccountPage() {
   const [showPasswordModal, setShowPasswordModal] = useState(false);
 
   useEffect(() => {
-    if (!user) return;
-    apiGetTransactions(user.id).then(data => {
-      setTransactions(data);
+    if (!user) {
       setLoading(false);
-    });
-    apiGetMyPurchases(user.id).then(data => {
-      setPurchases(data);
-    }).catch(() => {});
+      return;
+    }
+    let isMounted = true;
+    apiGetTransactions(user.id)
+      .then(data => {
+        if (isMounted) {
+          setTransactions(Array.isArray(data) ? data : []);
+          setLoading(false);
+        }
+      })
+      .catch(() => {
+        if (isMounted) {
+          setTransactions([]);
+          setLoading(false);
+        }
+      });
+
+    apiGetMyPurchases(user.id)
+      .then(data => {
+        if (isMounted) {
+          setPurchases(Array.isArray(data) ? data : []);
+        }
+      })
+      .catch(() => {
+        if (isMounted) {
+          setPurchases([]);
+        }
+      });
+
+    return () => { isMounted = false; };
   }, [user, setTransactions, setPurchases]);
 
   const safeTransactions = Array.isArray(transactions) ? transactions : [];
@@ -233,9 +257,14 @@ export default function AccountPage() {
               background: 'white', borderRadius: 16, border: '1.5px solid #E5E7EB', overflow: 'hidden',
             }}>
               {safeTransactions.map((tx, i) => {
-                const meta = TX_ICONS[tx.type] || TX_ICONS.ADMIN_ADJUSTMENT;
-                const statusMeta = STATUS_LABELS[tx.status] || { label: tx.status || 'Complété', color: '#15803D' };
-                const isCredit = tx.amountCents > 0;
+                if (!tx || typeof tx !== 'object') return null;
+                const txType = typeof tx.type === 'string' ? tx.type : 'ADMIN_ADJUSTMENT';
+                const txStatus = typeof tx.status === 'string' ? tx.status : 'COMPLETED';
+                const amountCents = typeof tx.amountCents === 'number' ? tx.amountCents : 0;
+
+                const meta = TX_ICONS[txType] || TX_ICONS.ADMIN_ADJUSTMENT;
+                const statusMeta = STATUS_LABELS[txStatus] || { label: txStatus || 'Complété', color: '#15803D' };
+                const isCredit = amountCents > 0;
                 return (
                   <div key={tx.id || i} style={{
                     display: 'flex', alignItems: 'center', gap: 12,
@@ -252,7 +281,7 @@ export default function AccountPage() {
                         {tx.description || meta.label}
                       </div>
                       <div style={{ fontSize: 11, color: '#9CA3AF', marginTop: 2 }}>
-                        {safeFormatDate(tx?.createdAt, { day: '2-digit', month: 'short', year: 'numeric' })} · <span style={{ color: statusMeta.color }}>{statusMeta.label}</span>
+                        {safeFormatDate(tx.createdAt, { day: '2-digit', month: 'short', year: 'numeric' })} · <span style={{ color: statusMeta.color }}>{statusMeta.label}</span>
                       </div>
                     </div>
                     <div style={{
@@ -260,7 +289,7 @@ export default function AccountPage() {
                       color: isCredit ? '#15803D' : '#B91C1C',
                       flexShrink: 0,
                     }}>
-                      {isCredit ? '+' : ''}{formatXOF(Math.abs(tx.amountCents || 0))}
+                      {isCredit ? '+' : ''}{formatXOF(Math.abs(amountCents))}
                     </div>
                   </div>
                 );

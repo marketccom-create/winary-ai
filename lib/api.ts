@@ -176,10 +176,15 @@ export async function apiAdminGetBotPaymentConfigs() {
   return rawRows || [];
 }
 
-// ─── Purchases ────────────────────────────────────────────────────────────────
 export async function apiGetMyPurchases(_userId: string) {
-  const { purchases } = await apiFetch<{ purchases: any[] }>('/api/purchases');
-  return purchases.map(normalizePurchase);
+  try {
+    const res = await apiFetch<{ purchases?: any[] }>('/api/purchases');
+    const purchases = Array.isArray(res?.purchases) ? res.purchases : [];
+    return purchases.map(normalizePurchase).filter(Boolean);
+  } catch (err) {
+    console.error('apiGetMyPurchases error:', err);
+    return [];
+  }
 }
 
 export async function apiPurchaseBot(
@@ -213,10 +218,15 @@ export async function apiClaimWork(_userId: string, purchaseId: string) {
   );
 }
 
-// ─── Transactions ─────────────────────────────────────────────────────────────
 export async function apiGetTransactions(_userId: string) {
-  const { transactions } = await apiFetch<{ transactions: any[] }>('/api/transactions');
-  return transactions;
+  try {
+    const res = await apiFetch<{ transactions?: any[] }>('/api/transactions');
+    const transactions = Array.isArray(res?.transactions) ? res.transactions : [];
+    return transactions;
+  } catch (err) {
+    console.error('apiGetTransactions error:', err);
+    return [];
+  }
 }
 
 export async function apiWithdraw(
@@ -426,6 +436,7 @@ export async function apiAdminGrantBot(userId: string, botId: string, reason: st
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 function normalizePurchase(p: any) {
+  if (!p || typeof p !== 'object') return null;
   return {
     ...p,
     purchasedAt: p.purchasedAt ? new Date(p.purchasedAt) : new Date(),
