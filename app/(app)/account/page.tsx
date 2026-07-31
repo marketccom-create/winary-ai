@@ -3,9 +3,8 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { LogOut, ArrowUpRight, ArrowDownLeft, Zap, Gift, Users, Settings, Loader2 } from 'lucide-react';
 import { useAuthStore, useAppStore, useUIStore } from '@/lib/store';
-import { apiGetTransactions } from '@/lib/api';
+import { apiGetTransactions, apiGetMyPurchases, apiChangePassword } from '@/lib/api';
 import { formatXOF, hasPriorityBoost, safeFormatDate } from '@/lib/data';
-import { apiChangePassword } from '@/lib/api';
 import type { Transaction } from '@/lib/data';
 
 const TX_ICONS: Record<string, { icon: string; color: string; bg: string; label: string }> = {
