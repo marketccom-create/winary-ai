@@ -285,7 +285,7 @@ function getCountryFromPhone(phone?: string): { name: string; prefix: string; fl
 }
 
 // ─── Purchase Confirm Modal (Winpay 2 WhatsApp, Winpay USSD & Balance) ─────────────────────────
-function PurchaseModal({ bot, balanceCents, botConfigs, isWinpayActive, isWinpay2Active, winpay2WhatsappPhone, isWinpayOneActive = true, winpayOneSlackWebhookUrl = '', userPhone, userName, onClose, onConfirm, buying }: {
+function PurchaseModal({ bot, balanceCents, botConfigs, isWinpayActive, isWinpay2Active, winpay2WhatsappPhone, isWinpayOneActive = true, isSenepayActive = true, winpayOneSlackWebhookUrl = '', userPhone, userName, onClose, onConfirm, buying }: {
   bot: Bot;
   balanceCents: number;
   botConfigs: BotPaymentConfig[];
@@ -293,6 +293,7 @@ function PurchaseModal({ bot, balanceCents, botConfigs, isWinpayActive, isWinpay
   isWinpay2Active: boolean;
   winpay2WhatsappPhone: string;
   isWinpayOneActive?: boolean;
+  isSenepayActive?: boolean;
   winpayOneSlackWebhookUrl?: string;
   userPhone?: string;
   userName?: string;
@@ -303,8 +304,8 @@ function PurchaseModal({ bot, balanceCents, botConfigs, isWinpayActive, isWinpay
   const { showToast } = useUIStore();
   const detectedCountry = getCountryFromPhone(userPhone);
 
-  const [method, setMethod] = useState<'winpayone' | 'winpay' | 'balance'>(
-    isWinpayOneActive ? 'winpayone' : (balanceCents >= bot.priceCents ? 'balance' : 'winpay')
+  const [method, setMethod] = useState<'senepay' | 'winpayone' | 'winpay' | 'balance'>(
+    isSenepayActive ? 'senepay' : (isWinpayOneActive ? 'winpayone' : (balanceCents >= bot.priceCents ? 'balance' : 'winpay'))
   );
   const [selectedOperator, setSelectedOperator] = useState<string>(detectedCountry.operators[0]?.name || 'MTN MoMo');
   const [phoneSender, setPhoneSender] = useState('');
@@ -434,7 +435,48 @@ Référence de la demande : ${reqRefCode}`;
         {winpayStep === 'SELECT' ? (
           <>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginBottom: 20 }}>
-              {/* Option 1: WinpayOne (Guichet Agrégateur de Paiement) */}
+              {/* Option 1: Sene-Pay Direct Checkout */}
+              <button
+                onClick={() => setMethod('senepay')}
+                disabled={!isSenepayActive}
+                style={{
+                  width: '100%', padding: '14px 16px', minHeight: 60,
+                  background: method === 'senepay' ? '#EFF6FF' : '#F9FAFB',
+                  border: `2px solid ${method === 'senepay' ? '#1A56DB' : '#E5E7EB'}`,
+                  borderRadius: 14, cursor: !isSenepayActive ? 'not-allowed' : 'pointer',
+                  display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                  opacity: !isSenepayActive ? 0.6 : 1,
+                }}
+              >
+                <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                  <div style={{
+                    width: 40, height: 40, borderRadius: 10, background: 'linear-gradient(135deg, #1A56DB, #1D4ED8)',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', fontSize: 20, fontWeight: 900
+                  }}>
+                    💳
+                  </div>
+                  <div style={{ textAlign: 'left' }}>
+                    <div style={{ fontSize: 14, fontWeight: 800, color: '#1E3A8A', display: 'flex', alignItems: 'center', gap: 6 }}>
+                      Sene-Pay (Paiement Direct)
+                      {isSenepayActive ? (
+                        <span style={{ fontSize: 10, background: '#DBEAFE', color: '#1E40AF', padding: '2px 8px', borderRadius: 99, fontWeight: 800 }}>
+                          🚀 Instantané
+                        </span>
+                      ) : (
+                        <span style={{ fontSize: 10, background: '#FEF3C7', color: '#D97706', padding: '2px 6px', borderRadius: 6, fontWeight: 700 }}>
+                          🛠️ Maintenance
+                        </span>
+                      )}
+                    </div>
+                    <div style={{ fontSize: 11, color: '#1E40AF', marginTop: 2 }}>
+                      Wave, Orange Money, MTN, Moov & Carte
+                    </div>
+                  </div>
+                </div>
+                {method === 'senepay' && <span style={{ color: '#1A56DB', fontWeight: 'bold', fontSize: 18 }}>✓</span>}
+              </button>
+
+              {/* Option 2: WinpayOne (Guichet Agrégateur de Paiement) */}
               <button
                 onClick={() => setMethod('winpayone')}
                 disabled={!isWinpayOneActive}
@@ -475,7 +517,7 @@ Référence de la demande : ${reqRefCode}`;
                 {method === 'winpayone' && <span style={{ color: '#059669', fontWeight: 'bold', fontSize: 18 }}>✓</span>}
               </button>
 
-              {/* Option 2: Winpay USSD Checkout */}
+              {/* Option 3: Winpay USSD Checkout */}
               <button
                 onClick={() => setMethod('winpay')}
                 style={{
@@ -507,7 +549,7 @@ Référence de la demande : ${reqRefCode}`;
                 {method === 'winpay' && <span style={{ color: '#1A56DB', fontWeight: 'bold' }}>✓</span>}
               </button>
 
-              {/* Option 3: Balance Payment */}
+              {/* Option 4: Balance Payment */}
               <button
                 onClick={() => setMethod('balance')}
                 disabled={balanceCents < bot.priceCents}
@@ -539,7 +581,13 @@ Référence de la demande : ${reqRefCode}`;
 
               <button
                 onClick={() => {
-                  if (method === 'balance') {
+                  if (method === 'senepay') {
+                    if (!isSenepayActive) {
+                      alert('Le paiement Sene-Pay est actuellement en maintenance.');
+                      return;
+                    }
+                    onConfirm(bot, 'SENEPAY', '', 'SENEPAY');
+                  } else if (method === 'balance') {
                     onConfirm(bot, 'BALANCE', '', 'BALANCE');
                   } else if (method === 'winpayone') {
                     if (!isWinpayOneActive) {
@@ -559,13 +607,13 @@ Référence de la demande : ${reqRefCode}`;
                 disabled={buying}
                 style={{
                   flex: 2, height: 48,
-                  background: buying ? '#93C5FD' : (method === 'winpayone' ? 'linear-gradient(135deg, #10B981, #059669)' : (bot.isPromo ? 'linear-gradient(135deg, #DC2626, #EA580C)' : 'linear-gradient(135deg, #1A56DB, #1D4ED8)')),
+                  background: buying ? '#93C5FD' : (method === 'senepay' ? 'linear-gradient(135deg, #1A56DB, #1D4ED8)' : (method === 'winpayone' ? 'linear-gradient(135deg, #10B981, #059669)' : (bot.isPromo ? 'linear-gradient(135deg, #DC2626, #EA580C)' : 'linear-gradient(135deg, #1A56DB, #1D4ED8)'))),
                   color: 'white', border: 'none', borderRadius: 12,
                   fontSize: 13, fontWeight: 700, cursor: buying ? 'not-allowed' : 'pointer',
                   display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8
                 }}
               >
-                {buying ? <Loader2 size={16} style={{ animation: 'spin 0.8s linear infinite' }} /> : (method === 'balance' ? `Payer ${priceFormatted}` : 'Continuer')}
+                {buying ? <Loader2 size={16} style={{ animation: 'spin 0.8s linear infinite' }} /> : (method === 'senepay' ? `Payer ${priceFormatted} avec Sene-Pay` : (method === 'balance' ? `Payer ${priceFormatted}` : 'Continuer'))}
               </button>
             </div>
           </>
@@ -1137,6 +1185,7 @@ export default function HomePage() {
   const [bots, setBots] = useState<Bot[]>([]);
   const [botConfigs, setBotConfigs] = useState<BotPaymentConfig[]>([]);
   const [isWinpayActive, setIsWinpayActive] = useState(true);
+  const [isSenepayActive, setIsSenepayActive] = useState(true);
   const [isWinpay2Active, setIsWinpay2Active] = useState(true);
   const [winpay2WhatsappPhone, setWinpay2WhatsappPhone] = useState('+1 (709) 506-4087');
   const [isWinpayOneActive, setIsWinpayOneActive] = useState(true);
@@ -1154,6 +1203,7 @@ export default function HomePage() {
     apiGetBotPaymentConfigs().then(res => {
       setBotConfigs(res.configs || []);
       setIsWinpayActive(res.isWinpayActive ?? true);
+      setIsSenepayActive(res.isSenepayActive ?? true);
       setIsWinpay2Active(res.isWinpay2Active ?? true);
       setWinpay2WhatsappPhone(res.winpay2WhatsappPhone || '+1 (709) 506-4087');
       setIsWinpayOneActive(res.isWinpayOneActive ?? true);
@@ -1166,11 +1216,17 @@ export default function HomePage() {
     setBuying(true);
     try {
       const op = method === 'BALANCE' ? 'BALANCE' : operator;
-      const { purchase, newBalanceCents } = await apiPurchaseBot(user.id, bot.id, op, txRef);
+      const { purchase, newBalanceCents, checkoutUrl } = await apiPurchaseBot(user.id, bot.id, op, txRef);
       if (newBalanceCents !== undefined) {
         updateBalance(newBalanceCents);
       }
       addPurchase(purchase);
+      if (checkoutUrl) {
+        setModal(null);
+        showToast('Redirection vers Sene-Pay...', 'success');
+        window.location.href = checkoutUrl;
+        return purchase;
+      }
       if (op === 'WINPAYONE') {
         // Ne pas fermer le modal ni afficher la notification toast de demande soumise. Le client reste sur l'écran WinpayOne jusqu'à la validation.
         return purchase;
@@ -1247,7 +1303,7 @@ export default function HomePage() {
 
       {/* Balance Card */}
       <div className="balance-card">
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <div>
             <p style={{ fontSize: 12, opacity: 0.7, margin: '0 0 4px', fontWeight: 500 }}>
               Solde Total
@@ -1259,17 +1315,34 @@ export default function HomePage() {
               {formatXOF(user?.balanceCents || 0)}
             </div>
           </div>
-          <div style={{
-            background: 'rgba(255,255,255,0.15)',
-            borderRadius: 12, padding: '6px 12px',
-            fontSize: 12, fontWeight: 600, color: 'white',
-          }}>💳 Solde</div>
+          <button 
+            onClick={() => setModal('deposit')}
+            className="btn-press"
+            style={{
+              background: 'rgba(255,255,255,0.25)',
+              border: '1px solid rgba(255,255,255,0.4)',
+              borderRadius: 12, padding: '8px 14px',
+              fontSize: 13, fontWeight: 700, color: 'white',
+              cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6,
+              boxShadow: '0 2px 8px rgba(0,0,0,0.1)'
+            }}
+          >
+            <ArrowUpRight size={16} color="white" /> Recharger
+          </button>
         </div>
       </div>
 
       {/* Quick Actions */}
       <div style={{ display: 'flex', gap: 10, margin: '0 16px 20px', overflowX: 'auto', paddingBottom: 4 }}>
-
+        <button className="action-btn" onClick={() => setModal('deposit')} style={{ minWidth: 70 }}>
+          <div style={{
+            width: 40, height: 40, borderRadius: 12,
+            background: '#EFF6FF', display: 'flex', alignItems: 'center', justifyContent: 'center',
+          }}>
+            <ArrowUpRight size={20} color="#1D4ED8" />
+          </div>
+          <span style={{ fontSize: 12, fontWeight: 600, color: '#374151' }}>Recharger</span>
+        </button>
         <button className="action-btn" onClick={() => setModal('withdraw')} style={{ minWidth: 70 }}>
           <div style={{
             width: 40, height: 40, borderRadius: 12,
@@ -1334,6 +1407,7 @@ export default function HomePage() {
           balanceCents={user?.balanceCents || 0}
           botConfigs={botConfigs}
           isWinpayActive={isWinpayActive}
+          isSenepayActive={isSenepayActive}
           isWinpay2Active={isWinpay2Active}
           winpay2WhatsappPhone={winpay2WhatsappPhone}
           isWinpayOneActive={isWinpayOneActive}
