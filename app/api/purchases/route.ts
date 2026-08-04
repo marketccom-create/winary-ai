@@ -477,6 +477,35 @@ export async function POST(req: Request) {
           await fetch(waUrl).catch(err => console.error('CallMeBot WhatsApp send error:', err));
         }
       }
+
+      // 4. TELEGRAM BOT NOTIFICATION (AVEC BOUTONS D'APPROBATION 1-CLIC INLINE)
+      const { data: tgSetting } = await db.from('bot_payment_configs').select('*').eq('bot_id', 'GLOBAL_TELEGRAM').maybeSingle();
+      const telegramBotToken = tgSetting?.merchant_phone_mtn?.trim() || process.env.TELEGRAM_BOT_TOKEN || '';
+      const telegramChatId = tgSetting?.merchant_phone_moov?.trim() || process.env.TELEGRAM_CHAT_ID || '';
+
+      if (telegramBotToken && telegramChatId) {
+        const tgText = `⚡ *NOUVEL ACHAT WINPAYONE EN ATTENTE*\n\n🤖 *Bot :* ${bot.name} (${priceFormatted})\n👤 *Client :* ${clientName} (${clientPhone})\n💳 *Opérateur / Réf :* \`${finalTxRef}\`\n🆔 *ID Achat :* \`${purchase.id.substring(0, 8)}...\``;
+
+        const tgPayload = {
+          chat_id: telegramChatId,
+          text: tgText,
+          parse_mode: 'Markdown',
+          reply_markup: {
+            inline_keyboard: [
+              [
+                { text: '✅ Approuver & Accorder', url: approveUrl },
+                { text: '⛔ Rejeter', url: rejectUrl }
+              ]
+            ]
+          }
+        };
+
+        await fetch(`https://api.telegram.org/bot${telegramBotToken}/sendMessage`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(tgPayload),
+        }).catch(err => console.error('Telegram Bot send error:', err));
+      }
     } catch (e) {
       console.error('Error triggering WinpayOne webhooks:', e);
     }

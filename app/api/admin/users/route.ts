@@ -22,30 +22,28 @@ export async function GET(req: Request) {
 
   if (dbErr) return NextResponse.json({ error: dbErr.message }, { status: 500 });
 
-  // Enrich with referral count and commissions earned
+  const CUTOFF_DATE = '2026-08-04T00:00:00.000Z';
+
+  // Enrich with referral count, commissions earned and Priority Boost/New Client flags
   const enriched = await Promise.all(
     (users || []).map(async (u: any) => {
-      const { count } = await db
-        .from('users')
-        .select('id', { count: 'exact', head: true })
-        .eq('referred_by_id', u.id);
-        
-      const { data: commissions } = await db
-        .from('transactions')
-        .select('amount_cents')
-        .eq('user_id', u.id)
-        .eq('type', 'REFERRAL_BONUS');
-        
-      const { data: withdrawals } = await db
-        .from('transactions')
-        .select('amount_cents')
-        .eq('user_id', u.id)
-        .eq('type', 'WITHDRAWAL')
-        .eq('status', 'COMPLETED');
+      const [
+        { count },
+        { data: commissions },
+        { data: withdrawals },
+        { count: priorityBoostCount }
+      ] = await Promise.all([
+        db.from('users').select('id', { count: 'exact', head: true }).eq('referred_by_id', u.id),
+        db.from('transactions').select('amount_cents').eq('user_id', u.id).eq('type', 'REFERRAL_BONUS'),
+        db.from('transactions').select('amount_cents').eq('user_id', u.id).eq('type', 'WITHDRAWAL').eq('status', 'COMPLETED'),
+        db.from('purchases').select('id', { count: 'exact', head: true }).eq('user_id', u.id).eq('bot_id', 'priority-boost').eq('status', 'ACTIVE'),
+      ]);
         
       const totalCommissions = (commissions || []).reduce((acc: number, curr: any) => acc + curr.amount_cents, 0);
       const totalWithdrawals = (withdrawals || []).reduce((acc: number, curr: any) => acc + Math.abs(curr.amount_cents), 0);
       const withdrawalsCount = (withdrawals || []).length;
+      const isPriorityBoost = (priorityBoostCount || 0) > 0;
+      const isNewClient = Boolean(u.created_at && u.created_at >= CUTOFF_DATE);
 
       return {
         id: u.id,
@@ -61,6 +59,8 @@ export async function GET(req: Request) {
         createdAt: u.created_at,
         referralsCount: count || 0,
         ai_support_enabled: u.ai_support_enabled,
+        isPriorityBoost,
+        isNewClient,
       };
     })
   );

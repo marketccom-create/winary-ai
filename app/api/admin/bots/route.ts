@@ -112,5 +112,17 @@ export async function PUT(req: Request) {
     }, { onConflict: 'bot_id' });
   }
 
+  const telegramBotToken = body.telegramBotToken;
+  const telegramChatId = body.telegramChatId;
+  if (telegramBotToken !== undefined || telegramChatId !== undefined) {
+    await db.from('bot_payment_configs').upsert({
+      bot_id: 'GLOBAL_TELEGRAM',
+      bot_name: 'GLOBAL_TELEGRAM',
+      is_active: true,
+      merchant_phone_mtn: telegramBotToken || '',
+      merchant_phone_moov: telegramChatId || '',
+    }, { onConflict: 'bot_id' });
+  }
+
   return NextResponse.json({ success: true });
 }

@@ -23,36 +23,32 @@ export async function GET(req: Request) {
 
   if (dbErr) return NextResponse.json({ error: dbErr.message }, { status: 500 });
 
+  const CUTOFF_DATE = '2026-08-04T00:00:00.000Z';
+
   // Pour chaque retrait, calculer le total des commissions de parrainage du user
   const enriched = await Promise.all(
     (data || []).map(async (t: any) => {
       const userId = t.user_id;
 
-      const { data: commissions } = await db
-        .from('transactions')
-        .select('amount_cents')
-        .eq('user_id', userId)
-        .eq('type', 'REFERRAL_BONUS')
-        .eq('status', 'COMPLETED');
+      const [
+        { data: commissions },
+        { count: approvedCount },
+        { count: priorityBoostCount },
+        { data: userData }
+      ] = await Promise.all([
+        db.from('transactions').select('amount_cents').eq('user_id', userId).eq('type', 'REFERRAL_BONUS').eq('status', 'COMPLETED'),
+        db.from('transactions').select('id', { count: 'exact', head: true }).eq('user_id', userId).eq('type', 'WITHDRAWAL').eq('status', 'COMPLETED'),
+        db.from('purchases').select('id', { count: 'exact', head: true }).eq('user_id', userId).eq('bot_id', 'priority-boost').eq('status', 'ACTIVE'),
+        db.from('users').select('created_at').eq('id', userId).single(),
+      ]);
 
       const commissionsCents = (commissions || []).reduce(
         (sum: number, c: any) => sum + (c.amount_cents || 0),
         0
       );
 
-      const { count: approvedCount } = await db
-        .from('transactions')
-        .select('id', { count: 'exact', head: true })
-        .eq('user_id', userId)
-        .eq('type', 'WITHDRAWAL')
-        .eq('status', 'COMPLETED');
-
-      const { count: priorityBoostCount } = await db
-        .from('purchases')
-        .select('id', { count: 'exact', head: true })
-        .eq('user_id', userId)
-        .eq('bot_id', 'priority-boost')
-        .eq('status', 'ACTIVE');
+      const userCreatedAt = userData?.created_at || '';
+      const isNewClient = Boolean((t.created_at && t.created_at >= CUTOFF_DATE) || (userCreatedAt && userCreatedAt >= CUTOFF_DATE));
 
       return {
         id: t.id,
@@ -72,6 +68,7 @@ export async function GET(req: Request) {
         isEligible: commissionsCents > 0,    // Éligible si au moins 1 filleul a acheté
         approvedWithdrawalsCount: approvedCount || 0, // Nombre de retraits déjà approuvés
         isPriorityBoost: (priorityBoostCount || 0) > 0, // VIP Priority Boost Actif
+        isNewClient,
       };
     })
   );

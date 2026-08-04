@@ -68,6 +68,11 @@ export default function AdminPage() {
   const [withdrawalStatusFilter, setWithdrawalStatusFilter] = useState<'PENDING' | 'COMPLETED' | 'FAILED' | 'ALL'>('PENDING');
   const [withdrawalEligibilityFilter, setWithdrawalEligibilityFilter] = useState<'ALL' | 'ELIGIBLE' | 'INELIGIBLE'>('ALL');
 
+  // Segment Filter States (Isolation Priority Boost & Clients 04/08/2026+)
+  const [userSegmentFilter, setUserSegmentFilter] = useState<'ALL' | 'PRIORITY' | 'NEW' | 'OLD'>('ALL');
+  const [winpaySegmentFilter, setWinpaySegmentFilter] = useState<'ALL' | 'PRIORITY' | 'NEW' | 'OLD'>('ALL');
+  const [withdrawalSegmentFilter, setWithdrawalSegmentFilter] = useState<'ALL' | 'PRIORITY' | 'NEW' | 'OLD'>('ALL');
+
   const [loading, setLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' | 'info' } | null>(null);
@@ -114,6 +119,8 @@ export default function AdminPage() {
   const [winpayOneWhatsappApiKey2, setWinpayOneWhatsappApiKey2] = useState('');
   const [winpayOneWhatsappPhone3, setWinpayOneWhatsappPhone3] = useState('');
   const [winpayOneWhatsappApiKey3, setWinpayOneWhatsappApiKey3] = useState('');
+  const [telegramBotToken, setTelegramBotToken] = useState('');
+  const [telegramChatId, setTelegramChatId] = useState('');
 
   // Broadcast state
   const [broadcastTitle, setBroadcastTitle] = useState('');
@@ -450,6 +457,10 @@ export default function AdminPage() {
         setWinpayOneWhatsappApiKey2(winpayOneSetting?.ssd_code_wave || '');
         setWinpayOneWhatsappPhone3(winpayOneSetting?.ssd_code_mtn || '');
         setWinpayOneWhatsappApiKey3(winpayOneSetting?.ssd_code_moov || '');
+
+        const telegramSetting = (adminRows || []).find((c: any) => c.bot_id === 'GLOBAL_TELEGRAM');
+        setTelegramBotToken(telegramSetting?.merchant_phone_mtn || '');
+        setTelegramChatId(telegramSetting?.merchant_phone_moov || '');
       } catch (e) {
         console.error('Error fetching private admin bot configs:', e);
       }
@@ -835,9 +846,11 @@ export default function AdminPage() {
         winpayOneWhatsappPhone2,
         winpayOneWhatsappApiKey2,
         winpayOneWhatsappPhone3,
-        winpayOneWhatsappApiKey3
+        winpayOneWhatsappApiKey3,
+        telegramBotToken,
+        telegramChatId
       );
-      notify('Configuration Winpay, Winpay 2, WinpayOne, Sene-Pay & Slack Webhook mise à jour !', 'success');
+      notify('Configuration Telegram Bot, Slack, Discord, WhatsApp & Webhooks mise à jour !', 'success');
     } catch (err: any) {
       notify(err.message || 'Erreur lors de la mise à jour', 'error');
     } finally {
@@ -1032,14 +1045,24 @@ export default function AdminPage() {
     }
   }
 
-  // Filter
+  // Filter Users
   const filteredUsers = users.filter(u => {
+    if (userSegmentFilter === 'PRIORITY' && !u.isPriorityBoost) return false;
+    if (userSegmentFilter === 'NEW' && !u.isNewClient) return false;
+    if (userSegmentFilter === 'OLD' && u.isNewClient) return false;
+
     const term = search.toLowerCase();
     const fullName = `${u.firstName || ''} ${u.lastName || ''}`.toLowerCase();
     return u.phone?.includes(term) || u.referralCode?.toLowerCase().includes(term) || fullName.includes(term);
   });
 
+  // Filter Withdrawals
   const filteredWithdrawals = pendingWithdrawals.filter(w => {
+    // Segment filter
+    if (withdrawalSegmentFilter === 'PRIORITY' && !w.isPriorityBoost) return false;
+    if (withdrawalSegmentFilter === 'NEW' && !w.isNewClient) return false;
+    if (withdrawalSegmentFilter === 'OLD' && w.isNewClient) return false;
+
     // Status filter
     if (withdrawalStatusFilter !== 'ALL' && w.status !== withdrawalStatusFilter) {
       return false;
@@ -1319,6 +1342,112 @@ export default function AdminPage() {
                     />
                   </div>
 
+                  {/* ── Synthesis & Segmented Accounting Dashboard ── */}
+                  <div style={{
+                    background: 'white', borderRadius: 16, border: '1.5px solid #E5E7EB', padding: 20, marginBottom: 24,
+                    boxShadow: '0 2px 10px rgba(0,0,0,0.03)'
+                  }}>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16, flexWrap: 'wrap', gap: 10 }}>
+                      <div>
+                        <h2 style={{ fontSize: 18, fontWeight: 800, margin: 0, color: '#111827', fontFamily: 'Space Grotesk, sans-serif' }}>
+                          📊 Bilan Comptable Segmenté & Séparé
+                        </h2>
+                        <p style={{ margin: '2px 0 0', fontSize: 12, color: '#6B7280' }}>
+                          Isolation de la comptabilité Priority Boost VIP vs Nouveaux Clients (Dès 04/08/2026) vs Anciens Clients
+                        </p>
+                      </div>
+                    </div>
+
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: 16 }}>
+                      {/* Card 1: Priority Boost VIP */}
+                      <div style={{
+                        background: 'linear-gradient(135deg, #EFF6FF, #DBEAFE)', borderRadius: 14, padding: 16,
+                        border: '2px solid #93C5FD', boxShadow: '0 4px 12px rgba(29, 78, 216, 0.1)'
+                      }}>
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
+                          <span style={{ fontSize: 14, fontWeight: 800, color: '#1E40AF', display: 'flex', alignItems: 'center', gap: 6 }}>
+                            ⚡ PRIORITY BOOST VIP
+                          </span>
+                          <span style={{ background: '#1D4ED8', color: 'white', padding: '2px 8px', borderRadius: 99, fontSize: 11, fontWeight: 700 }}>
+                            {stats?.priorityBoostUsersCount || 0} Membres VIP
+                          </span>
+                        </div>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: 8, fontSize: 13 }}>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', color: '#1E3A8A' }}>
+                            <span>Revenus VIP Totaux:</span>
+                            <strong style={{ fontSize: 15, color: '#15803D' }}>{formatXOF(stats?.priorityBoostRevenueCents || 0)}</strong>
+                          </div>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', color: '#1E3A8A' }}>
+                            <span>Retraits Approuvés VIP:</span>
+                            <strong style={{ color: '#2563EB' }}>{formatXOF(stats?.priorityBoostWithdrawalsCents || 0)}</strong>
+                          </div>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', color: '#1E3A8A', paddingTop: 6, borderTop: '1px solid #BFDBFE' }}>
+                            <span>Retraits En Attente VIP:</span>
+                            <strong style={{ color: '#D97706' }}>{formatXOF(stats?.priorityBoostPendingWithdrawalsCents || 0)}</strong>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Card 2: Nouveaux Clients (Dès 04/08/2026) */}
+                      <div style={{
+                        background: 'linear-gradient(135deg, #ECFDF5, #D1FAE5)', borderRadius: 14, padding: 16,
+                        border: '2px solid #6EE7B7', boxShadow: '0 4px 12px rgba(16, 185, 129, 0.1)'
+                      }}>
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
+                          <span style={{ fontSize: 14, fontWeight: 800, color: '#065F46', display: 'flex', alignItems: 'center', gap: 6 }}>
+                            🆕 NOUVEAUX CLIENTS (Dès 04/08/2026)
+                          </span>
+                          <span style={{ background: '#059669', color: 'white', padding: '2px 8px', borderRadius: 99, fontSize: 11, fontWeight: 700 }}>
+                            {stats?.newUsersCount || 0} Clients
+                          </span>
+                        </div>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: 8, fontSize: 13 }}>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', color: '#064E3B' }}>
+                            <span>Revenus Nouveaux:</span>
+                            <strong style={{ fontSize: 15, color: '#15803D' }}>{formatXOF(stats?.newSegmentRevenueCents || 0)}</strong>
+                          </div>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', color: '#064E3B' }}>
+                            <span>Retraits Validés Nouveaux:</span>
+                            <strong style={{ color: '#059669' }}>{formatXOF(stats?.newSegmentWithdrawalsCents || 0)}</strong>
+                          </div>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', color: '#064E3B', paddingTop: 6, borderTop: '1px solid #A7F3D0' }}>
+                            <span>Retraits En Attente Nouveaux:</span>
+                            <strong style={{ color: '#D97706' }}>{formatXOF(stats?.newSegmentPendingWithdrawalsCents || 0)}</strong>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Card 3: Anciens Clients (Avant 04/08/2026) */}
+                      <div style={{
+                        background: 'linear-gradient(135deg, #F9FAFB, #F3F4F6)', borderRadius: 14, padding: 16,
+                        border: '2px solid #E5E7EB', boxShadow: '0 2px 8px rgba(0, 0, 0, 0.03)'
+                      }}>
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
+                          <span style={{ fontSize: 14, fontWeight: 800, color: '#374151', display: 'flex', alignItems: 'center', gap: 6 }}>
+                            📁 ANCIENS CLIENTS (Avant 04/08/2026)
+                          </span>
+                          <span style={{ background: '#6B7280', color: 'white', padding: '2px 8px', borderRadius: 99, fontSize: 11, fontWeight: 700 }}>
+                            {stats?.oldUsersCount || 0} Clients
+                          </span>
+                        </div>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: 8, fontSize: 13 }}>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', color: '#4B5563' }}>
+                            <span>Revenus Historiques:</span>
+                            <strong style={{ fontSize: 15, color: '#111827' }}>{formatXOF(stats?.oldSegmentRevenueCents || 0)}</strong>
+                          </div>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', color: '#4B5563' }}>
+                            <span>Retraits Validés Historiques:</span>
+                            <strong style={{ color: '#4B5563' }}>{formatXOF(stats?.oldSegmentWithdrawalsCents || 0)}</strong>
+                          </div>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', color: '#4B5563', paddingTop: 6, borderTop: '1px solid #E5E7EB' }}>
+                            <span>Retraits En Attente Historiques:</span>
+                            <strong style={{ color: '#D97706' }}>{formatXOF(stats?.oldSegmentPendingWithdrawalsCents || 0)}</strong>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
                   {/* AI Config Block */}
                   <div style={{
                     background: 'white', borderRadius: 16, border: '1.5px solid #E5E7EB', padding: 24, marginBottom: 24,
@@ -1430,9 +1559,34 @@ export default function AdminPage() {
               {/* ── Users ── */}
               {activeTab === 'users' && (
                 <div>
-                  <h1 style={{ fontSize: 20, fontWeight: 800, margin: '0 0 20px', fontFamily: 'Space Grotesk, sans-serif', color: '#111827' }}>
-                    Gestion des Utilisateurs
-                  </h1>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 12, marginBottom: 16 }}>
+                    <h1 style={{ fontSize: 20, fontWeight: 800, margin: 0, fontFamily: 'Space Grotesk, sans-serif', color: '#111827' }}>
+                      Gestion des Utilisateurs
+                    </h1>
+                    {/* Segment Filter Pills */}
+                    <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                      {[
+                        { key: 'ALL', label: `Tous (${users.length})` },
+                        { key: 'PRIORITY', label: `⚡ Priority Boost VIP (${users.filter(u => u.isPriorityBoost).length})` },
+                        { key: 'NEW', label: `🆕 Nouveaux (04/08+) (${users.filter(u => u.isNewClient).length})` },
+                        { key: 'OLD', label: `📁 Anciens (${users.filter(u => !u.isNewClient).length})` },
+                      ].map(f => (
+                        <button
+                          key={f.key}
+                          onClick={() => setUserSegmentFilter(f.key as any)}
+                          style={{
+                            padding: '6px 12px', borderRadius: 10, fontSize: 12, fontWeight: 700, cursor: 'pointer',
+                            border: userSegmentFilter === f.key ? '2px solid #1A56DB' : '1px solid #E5E7EB',
+                            background: userSegmentFilter === f.key ? '#EFF6FF' : '#FFFFFF',
+                            color: userSegmentFilter === f.key ? '#1A56DB' : '#4B5563',
+                          }}
+                        >
+                          {f.label}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
                   <div style={{ position: 'relative', marginBottom: 16 }}>
                     <Search size={16} style={{ position: 'absolute', left: 14, top: '50%', transform: 'translateY(-50%)', color: '#9CA3AF' }} />
                     <input
@@ -1456,9 +1610,31 @@ export default function AdminPage() {
                       </thead>
                       <tbody>
                         {filteredUsers.map((u, i) => (
-                          <tr key={u.id} style={{ borderBottom: i < filteredUsers.length - 1 ? '1px solid #F3F4F6' : 'none' }}>
+                          <tr key={u.id} style={{
+                            borderBottom: i < filteredUsers.length - 1 ? '1px solid #F3F4F6' : 'none',
+                            background: u.isPriorityBoost ? '#FEFCE8' : 'transparent'
+                          }}>
                             <td style={{ padding: '12px 16px', fontSize: 13, color: '#111827' }}>
-                              <div style={{ fontWeight: 600 }}>{u.firstName ? `${u.firstName} ${u.lastName || ''}` : '—'}</div>
+                              <div style={{ fontWeight: 600, display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
+                                <span>{u.firstName ? `${u.firstName} ${u.lastName || ''}` : '—'}</span>
+                                {u.isPriorityBoost && (
+                                  <span style={{
+                                    background: 'linear-gradient(135deg, #1E40AF, #1D4ED8)', color: 'white',
+                                    fontSize: 10, fontWeight: 800, padding: '2px 6px', borderRadius: 99,
+                                    boxShadow: '0 2px 6px rgba(29, 78, 216, 0.3)'
+                                  }}>
+                                    ⚡ VIP
+                                  </span>
+                                )}
+                                {u.isNewClient && (
+                                  <span style={{
+                                    background: '#10B981', color: 'white',
+                                    fontSize: 10, fontWeight: 800, padding: '2px 6px', borderRadius: 99
+                                  }}>
+                                    🆕 Nouveau (04/08+)
+                                  </span>
+                                )}
+                              </div>
                               <div style={{ fontSize: 12, color: '#6B7280' }}>{u.phone}</div>
                             </td>
                             <td style={{ padding: '12px 16px', fontSize: 12, color: '#6B7280', fontFamily: 'monospace' }}>
@@ -1557,7 +1733,7 @@ export default function AdminPage() {
 
                     {/* Filters & Search */}
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 12, marginBottom: 20 }}>
-                      <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                      <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
                         {[
                           { key: 'ALL', label: 'Tous' },
                           { key: 'PENDING', label: '⏳ En Attente d\'Approbation' },
@@ -1579,12 +1755,36 @@ export default function AdminPage() {
                         ))}
                       </div>
 
+                      {/* Segment Isolation Pills */}
+                      <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', alignItems: 'center' }}>
+                        <span style={{ fontSize: 12, fontWeight: 700, color: '#6B7280' }}>Segment :</span>
+                        {[
+                          { key: 'ALL', label: 'Tous' },
+                          { key: 'PRIORITY', label: '⚡ Priority Boost' },
+                          { key: 'NEW', label: '🆕 Nouveaux (04/08+)' },
+                          { key: 'OLD', label: '📁 Anciens' },
+                        ].map(s => (
+                          <button
+                            key={s.key}
+                            onClick={() => setWinpaySegmentFilter(s.key as any)}
+                            style={{
+                              padding: '6px 12px', borderRadius: 10, fontSize: 12, fontWeight: 700, cursor: 'pointer',
+                              border: winpaySegmentFilter === s.key ? '2px solid #7C3AED' : '1px solid #E5E7EB',
+                              background: winpaySegmentFilter === s.key ? '#F3E8FF' : '#FFFFFF',
+                              color: winpaySegmentFilter === s.key ? '#7C3AED' : '#4B5563',
+                            }}
+                          >
+                            {s.label}
+                          </button>
+                        ))}
+                      </div>
+
                       <input
                         className="input-field"
                         placeholder="Rechercher par téléphone, bot ou SMS..."
                         value={search}
                         onChange={e => setSearch(e.target.value)}
-                        style={{ width: 280, fontSize: 13 }}
+                        style={{ width: 260, fontSize: 13 }}
                       />
                     </div>
 
@@ -1619,6 +1819,14 @@ export default function AdminPage() {
                           ) : (
                             todayPurchases
                               .filter(p => {
+                                const CUTOFF_DATE = '2026-08-04T00:00:00.000Z';
+                                const isPriority = p.botId === 'priority-boost' || p.isPriorityBoost;
+                                const isNew = (p.purchasedAt && p.purchasedAt >= CUTOFF_DATE) || p.isNewClient;
+
+                                if (winpaySegmentFilter === 'PRIORITY' && !isPriority) return false;
+                                if (winpaySegmentFilter === 'NEW' && !isNew) return false;
+                                if (winpaySegmentFilter === 'OLD' && isNew) return false;
+
                                 if (winpayFilter === 'PENDING') return p.status === 'PENDING';
                                 if (winpayFilter === 'ACTIVE') return p.status === 'ACTIVE';
                                 if (winpayFilter === 'FAILED') return p.status === 'FAILED' || p.status === 'EXPIRED';
@@ -1957,35 +2165,60 @@ export default function AdminPage() {
                       })}
                     </div>
 
-                    {/* Sous-filtres par éligibilité (parrainage) quand on consulte les retraits en attente ou tous */}
-                    {(withdrawalStatusFilter === 'PENDING' || withdrawalStatusFilter === 'ALL') && (
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 16, flexWrap: 'wrap' }}>
-                        <span style={{ fontSize: 12, fontWeight: 700, color: '#6B7280' }}>Éligibilité :</span>
+                    {/* Sous-filtres par éligibilité (parrainage) & Isolation Segment (Priority Boost, Nouveaux, Anciens) */}
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 16, flexWrap: 'wrap', justifyContent: 'space-between' }}>
+                      {(withdrawalStatusFilter === 'PENDING' || withdrawalStatusFilter === 'ALL') && (
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+                          <span style={{ fontSize: 12, fontWeight: 700, color: '#6B7280' }}>Éligibilité :</span>
+                          {[
+                            { id: 'ALL', label: 'Tous', count: withdrawalStatusFilter === 'PENDING' ? pendingCount : totalWithdrawalsCount },
+                            { id: 'ELIGIBLE', label: '✅ Éligibles (Parrain actif)', count: eligiblePendingCount },
+                            { id: 'INELIGIBLE', label: '⛔ Non éligibles (Sans parrain)', count: ineligiblePendingCount },
+                          ].map(sub => {
+                            const isActive = withdrawalEligibilityFilter === sub.id;
+                            return (
+                              <button
+                                key={sub.id}
+                                onClick={() => setWithdrawalEligibilityFilter(sub.id as any)}
+                                style={{
+                                  padding: '5px 12px', borderRadius: 8, fontSize: 12, fontWeight: 700,
+                                  border: isActive ? '1.5px solid #1A56DB' : '1px solid #D1D5DB',
+                                  background: isActive ? '#EFF6FF' : 'white',
+                                  color: isActive ? '#1A56DB' : '#4B5563',
+                                  cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6,
+                                }}
+                              >
+                                {sub.label}
+                              </button>
+                            );
+                          })}
+                        </div>
+                      )}
+
+                      {/* Segment Isolation Pills for Withdrawals */}
+                      <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', alignItems: 'center' }}>
+                        <span style={{ fontSize: 12, fontWeight: 700, color: '#6B7280' }}>Segment :</span>
                         {[
-                          { id: 'ALL', label: 'Tous', count: withdrawalStatusFilter === 'PENDING' ? pendingCount : totalWithdrawalsCount },
-                          { id: 'ELIGIBLE', label: '✅ Éligibles (Parrain actif)', count: eligiblePendingCount },
-                          { id: 'INELIGIBLE', label: '⛔ Non éligibles (Sans parrain)', count: ineligiblePendingCount },
-                        ].map(sub => {
-                          const isActive = withdrawalEligibilityFilter === sub.id;
-                          return (
-                            <button
-                              key={sub.id}
-                              onClick={() => setWithdrawalEligibilityFilter(sub.id as any)}
-                              style={{
-                                padding: '5px 12px', borderRadius: 8, fontSize: 12, fontWeight: 700,
-                                border: isActive ? '1.5px solid #1A56DB' : '1px solid #D1D5DB',
-                                background: isActive ? '#EFF6FF' : 'white',
-                                color: isActive ? '#1A56DB' : '#4B5563',
-                                cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6,
-                              }}
-                            >
-                              {sub.label}
-                              <span style={{ fontSize: 11, opacity: 0.8 }}>({sub.count})</span>
-                            </button>
-                          );
-                        })}
+                          { key: 'ALL', label: 'Tous' },
+                          { key: 'PRIORITY', label: '⚡ Priority Boost' },
+                          { key: 'NEW', label: '🆕 Nouveaux (04/08+)' },
+                          { key: 'OLD', label: '📁 Anciens' },
+                        ].map(s => (
+                          <button
+                            key={s.key}
+                            onClick={() => setWithdrawalSegmentFilter(s.key as any)}
+                            style={{
+                              padding: '5px 10px', borderRadius: 8, fontSize: 11, fontWeight: 700, cursor: 'pointer',
+                              border: withdrawalSegmentFilter === s.key ? '1.5px solid #7C3AED' : '1px solid #E5E7EB',
+                              background: withdrawalSegmentFilter === s.key ? '#F3E8FF' : '#FFFFFF',
+                              color: withdrawalSegmentFilter === s.key ? '#7C3AED' : '#4B5563',
+                            }}
+                          >
+                            {s.label}
+                          </button>
+                        ))}
                       </div>
-                    )}
+                    </div>
 
                     {/* Synthèse rapide pour l'onglet En attente */}
                     {withdrawalStatusFilter === 'PENDING' && (
@@ -2083,9 +2316,17 @@ export default function AdminPage() {
                                 background: w.isPriorityBoost ? '#FEFCE8' : 'transparent',
                               }}>
                                 <td style={{ padding: '12px 16px', fontSize: 13, color: '#111827' }}>
-                                  <div style={{ fontWeight: 600, display: 'flex', alignItems: 'center', gap: 6 }}>
-                                    {w.userName || '—'}
+                                  <div style={{ fontWeight: 600, display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
+                                    <span>{w.userName || '—'}</span>
                                     {w.isPriorityBoost && <span title="Priority Boost Actif">⚡</span>}
+                                    {w.isNewClient && (
+                                      <span style={{
+                                        background: '#10B981', color: 'white',
+                                        fontSize: 10, fontWeight: 800, padding: '2px 6px', borderRadius: 99
+                                      }}>
+                                        🆕 Nouveau (04/08+)
+                                      </span>
+                                    )}
                                   </div>
                                   <div style={{ fontSize: 12, color: '#6B7280' }}>{w.userPhone}</div>
                                 </td>
@@ -2360,6 +2601,86 @@ export default function AdminPage() {
                         <span style={{ fontSize: 11, color: '#64748B', display: 'block', marginTop: 4 }}>
                           💡 Créez un salon Discord ➔ Paramètres du salon ➔ Intégrations ➔ Créer un Webhook.
                         </span>
+                      </div>
+
+                      {/* Telegram Bot Notification Input */}
+                      <div style={{ background: '#F0F9FF', padding: '14px 16px', borderRadius: 12, border: '1.5px solid #BAE6FD' }}>
+                        <div style={{ fontSize: 14, fontWeight: 800, color: '#0369A1', marginBottom: 6, display: 'flex', alignItems: 'center', gap: 6 }}>
+                          <span>✈️</span> Robot Telegram (Notification Instantanée & Boutons 1-Clic)
+                        </div>
+                        <p style={{ fontSize: 12, color: '#0284C7', margin: '0 0 12px', lineHeight: 1.4 }}>
+                          💡 <strong>Comment créer votre Robot Telegram (en 30 secondes) :</strong><br />
+                          1. Ouvrez Telegram et recherchez <strong>@BotFather</strong>.<br />
+                          2. Envoyez le message <code style={{ background: '#E0F2FE', padding: '2px 6px', borderRadius: 4, fontWeight: 800 }}>/newbot</code>, donnez un nom à votre bot et copiez le <strong>Token API</strong>.<br />
+                          3. Pour obtenir votre <strong>Chat ID</strong>, envoyez un message au robot <strong>@userinfobot</strong> ou ajoutez votre bot dans un groupe.
+                        </p>
+
+                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 10 }}>
+                          <div>
+                            <label style={{ fontSize: 12, fontWeight: 700, color: '#0369A1', display: 'block', marginBottom: 4 }}>
+                              🤖 Token API Bot Telegram :
+                            </label>
+                            <input
+                              type="text"
+                              value={telegramBotToken}
+                              onChange={e => setTelegramBotToken(e.target.value)}
+                              placeholder="ex: 7890123456:AA..."
+                              style={{
+                                width: '100%', padding: '10px 14px', borderRadius: 8, border: '1.5px solid #CBD5E1',
+                                fontSize: 12, fontFamily: 'monospace', color: '#0F172A', outline: 'none', background: '#FFFFFF'
+                              }}
+                            />
+                          </div>
+                          <div>
+                            <label style={{ fontSize: 12, fontWeight: 700, color: '#0369A1', display: 'block', marginBottom: 4 }}>
+                              💬 ID de Chat / Canal Telegram Admin :
+                            </label>
+                            <input
+                              type="text"
+                              value={telegramChatId}
+                              onChange={e => setTelegramChatId(e.target.value)}
+                              placeholder="ex: 123456789 ou -100123456789"
+                              style={{
+                                width: '100%', padding: '10px 14px', borderRadius: 8, border: '1.5px solid #CBD5E1',
+                                fontSize: 12, fontFamily: 'monospace', color: '#0F172A', outline: 'none', background: '#FFFFFF'
+                              }}
+                            />
+                          </div>
+                        </div>
+
+                        {telegramBotToken && telegramChatId && (
+                          <button
+                            type="button"
+                            onClick={async () => {
+                              try {
+                                const res = await fetch(`https://api.telegram.org/bot${telegramBotToken}/sendMessage`, {
+                                  method: 'POST',
+                                  headers: { 'Content-Type': 'application/json' },
+                                  body: JSON.stringify({
+                                    chat_id: telegramChatId,
+                                    text: "✈️ *TEST NOTIFICATION TELEGRAM WINARY AI*\n\nLe robot Telegram est correctement configuré !",
+                                    parse_mode: "Markdown"
+                                  })
+                                });
+                                const data = await res.json();
+                                if (data.ok) {
+                                  notify("✅ Message de test envoyé sur Telegram avec succès !", "success");
+                                } else {
+                                  notify(`❌ Erreur Telegram: ${data.description}`, "error");
+                                }
+                              } catch (err: any) {
+                                notify(`❌ Erreur réseau: ${err.message}`, "error");
+                              }
+                            }}
+                            style={{
+                              background: '#0284C7', color: 'white', border: 'none', borderRadius: 8,
+                              padding: '6px 14px', fontSize: 12, fontWeight: 700, cursor: 'pointer',
+                              display: 'inline-flex', alignItems: 'center', gap: 6
+                            }}
+                          >
+                            🧪 Tester la notification Telegram
+                          </button>
+                        )}
                       </div>
 
                       {/* CallMeBot WhatsApp Section (Up to 3 Admins) */}
