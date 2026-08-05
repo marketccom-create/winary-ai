@@ -343,7 +343,19 @@ function PurchaseModal({ bot, balanceCents, botConfigs, isWinpayActive, isWinpay
   const [phoneSender, setPhoneSender] = useState('');
   const [clientFullName, setClientFullName] = useState(userName || '');
   const [txRef, setTxRef] = useState('');
-  const [winpayStep, setWinpayStep] = useState<'SELECT' | 'PHONE' | 'REF' | 'WINPAYONE_WAIT'>('SELECT');
+  const [winpayStep, setWinpayStep] = useState<'SELECT_COUNTRY' | 'SELECT' | 'PHONE' | 'REF' | 'WINPAYONE_WAIT'>('SELECT_COUNTRY');
+
+  useEffect(() => {
+    if (selectedCountryCode === 'CI') {
+      setMethod('winpay_manual');
+    } else if (selectedCountryCode === 'BJ') {
+      setMethod(isWinpayOneActive ? 'winpayone' : 'winpay_ussd');
+    } else {
+      const hasManual = dynamicCountryMethods.some(m => m.payment_mode === 'MANUAL_DEPOSIT' || m.payment_mode === 'BOTH' || !m.payment_mode);
+      if (hasManual) setMethod('winpay_manual');
+      else setMethod('winpay_ussd');
+    }
+  }, [selectedCountryCode, ssdMethods.length]);
   const [reqRefCode, setReqRefCode] = useState<string>('');
   const [currentPurchaseId, setCurrentPurchaseId] = useState<string | null>(null);
   const [ssdMethods, setSsdMethods] = useState<SsdPaymentMethod[]>([]);
@@ -523,115 +535,187 @@ Référence de la demande : ${reqRefCode}`;
           Tarif d'activation : <strong style={{ color: '#1A56DB', fontSize: 14 }}>{priceFormatted}</strong>
         </p>
 
-        {winpayStep === 'SELECT' ? (
+        {winpayStep === 'SELECT_COUNTRY' ? (
+          /* Step 1: Sélection obligatoire du PAYS d'abord */
+          <div>
+            <div style={{ marginBottom: 16, textAlign: 'left' }}>
+              <label style={{ fontSize: 13, fontWeight: 800, color: '#0F172A', display: 'block', marginBottom: 4 }}>
+                🌍 1. Dans quel pays êtes-vous ?
+              </label>
+              <p style={{ fontSize: 12, color: '#64748B', margin: '0 0 14px' }}>
+                Sélectionnez votre pays pour afficher les modes de paiement et réseaux disponibles.
+              </p>
+
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 10 }}>
+                {ALL_COUNTRIES.map(c => {
+                  const isSelected = selectedCountryCode === c.code;
+                  return (
+                    <button
+                      key={c.code}
+                      onClick={() => {
+                        setSelectedCountryCode(c.code);
+                        setWinpayStep('SELECT');
+                      }}
+                      className="btn-press"
+                      style={{
+                        padding: '12px 14px', borderRadius: 14,
+                        border: `2px solid ${isSelected ? '#1A56DB' : '#CBD5E1'}`,
+                        background: isSelected ? '#EFF6FF' : '#FFFFFF',
+                        cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 10,
+                        textAlign: 'left', boxShadow: '0 2px 8px rgba(0,0,0,0.02)'
+                      }}
+                    >
+                      <span style={{ fontSize: 24 }}>{c.flag}</span>
+                      <div>
+                        <div style={{ fontSize: 13, fontWeight: 800, color: isSelected ? '#1E40AF' : '#0F172A' }}>
+                          {c.name}
+                        </div>
+                        <div style={{ fontSize: 11, color: isSelected ? '#2563EB' : '#64748B', fontWeight: 600 }}>
+                          {c.prefix}
+                        </div>
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            <div style={{ display: 'flex', gap: 10, marginTop: 16 }}>
+              <button onClick={onClose} style={{
+                flex: 1, height: 48, background: '#F3F4F6', border: '1px solid #E5E7EB',
+                borderRadius: 12, fontSize: 13, fontWeight: 600, cursor: 'pointer', color: '#374151',
+              }}>Annuler</button>
+            </div>
+          </div>
+        ) : winpayStep === 'SELECT' ? (
+          /* Step 2: Modes de Paiement filtrés pour ce PAYS uniquement */
           <>
+            {/* Top Bar with Selected Country & Change Button */}
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: '#F8FAFC', padding: '10px 14px', borderRadius: 12, border: '1px solid #E2E8F0', marginBottom: 16 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <span style={{ fontSize: 20 }}>{selectedCountryObj.flag}</span>
+                <span style={{ fontSize: 13, fontWeight: 800, color: '#0F172A' }}>{selectedCountryObj.name} ({selectedCountryObj.prefix})</span>
+              </div>
+              <button onClick={() => setWinpayStep('SELECT_COUNTRY')} style={{ background: '#EFF6FF', color: '#1D4ED8', border: '1px solid #BFDBFE', borderRadius: 8, padding: '4px 10px', fontSize: 11, fontWeight: 800, cursor: 'pointer' }}>
+                Changer de pays 🌐
+              </button>
+            </div>
+
             <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginBottom: 20 }}>
-              {/* Mode 1: Dépôt Manuel & Confirmation SMS (Spécial Côte d'Ivoire & Multi-Pays) */}
-              <button
-                onClick={() => setMethod('winpay_manual')}
-                style={{
-                  width: '100%', padding: '14px 16px', minHeight: 60,
-                  background: method === 'winpay_manual' ? '#FFFBEB' : '#F9FAFB',
-                  border: `2px solid ${method === 'winpay_manual' ? '#D97706' : '#E5E7EB'}`,
-                  borderRadius: 14, cursor: 'pointer',
-                  display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                }}
-              >
-                <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                  <div style={{
-                    width: 40, height: 40, borderRadius: 10, background: 'linear-gradient(135deg, #F59E0B, #D97706)',
-                    display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', fontSize: 20, fontWeight: 900
-                  }}>
-                    📝
-                  </div>
-                  <div style={{ textAlign: 'left' }}>
-                    <div style={{ fontSize: 14, fontWeight: 800, color: '#92400E', display: 'flex', alignItems: 'center', gap: 6 }}>
-                      Dépôt Manuel & Validation SMS
-                      <span style={{ fontSize: 10, background: '#FEF3C7', color: '#B45309', padding: '2px 8px', borderRadius: 99, fontWeight: 800 }}>
-                        🇨🇮 Côte d'Ivoire & Multi-Pays
-                      </span>
+              {/* Option 1: Dépôt Manuel & Confirmation SMS (Spécial Côte d'Ivoire & Multi-Pays si activé) */}
+              {(selectedCountryCode === 'CI' || dynamicCountryMethods.some(m => m.payment_mode === 'MANUAL_DEPOSIT' || m.payment_mode === 'BOTH' || !m.payment_mode)) && (
+                <button
+                  onClick={() => setMethod('winpay_manual')}
+                  style={{
+                    width: '100%', padding: '14px 16px', minHeight: 60,
+                    background: method === 'winpay_manual' ? '#FFFBEB' : '#F9FAFB',
+                    border: `2px solid ${method === 'winpay_manual' ? '#D97706' : '#E5E7EB'}`,
+                    borderRadius: 14, cursor: 'pointer',
+                    display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                  }}
+                >
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                    <div style={{
+                      width: 40, height: 40, borderRadius: 10, background: 'linear-gradient(135deg, #F59E0B, #D97706)',
+                      display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', fontSize: 20, fontWeight: 900
+                    }}>
+                      📝
                     </div>
-                    <div style={{ fontSize: 11, color: '#B45309', marginTop: 2 }}>
-                      Transfert vers n° marchand puis copier-coller du SMS
+                    <div style={{ textAlign: 'left' }}>
+                      <div style={{ fontSize: 14, fontWeight: 800, color: '#92400E', display: 'flex', alignItems: 'center', gap: 6 }}>
+                        Dépôt Manuel & Validation SMS
+                        {selectedCountryCode === 'CI' && (
+                          <span style={{ fontSize: 10, background: '#FEF3C7', color: '#B45309', padding: '2px 8px', borderRadius: 99, fontWeight: 800 }}>
+                            🇨🇮 Spécial Côte d'Ivoire
+                          </span>
+                        )}
+                      </div>
+                      <div style={{ fontSize: 11, color: '#B45309', marginTop: 2 }}>
+                        Transfert vers n° marchand puis copier-coller du SMS
+                      </div>
                     </div>
                   </div>
-                </div>
-                {method === 'winpay_manual' && <span style={{ color: '#D97706', fontWeight: 'bold', fontSize: 18 }}>✓</span>}
-              </button>
+                  {method === 'winpay_manual' && <span style={{ color: '#D97706', fontWeight: 'bold', fontSize: 18 }}>✓</span>}
+                </button>
+              )}
 
-              {/* Mode 2: Code SSD / USSD (Appel Direct) */}
-              <button
-                onClick={() => setMethod('winpay_ussd')}
-                style={{
-                  width: '100%', padding: '14px 16px', minHeight: 60,
-                  background: method === 'winpay_ussd' ? '#EFF6FF' : '#F9FAFB',
-                  border: `2px solid ${method === 'winpay_ussd' ? '#1A56DB' : '#E5E7EB'}`,
-                  borderRadius: 14, cursor: 'pointer',
-                  display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                }}
-              >
-                <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                  <div style={{
-                    width: 40, height: 40, borderRadius: 10, background: 'linear-gradient(135deg, #1A56DB, #1D4ED8)',
-                    display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', fontSize: 20, fontWeight: 900
-                  }}>
-                    ⚡
-                  </div>
-                  <div style={{ textAlign: 'left' }}>
-                    <div style={{ fontSize: 14, fontWeight: 800, color: '#1E40AF', display: 'flex', alignItems: 'center', gap: 6 }}>
-                      Code SSD / USSD (Appel Direct)
-                      <span style={{ fontSize: 10, background: '#DBEAFE', color: '#1E40AF', padding: '2px 8px', borderRadius: 99, fontWeight: 800 }}>
-                        ⚡ Appel USSD
-                      </span>
+              {/* Option 2: Code SSD / USSD (Appel Direct) — Masqué pour Côte d'Ivoire */}
+              {selectedCountryCode !== 'CI' && (selectedCountryCode === 'BJ' || dynamicCountryMethods.some(m => m.payment_mode === 'USSD' || m.payment_mode === 'BOTH')) && (
+                <button
+                  onClick={() => setMethod('winpay_ussd')}
+                  style={{
+                    width: '100%', padding: '14px 16px', minHeight: 60,
+                    background: method === 'winpay_ussd' ? '#EFF6FF' : '#F9FAFB',
+                    border: `2px solid ${method === 'winpay_ussd' ? '#1A56DB' : '#E5E7EB'}`,
+                    borderRadius: 14, cursor: 'pointer',
+                    display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                  }}
+                >
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                    <div style={{
+                      width: 40, height: 40, borderRadius: 10, background: 'linear-gradient(135deg, #1A56DB, #1D4ED8)',
+                      display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', fontSize: 20, fontWeight: 900
+                    }}>
+                      ⚡
                     </div>
-                    <div style={{ fontSize: 11, color: '#2563EB', marginTop: 2 }}>
-                      Composer directement le code USSD sur votre téléphone (*880#...)
+                    <div style={{ textAlign: 'left' }}>
+                      <div style={{ fontSize: 14, fontWeight: 800, color: '#1E40AF', display: 'flex', alignItems: 'center', gap: 6 }}>
+                        Code SSD / USSD (Appel Direct)
+                        <span style={{ fontSize: 10, background: '#DBEAFE', color: '#1E40AF', padding: '2px 8px', borderRadius: 99, fontWeight: 800 }}>
+                          ⚡ Appel USSD
+                        </span>
+                      </div>
+                      <div style={{ fontSize: 11, color: '#2563EB', marginTop: 2 }}>
+                        Composer directement le code USSD sur votre téléphone (*880#...)
+                      </div>
                     </div>
                   </div>
-                </div>
-                {method === 'winpay_ussd' && <span style={{ color: '#1A56DB', fontWeight: 'bold', fontSize: 18 }}>✓</span>}
-              </button>
+                  {method === 'winpay_ussd' && <span style={{ color: '#1A56DB', fontWeight: 'bold', fontSize: 18 }}>✓</span>}
+                </button>
+              )}
 
-              {/* Option 3: WinpayOne (Guichet Agrégateur) */}
-              <button
-                onClick={() => setMethod('winpayone')}
-                disabled={!isWinpayOneActive}
-                style={{
-                  width: '100%', padding: '14px 16px', minHeight: 60,
-                  background: method === 'winpayone' ? '#ECFDF5' : '#F9FAFB',
-                  border: `2px solid ${method === 'winpayone' ? '#10B981' : '#E5E7EB'}`,
-                  borderRadius: 14, cursor: !isWinpayOneActive ? 'not-allowed' : 'pointer',
-                  display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                  opacity: !isWinpayOneActive ? 0.6 : 1,
-                }}
-              >
-                <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                  <div style={{
-                    width: 40, height: 40, borderRadius: 10, background: 'linear-gradient(135deg, #10B981, #047857)',
-                    display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', fontSize: 20, fontWeight: 900
-                  }}>
-                    🔒
-                  </div>
-                  <div style={{ textAlign: 'left' }}>
-                    <div style={{ fontSize: 14, fontWeight: 800, color: '#065F46', display: 'flex', alignItems: 'center', gap: 6 }}>
-                      WinpayOne (Guichet Sécurisé)
-                      {isWinpayOneActive ? (
-                        <span style={{ fontSize: 10, background: '#DCFCE7', color: '#166534', padding: '2px 8px', borderRadius: 99, fontWeight: 800 }}>
-                          🔒 Guichet Sécurisé
-                        </span>
-                      ) : (
-                        <span style={{ fontSize: 10, background: '#FEF3C7', color: '#D97706', padding: '2px 6px', borderRadius: 6, fontWeight: 700 }}>
-                          🛠️ Maintenance
-                        </span>
-                      )}
+              {/* Option 3: WinpayOne (Guichet Agrégateur) — Bénin et pays supportés */}
+              {selectedCountryCode === 'BJ' && (
+                <button
+                  onClick={() => setMethod('winpayone')}
+                  disabled={!isWinpayOneActive}
+                  style={{
+                    width: '100%', padding: '14px 16px', minHeight: 60,
+                    background: method === 'winpayone' ? '#ECFDF5' : '#F9FAFB',
+                    border: `2px solid ${method === 'winpayone' ? '#10B981' : '#E5E7EB'}`,
+                    borderRadius: 14, cursor: !isWinpayOneActive ? 'not-allowed' : 'pointer',
+                    display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                    opacity: !isWinpayOneActive ? 0.6 : 1,
+                  }}
+                >
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                    <div style={{
+                      width: 40, height: 40, borderRadius: 10, background: 'linear-gradient(135deg, #10B981, #047857)',
+                      display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', fontSize: 20, fontWeight: 900
+                    }}>
+                      🔒
                     </div>
-                    <div style={{ fontSize: 11, color: '#047857', marginTop: 2 }}>
-                      Guichet de Paiement Mobile Money Direct
+                    <div style={{ textAlign: 'left' }}>
+                      <div style={{ fontSize: 14, fontWeight: 800, color: '#065F46', display: 'flex', alignItems: 'center', gap: 6 }}>
+                        WinpayOne (Guichet Sécurisé)
+                        {isWinpayOneActive ? (
+                          <span style={{ fontSize: 10, background: '#DCFCE7', color: '#166534', padding: '2px 8px', borderRadius: 99, fontWeight: 800 }}>
+                            🔒 Guichet Sécurisé
+                          </span>
+                        ) : (
+                          <span style={{ fontSize: 10, background: '#FEF3C7', color: '#D97706', padding: '2px 6px', borderRadius: 6, fontWeight: 700 }}>
+                            🛠️ Maintenance
+                          </span>
+                        )}
+                      </div>
+                      <div style={{ fontSize: 11, color: '#047857', marginTop: 2 }}>
+                        Guichet de Paiement Mobile Money Direct
+                      </div>
                     </div>
                   </div>
-                </div>
-                {method === 'winpayone' && <span style={{ color: '#059669', fontWeight: 'bold', fontSize: 18 }}>✓</span>}
-              </button>
+                  {method === 'winpayone' && <span style={{ color: '#059669', fontWeight: 'bold', fontSize: 18 }}>✓</span>}
+                </button>
+              )}
 
               {/* Option 4: Balance Payment */}
               <button
@@ -670,10 +754,10 @@ Référence de la demande : ${reqRefCode}`;
             </div>
 
             <div style={{ display: 'flex', gap: 10 }}>
-              <button onClick={onClose} style={{
+              <button onClick={() => setWinpayStep('SELECT_COUNTRY')} style={{
                 flex: 1, height: 48, background: '#F3F4F6', border: '1px solid #E5E7EB',
                 borderRadius: 12, fontSize: 13, fontWeight: 600, cursor: 'pointer', color: '#374151',
-              }}>Annuler</button>
+              }}>Retour</button>
 
               <button
                 onClick={() => {
@@ -704,34 +788,15 @@ Référence de la demande : ${reqRefCode}`;
         ) : winpayStep === 'PHONE' ? (
           /* Step 2: Sélection du Pays et du Réseau Mobile Money */
           <div>
-            {/* Country Selector */}
-            <div style={{ marginBottom: 14, textAlign: 'left' }}>
-              <label style={{ fontSize: 12, fontWeight: 700, color: '#374151', display: 'block', marginBottom: 6 }}>
-                1. Choisissez votre Pays :
-              </label>
-              <select
-                value={selectedCountryCode}
-                onChange={e => {
-                  const newCode = e.target.value;
-                  setSelectedCountryCode(newCode);
-                  const foundCountry = ALL_COUNTRIES.find(c => c.code === newCode);
-                  if (foundCountry) {
-                    const ops = ssdMethods.filter(m => m.is_active && m.country_code === newCode);
-                    if (ops.length > 0) setSelectedOperator(ops[0].operator_name);
-                  }
-                }}
-                style={{
-                  width: '100%', padding: '10px 14px', borderRadius: 12,
-                  border: '1.5px solid #CBD5E1', fontSize: 14, fontWeight: 700,
-                  background: '#FFFFFF', color: '#0F172A', outline: 'none'
-                }}
-              >
-                {ALL_COUNTRIES.map(c => (
-                  <option key={c.code} value={c.code}>
-                    {c.flag} {c.name} ({c.prefix})
-                  </option>
-                ))}
-              </select>
+            {/* Selected Country Badge */}
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: '#F8FAFC', padding: '10px 14px', borderRadius: 12, border: '1px solid #E2E8F0', marginBottom: 14 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <span style={{ fontSize: 20 }}>{selectedCountryObj.flag}</span>
+                <span style={{ fontSize: 13, fontWeight: 800, color: '#0F172A' }}>{selectedCountryObj.name} ({selectedCountryObj.prefix})</span>
+              </div>
+              <button onClick={() => setWinpayStep('SELECT_COUNTRY')} style={{ background: '#EFF6FF', color: '#1D4ED8', border: '1px solid #BFDBFE', borderRadius: 8, padding: '4px 10px', fontSize: 11, fontWeight: 800, cursor: 'pointer' }}>
+                Changer 🌐
+              </button>
             </div>
 
             <div style={{ marginBottom: 16 }}>
