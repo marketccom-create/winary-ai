@@ -4,7 +4,7 @@ import { useRouter } from 'next/navigation';
 import Image from 'next/image';
 import {
   Users, Bot, CreditCard, Megaphone, Settings, LogOut,
-  Search, TrendingUp, AlertCircle, Check, X, Save, Loader2, ChevronRight, ChevronLeft, Plus, Trash, Edit, RefreshCw, MessageCircle, Send
+  Search, TrendingUp, AlertCircle, Check, X, Save, Loader2, ChevronRight, ChevronLeft, Plus, Trash, Edit, RefreshCw, MessageCircle, Send, Globe
 } from 'lucide-react';
 import { useAuthStore } from '@/lib/store';
 import {
@@ -25,7 +25,7 @@ import { supabase } from '@/lib/supabase';
 import { playWhatsappPopSound } from '@/lib/sound';
 import type { BotPaymentConfig, Announcement } from '@/lib/data';
 
-type Tab = 'dashboard' | 'users' | 'winpay' | 'pending' | 'withdrawals' | 'bots' | 'announcements' | 'chat';
+type Tab = 'dashboard' | 'users' | 'winpay' | 'pending' | 'withdrawals' | 'ssd_methods' | 'bots' | 'announcements' | 'chat';
 
 // ─── Stat Card ─────────────────────────────────────────────────────────────────
 function StatCard({ label, value, icon, color, onClick }: { label: string; value: string | number; icon: string; color: string; onClick?: () => void }) {
@@ -518,7 +518,7 @@ export default function AdminPage() {
   async function loadData() {
     setLoading(true);
     try {
-      const [s, u, b, cfgData, ann, p, w, c, ai, allP] = await Promise.all([
+      const [s, u, b, cfgData, ann, p, w, c, ai, allP, ssdM] = await Promise.all([
         apiAdminGetStats(),
         apiAdminGetUsers(),
         apiGetBots(),
@@ -529,11 +529,13 @@ export default function AdminPage() {
         apiAdminGetChatConversations(),
         apiAdminGetAiSettings(),
         apiAdminGetAllPurchases(),
+        apiAdminGetSsdMethods(),
       ]);
       setStats(s);
       setUsers(u);
       setBots(b);
       setAllPurchases(allP || []);
+      setSsdMethods(ssdM || []);
 
       const serverConfigs = cfgData?.configs || [];
       const populatedConfigs = b.map((bot: any) => {
@@ -1207,7 +1209,9 @@ export default function AdminPage() {
     { key: 'dashboard', label: 'Tableau de bord', icon: TrendingUp },
     { key: 'users', label: 'Utilisateurs', icon: Users },
     { key: 'winpay', label: 'Achats Winpay', icon: CreditCard },
+    { key: 'pending', label: 'Demandes SSD', icon: AlertCircle },
     { key: 'withdrawals', label: `Retraits (${pendingWithdrawalsCount})`, icon: CreditCard },
+    { key: 'ssd_methods', label: 'Moyens de Paiement', icon: Globe },
     { key: 'bots', label: 'Configuration Bots/SSD', icon: Settings },
     { key: 'announcements', label: 'Annonces Popups', icon: Megaphone },
     { key: 'chat', label: 'Support Client', icon: MessageCircle },
@@ -2574,6 +2578,202 @@ export default function AdminPage() {
                   </div>
                 );
               })()}
+
+              {/* ── 🌍 Dedicated Tab: Moyens de Paiement Multi-Pays ── */}
+              {activeTab === 'ssd_methods' && (
+                <div>
+                  {/* Page Header */}
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 24, flexWrap: 'wrap', gap: 16 }}>
+                    <div>
+                      <h1 style={{ fontSize: 22, fontWeight: 800, margin: '0 0 6px', fontFamily: 'Space Grotesk, sans-serif', color: '#0F172A', display: 'flex', alignItems: 'center', gap: 10 }}>
+                        <span>🌍 Moyens de Paiement & Dépôts Manuels</span>
+                        <span style={{ fontSize: 11, background: '#DCFCE7', color: '#15803D', padding: '3px 10px', borderRadius: 99, fontWeight: 800, border: '1px solid #86EFAC' }}>
+                          Multi-Pays
+                        </span>
+                      </h1>
+                      <p style={{ color: '#64748B', fontSize: 13, margin: 0, maxWidth: 700 }}>
+                        Gérez ici le numéro marchand récepteur, le nom du titulaire de compte, les instructions de dépôt et le mode de paiement pour chaque réseau (Côte d'Ivoire, Burkina Faso, Bénin, etc.).
+                      </p>
+                    </div>
+
+                    <button
+                      onClick={openCreateSsdModal}
+                      className="btn-press"
+                      style={{
+                        background: 'linear-gradient(135deg, #10B981, #059669)',
+                        color: 'white', border: 'none', borderRadius: 12,
+                        padding: '12px 20px', fontSize: 13, fontWeight: 800,
+                        cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 8,
+                        boxShadow: '0 4px 14px rgba(16, 185, 129, 0.3)',
+                      }}
+                    >
+                      <Plus size={16} />
+                      Ajouter un Moyen de Paiement
+                    </button>
+                  </div>
+
+                  {/* Country Filter Chips */}
+                  <div style={{ display: 'flex', gap: 8, marginBottom: 24, overflowX: 'auto', paddingBottom: 4 }}>
+                    {['ALL', 'Côte d’Ivoire', 'Burkina Faso', 'Bénin', 'Sénégal'].map(cName => {
+                      const isSelected = selectedSsdCountryFilter === cName;
+                      const count = cName === 'ALL' ? ssdMethods.length : ssdMethods.filter(m => m.country_name.toLowerCase().includes(cName.toLowerCase())).length;
+                      const flag = cName === 'Côte d’Ivoire' ? '🇨🇮' : cName === 'Burkina Faso' ? '🇧🇫' : cName === 'Bénin' ? '🇧🇯' : cName === 'Sénégal' ? '🇸🇳' : '🌐';
+
+                      return (
+                        <button
+                          key={cName}
+                          onClick={() => setSelectedSsdCountryFilter(cName)}
+                          style={{
+                            padding: '10px 16px', borderRadius: 12,
+                            background: isSelected ? '#1E40AF' : '#FFFFFF',
+                            color: isSelected ? 'white' : '#334155',
+                            border: `1.5px solid ${isSelected ? '#1E40AF' : '#E2E8F0'}`,
+                            fontSize: 13, fontWeight: 700, cursor: 'pointer',
+                            display: 'flex', alignItems: 'center', gap: 8, whiteSpace: 'nowrap',
+                            boxShadow: isSelected ? '0 4px 12px rgba(30, 64, 175, 0.25)' : 'none'
+                          }}
+                        >
+                          <span>{flag}</span>
+                          <span>{cName === 'ALL' ? 'Tous les Pays' : cName}</span>
+                          <span style={{
+                            fontSize: 11, padding: '2px 8px', borderRadius: 99,
+                            background: isSelected ? 'rgba(255,255,255,0.2)' : '#F1F5F9',
+                            color: isSelected ? 'white' : '#64748B', fontWeight: 800
+                          }}>
+                            {count}
+                          </span>
+                        </button>
+                      );
+                    })}
+                  </div>
+
+                  {/* Cards Grid */}
+                  {ssdMethods.length === 0 ? (
+                    <div style={{ background: 'white', borderRadius: 16, border: '1.5px solid #E2E8F0', padding: 40, textAlign: 'center' }}>
+                      <span style={{ fontSize: 32 }}>💳</span>
+                      <h3 style={{ fontSize: 16, fontWeight: 700, color: '#334155', margin: '8px 0 4px' }}>Aucun moyen de paiement configuré</h3>
+                      <p style={{ fontSize: 13, color: '#64748B', margin: 0 }}>Cliquez sur "Ajouter un Moyen de Paiement" ci-dessus pour commencer.</p>
+                    </div>
+                  ) : (
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(340px, 1fr))', gap: 16 }}>
+                      {ssdMethods
+                        .filter(m => selectedSsdCountryFilter === 'ALL' || m.country_name.toLowerCase().includes(selectedSsdCountryFilter.toLowerCase()))
+                        .map(method => (
+                          <div
+                            key={method.id}
+                            style={{
+                              background: 'white', borderRadius: 16,
+                              border: `1.5px solid ${method.is_active ? '#CBD5E1' : '#FECACA'}`,
+                              padding: 18, position: 'relative',
+                              boxShadow: '0 4px 14px rgba(0,0,0,0.03)',
+                              display: 'flex', flexDirection: 'column', justifyContent: 'space-between', gap: 14,
+                              opacity: method.is_active ? 1 : 0.85
+                            }}
+                          >
+                            <div>
+                              {/* Header */}
+                              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12, paddingBottom: 10, borderBottom: '1px solid #F1F5F9' }}>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                                  <span style={{ fontSize: 24 }}>{method.icon || '💳'}</span>
+                                  <div>
+                                    <div style={{ fontSize: 15, fontWeight: 800, color: '#0F172A' }}>
+                                      {method.operator_name}
+                                    </div>
+                                    <div style={{ fontSize: 11, color: '#64748B', fontWeight: 600, display: 'flex', alignItems: 'center', gap: 4 }}>
+                                      <span>{method.country_flag}</span>
+                                      <span>{method.country_name} ({method.country_prefix})</span>
+                                    </div>
+                                  </div>
+                                </div>
+
+                                <button
+                                  onClick={() => handleToggleSsdActive(method)}
+                                  style={{
+                                    border: 'none', background: method.is_active ? '#DCFCE7' : '#FEE2E2',
+                                    color: method.is_active ? '#15803D' : '#DC2626',
+                                    fontSize: 11, fontWeight: 800, padding: '4px 10px', borderRadius: 99,
+                                    cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4
+                                  }}
+                                >
+                                  {method.is_active ? '👁️ Visible' : '🙈 Masqué'}
+                                </button>
+                              </div>
+
+                              {/* Main Account Info Card */}
+                              <div style={{ background: '#F8FAFC', padding: '12px 14px', borderRadius: 12, border: '1px solid #E2E8F0', marginBottom: 12 }}>
+                                <div style={{ fontSize: 11, color: '#64748B', fontWeight: 700, marginBottom: 6, textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                                  📱 Compte Récepteur Dépôt Manuel
+                                </div>
+
+                                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
+                                  <span style={{ fontSize: 12, color: '#334155' }}>Numéro Marchand :</span>
+                                  <strong style={{ fontSize: 15, color: '#1E40AF', fontFamily: 'monospace' }}>
+                                    {method.merchant_phone || 'Non renseigné'}
+                                  </strong>
+                                </div>
+
+                                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                                  <span style={{ fontSize: 12, color: '#334155' }}>Nom du Titulaire :</span>
+                                  <strong style={{ fontSize: 13, color: '#0F172A' }}>
+                                    {method.merchant_name || 'Non renseigné'}
+                                  </strong>
+                                </div>
+                              </div>
+
+                              {/* Mode & Instructions */}
+                              <div style={{ fontSize: 12, display: 'flex', flexDirection: 'column', gap: 6 }}>
+                                <div>
+                                  <span style={{ color: '#64748B' }}>Mode autorisé : </span>
+                                  <strong style={{ color: '#1E293B' }}>
+                                    {method.payment_mode === 'MANUAL_DEPOSIT' ? '📝 Dépôt Manuel & SMS' : method.payment_mode === 'USSD' ? '⚡ Code USSD Direct' : '🔀 Les 2 modes (USSD + Manuel)'}
+                                  </strong>
+                                </div>
+
+                                {method.ssd_code_template && (
+                                  <div style={{ fontSize: 11, color: '#475569' }}>
+                                    ⚡ Code SSD : <code style={{ background: '#F1F5F9', padding: '2px 6px', borderRadius: 4, color: '#0F172A', fontWeight: 700 }}>{method.ssd_code_template}</code>
+                                  </div>
+                                )}
+
+                                {method.deposit_instructions && (
+                                  <div style={{ background: '#FFFBEB', padding: '8px 10px', borderRadius: 8, border: '1px dashed #FCD34D', color: '#92400E', fontSize: 11, fontStyle: 'italic', marginTop: 4 }}>
+                                    💬 "{method.deposit_instructions}"
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+
+                            {/* Card Footer Actions */}
+                            <div style={{ display: 'flex', gap: 8, paddingTop: 12, borderTop: '1px solid #F1F5F9' }}>
+                              <button
+                                onClick={() => openEditSsdModal(method)}
+                                style={{
+                                  flex: 1, padding: '8px 12px', background: '#EFF6FF', color: '#1D4ED8',
+                                  border: '1px solid #BFDBFE', borderRadius: 10, fontSize: 12, fontWeight: 700,
+                                  cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6
+                                }}
+                              >
+                                <Edit size={14} /> Modifier
+                              </button>
+
+                              <button
+                                onClick={() => handleDeleteSsdMethod(method.id, method.operator_name)}
+                                style={{
+                                  padding: '8px 12px', background: '#FEF2F2', color: '#DC2626',
+                                  border: '1px solid #FCA5A5', borderRadius: 10, fontSize: 12, fontWeight: 700,
+                                  cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center'
+                                }}
+                                title="Supprimer"
+                              >
+                                <Trash size={14} />
+                              </button>
+                            </div>
+                          </div>
+                        ))}
+                    </div>
+                  )}
+                </div>
+              )}
 
               {/* ── Bots Config & SSD (Winpay) ── */}
               {activeTab === 'bots' && (
