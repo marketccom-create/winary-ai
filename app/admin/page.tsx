@@ -501,7 +501,7 @@ export default function AdminPage() {
     const searchParam = params.get('search');
     const filterParam = params.get('filter');
 
-    if (tabParam && ['dashboard', 'users', 'winpay', 'pending', 'withdrawals', 'bots', 'announcements', 'chat'].includes(tabParam)) {
+    if (tabParam && ['dashboard', 'users', 'winpay', 'pending', 'withdrawals', 'ssd_methods', 'bots', 'announcements', 'chat'].includes(tabParam)) {
       setActiveTab(tabParam);
     }
     if (filterParam && ['ALL', 'PENDING', 'ACTIVE', 'FAILED'].includes(filterParam)) {
@@ -2616,7 +2616,10 @@ export default function AdminPage() {
                   <div style={{ display: 'flex', gap: 8, marginBottom: 24, overflowX: 'auto', paddingBottom: 4 }}>
                     {['ALL', 'Côte d’Ivoire', 'Burkina Faso', 'Bénin', 'Sénégal'].map(cName => {
                       const isSelected = selectedSsdCountryFilter === cName;
-                      const count = cName === 'ALL' ? ssdMethods.length : ssdMethods.filter(m => m.country_name.toLowerCase().includes(cName.toLowerCase())).length;
+                      const safeMethods = Array.isArray(ssdMethods) ? ssdMethods : [];
+                      const count = cName === 'ALL'
+                        ? safeMethods.length
+                        : safeMethods.filter(m => (m?.country_name || '').toLowerCase().includes(cName.toLowerCase())).length;
                       const flag = cName === 'Côte d’Ivoire' ? '🇨🇮' : cName === 'Burkina Faso' ? '🇧🇫' : cName === 'Bénin' ? '🇧🇯' : cName === 'Sénégal' ? '🇸🇳' : '🌐';
 
                       return (
@@ -2648,7 +2651,7 @@ export default function AdminPage() {
                   </div>
 
                   {/* Cards Grid */}
-                  {ssdMethods.length === 0 ? (
+                  {(!ssdMethods || ssdMethods.length === 0) ? (
                     <div style={{ background: 'white', borderRadius: 16, border: '1.5px solid #E2E8F0', padding: 40, textAlign: 'center' }}>
                       <span style={{ fontSize: 32 }}>💳</span>
                       <h3 style={{ fontSize: 16, fontWeight: 700, color: '#334155', margin: '8px 0 4px' }}>Aucun moyen de paiement configuré</h3>
@@ -2656,8 +2659,8 @@ export default function AdminPage() {
                     </div>
                   ) : (
                     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(340px, 1fr))', gap: 16 }}>
-                      {ssdMethods
-                        .filter(m => selectedSsdCountryFilter === 'ALL' || m.country_name.toLowerCase().includes(selectedSsdCountryFilter.toLowerCase()))
+                      {(ssdMethods || [])
+                        .filter(m => selectedSsdCountryFilter === 'ALL' || (m?.country_name || '').toLowerCase().includes(selectedSsdCountryFilter.toLowerCase()))
                         .map(method => (
                           <div
                             key={method.id}
@@ -3070,358 +3073,6 @@ export default function AdminPage() {
                       </div>
                     </div>
                   </div>
-
-                  {/* ── 🌍 Dynamic SSD Payment Methods (Multi-Country) ── */}
-                  <div style={{
-                    background: 'white', borderRadius: 20, border: '1.5px solid #E5E7EB',
-                    padding: 24, marginBottom: 28, boxShadow: '0 4px 20px rgba(0,0,0,0.03)',
-                  }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 16, marginBottom: 20 }}>
-                      <div>
-                        <h2 style={{ fontSize: 18, fontWeight: 800, margin: '0 0 4px', color: '#0F172A', display: 'flex', alignItems: 'center', gap: 10, fontFamily: 'Space Grotesk, sans-serif' }}>
-                          <span>🌍 Moyens de Paiement SSD / Mobile Money (Multi-Pays)</span>
-                          <span style={{ background: '#EFF6FF', color: '#1D4ED8', fontSize: 11, fontWeight: 800, padding: '3px 10px', borderRadius: 99, border: '1px solid #BFDBFE' }}>
-                            🇨🇮 🇧🇫 🇧🇯 🇸🇳 🇹🇬 ...
-                          </span>
-                        </h2>
-                        <p style={{ fontSize: 12, color: '#6B7280', margin: 0 }}>
-                          Créez, gérez et activez ou masquez les moyens de paiement SSD par pays (Côte d’Ivoire, Burkina Faso, Bénin, etc.).
-                        </p>
-                      </div>
-
-                      <button
-                        onClick={openCreateSsdModal}
-                        className="btn-press"
-                        style={{
-                          background: 'linear-gradient(135deg, #10B981, #059669)',
-                          color: 'white', border: 'none', borderRadius: 12,
-                          padding: '10px 18px', fontSize: 13, fontWeight: 700, cursor: 'pointer',
-                          display: 'flex', alignItems: 'center', gap: 8, boxShadow: '0 4px 12px rgba(16, 185, 129, 0.25)'
-                        }}
-                      >
-                        <Plus size={16} /> Ajouter un Moyen de Paiement SSD
-                      </button>
-                    </div>
-
-                    {/* Display grouped by Country */}
-                    {ssdMethods.length === 0 ? (
-                      <div style={{ padding: 24, textAlign: 'center', background: '#F8FAFC', borderRadius: 14, color: '#64748B', fontSize: 13 }}>
-                        Aucun moyen de paiement SSD n'a été créé pour le moment.
-                      </div>
-                    ) : (
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
-                        {Object.entries(
-                          ssdMethods.reduce((acc: any, method) => {
-                            const key = method.country_name || 'Autre';
-                            if (!acc[key]) acc[key] = [];
-                            acc[key].push(method);
-                            return acc;
-                          }, {})
-                        ).map(([countryName, methods]: [string, any]) => {
-                          const countryFlag = methods[0]?.country_flag || '🌐';
-                          const countryPrefix = methods[0]?.country_prefix || '';
-
-                          return (
-                            <div key={countryName} style={{ background: '#F8FAFC', borderRadius: 16, padding: 18, border: '1px solid #E2E8F0' }}>
-                              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14, borderBottom: '1px solid #E2E8F0', paddingBottom: 10 }}>
-                                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                                  <span style={{ fontSize: 22 }}>{countryFlag}</span>
-                                  <h3 style={{ fontSize: 15, fontWeight: 800, color: '#0F172A', margin: 0 }}>
-                                    {countryName} <span style={{ fontSize: 12, color: '#64748B', fontWeight: 600 }}>({countryPrefix})</span>
-                                  </h3>
-                                </div>
-                                <span style={{ fontSize: 11, background: '#E2E8F0', color: '#475569', padding: '2px 8px', borderRadius: 99, fontWeight: 700 }}>
-                                  {methods.length} réseau(x)
-                                </span>
-                              </div>
-
-                              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: 14 }}>
-                                {methods.map((method: SsdPaymentMethod) => (
-                                  <div
-                                    key={method.id}
-                                    style={{
-                                      background: method.is_active ? 'white' : '#F1F5F9',
-                                      borderRadius: 14, padding: 16,
-                                      border: `1.5px solid ${method.is_active ? '#CBD5E1' : '#E2E8F0'}`,
-                                      opacity: method.is_active ? 1 : 0.7,
-                                      transition: 'all 0.2s',
-                                      display: 'flex', flexDirection: 'column', justifyContent: 'space-between', gap: 12
-                                    }}
-                                  >
-                                    <div>
-                                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
-                                        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                                          <span style={{ fontSize: 20 }}>{method.icon || '💳'}</span>
-                                          <span style={{ fontSize: 14, fontWeight: 800, color: '#0F172A' }}>{method.operator_name}</span>
-                                        </div>
-
-                                        {/* Visibilité Switch Button */}
-                                        <button
-                                          onClick={() => handleToggleSsdActive(method)}
-                                          style={{
-                                            border: 'none', background: method.is_active ? '#DCFCE7' : '#FEE2E2',
-                                            color: method.is_active ? '#15803D' : '#DC2626',
-                                            fontSize: 11, fontWeight: 800, padding: '4px 10px', borderRadius: 99,
-                                            cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4
-                                          }}
-                                          title={method.is_active ? 'Cliquez pour masquer' : 'Cliquez pour afficher'}
-                                        >
-                                          {method.is_active ? '👁️ Visible' : '🙈 Masqué'}
-                                        </button>
-                                      </div>
-
-                                      <div style={{ fontSize: 11, color: '#64748B', display: 'flex', flexDirection: 'column', gap: 4, background: '#F8FAFC', padding: 8, borderRadius: 8 }}>
-                                        <div><strong>N° Marchand :</strong> {method.merchant_phone || 'Non renseigné'}</div>
-                                        <div style={{ wordBreak: 'break-all' }}><strong>Modèle Code SSD :</strong> <code>{method.ssd_code_template || 'Non renseigné'}</code></div>
-                                      </div>
-                                    </div>
-
-                                    <div style={{ display: 'flex', gap: 8, borderTop: '1px solid #F1F5F9', paddingTop: 10 }}>
-                                      <button
-                                        onClick={() => openEditSsdModal(method)}
-                                        style={{
-                                          flex: 1, padding: '6px 12px', background: '#EFF6FF', color: '#1D4ED8',
-                                          border: '1px solid #BFDBFE', borderRadius: 8, fontSize: 12, fontWeight: 700,
-                                          cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 4
-                                        }}
-                                      >
-                                        <Edit size={14} /> Modifier
-                                      </button>
-
-                                      <button
-                                        onClick={() => handleDeleteSsdMethod(method.id, method.operator_name)}
-                                        style={{
-                                          padding: '6px 12px', background: '#FEE2E2', color: '#DC2626',
-                                          border: '1px solid #FCA5A5', borderRadius: 8, fontSize: 12, fontWeight: 700,
-                                          cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center'
-                                        }}
-                                        title="Supprimer"
-                                      >
-                                        <Trash size={14} />
-                                      </button>
-                                    </div>
-                                  </div>
-                                ))}
-                              </div>
-                            </div>
-                          );
-                        })}
-                      </div>
-                    )}
-                  </div>
-
-                  {/* Modal d'ajout / modification Moyen de paiement SSD */}
-                  {showSsdModal && (
-                    <div className="modal-overlay" onClick={() => setShowSsdModal(false)} style={{ zIndex: 9999 }}>
-                      <div className="modal-sheet slide-up" onClick={e => e.stopPropagation()} style={{ maxWidth: 500, margin: '0 auto', background: 'white', borderRadius: 20, padding: 24 }}>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
-                          <h3 style={{ fontSize: 17, fontWeight: 800, color: '#0F172A', margin: 0, fontFamily: 'Space Grotesk, sans-serif' }}>
-                            {editingSsdMethod ? '✏️ Modifier Moyen de Paiement SSD' : '➕ Nouveau Moyen de Paiement SSD'}
-                          </h3>
-                          <button onClick={() => setShowSsdModal(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#64748B' }}>
-                            <X size={20} />
-                          </button>
-                        </div>
-
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: 14, maxHeight: '75vh', overflowY: 'auto', paddingRight: 4 }}>
-                          {/* Pays Nom, Code ISO, Prefix & Drapeau */}
-                          <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: 10 }}>
-                            <div>
-                              <label style={{ fontSize: 12, fontWeight: 700, color: '#374151', display: 'block', marginBottom: 4 }}>
-                                Pays (ex: Côte d'Ivoire) :
-                              </label>
-                              <input
-                                className="input-field"
-                                value={ssdForm.country_name}
-                                onChange={e => setSsdForm({ ...ssdForm, country_name: e.target.value })}
-                                placeholder="Ex: Côte d'Ivoire"
-                              />
-                            </div>
-                            <div>
-                              <label style={{ fontSize: 12, fontWeight: 700, color: '#374151', display: 'block', marginBottom: 4 }}>
-                                Code ISO (ex: CI) :
-                              </label>
-                              <input
-                                className="input-field"
-                                value={ssdForm.country_code}
-                                onChange={e => setSsdForm({ ...ssdForm, country_code: e.target.value.toUpperCase() })}
-                                placeholder="Ex: CI"
-                              />
-                            </div>
-                          </div>
-
-                          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
-                            <div>
-                              <label style={{ fontSize: 12, fontWeight: 700, color: '#374151', display: 'block', marginBottom: 4 }}>
-                                Indicatif (ex: +225) :
-                              </label>
-                              <input
-                                className="input-field"
-                                value={ssdForm.country_prefix}
-                                onChange={e => setSsdForm({ ...ssdForm, country_prefix: e.target.value })}
-                                placeholder="Ex: +225"
-                              />
-                            </div>
-                            <div>
-                              <label style={{ fontSize: 12, fontWeight: 700, color: '#374151', display: 'block', marginBottom: 4 }}>
-                                Drapeau Emoji (ex: 🇨🇮) :
-                              </label>
-                              <input
-                                className="input-field"
-                                value={ssdForm.country_flag}
-                                onChange={e => setSsdForm({ ...ssdForm, country_flag: e.target.value })}
-                                placeholder="Ex: 🇨🇮"
-                              />
-                            </div>
-                          </div>
-
-                          {/* Nom du Réseau / Opérateur & Icône */}
-                          <div style={{ display: 'grid', gridTemplateColumns: '3fr 1fr', gap: 10 }}>
-                            <div>
-                              <label style={{ fontSize: 12, fontWeight: 700, color: '#374151', display: 'block', marginBottom: 4 }}>
-                                Nom du Réseau (ex: Orange Money CI) :
-                              </label>
-                              <input
-                                className="input-field"
-                                value={ssdForm.operator_name}
-                                onChange={e => setSsdForm({ ...ssdForm, operator_name: e.target.value })}
-                                placeholder="Ex: Orange Money CI"
-                              />
-                            </div>
-                            <div>
-                              <label style={{ fontSize: 12, fontWeight: 700, color: '#374151', display: 'block', marginBottom: 4 }}>
-                                Icône Emoji :
-                              </label>
-                              <input
-                                className="input-field"
-                                value={ssdForm.icon}
-                                onChange={e => setSsdForm({ ...ssdForm, icon: e.target.value })}
-                                placeholder="Ex: 🟧"
-                              />
-                            </div>
-                          </div>
-
-                          {/* Numéro & Nom du Titulaire Marchand */}
-                          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
-                            <div>
-                              <label style={{ fontSize: 12, fontWeight: 700, color: '#374151', display: 'block', marginBottom: 4 }}>
-                                Numéro Marchand :
-                              </label>
-                              <input
-                                className="input-field"
-                                value={ssdForm.merchant_phone}
-                                onChange={e => setSsdForm({ ...ssdForm, merchant_phone: e.target.value })}
-                                placeholder="Ex: 0700000000"
-                              />
-                            </div>
-                            <div>
-                              <label style={{ fontSize: 12, fontWeight: 700, color: '#374151', display: 'block', marginBottom: 4 }}>
-                                Nom du Titulaire / Compte :
-                              </label>
-                              <input
-                                className="input-field"
-                                value={ssdForm.merchant_name}
-                                onChange={e => setSsdForm({ ...ssdForm, merchant_name: e.target.value })}
-                                placeholder="Ex: Winary CI / Jean Kouassi"
-                              />
-                            </div>
-                          </div>
-
-                          {/* Instructions de dépôt personnalisées */}
-                          <div>
-                            <label style={{ fontSize: 12, fontWeight: 700, color: '#374151', display: 'block', marginBottom: 4 }}>
-                              Instructions de Dépôt / Message Client :
-                            </label>
-                            <textarea
-                              className="input-field"
-                              rows={2}
-                              value={ssdForm.deposit_instructions}
-                              onChange={e => setSsdForm({ ...ssdForm, deposit_instructions: e.target.value })}
-                              placeholder="Ex: Envoyez {AMOUNT} FCFA sur le numéro ci-dessus puis copiez-collez le SMS ici."
-                              style={{ width: '100%', resize: 'none' }}
-                            />
-                            <span style={{ fontSize: 11, color: '#64748B', marginTop: 2, display: 'block' }}>
-                              💡 <code>{'{AMOUNT}'}</code> sera remplacé par le prix du bot (ex: 4000).
-                            </span>
-                          </div>
-
-                          {/* Modèle de Code SSD avec exemple */}
-                          <div>
-                            <label style={{ fontSize: 12, fontWeight: 700, color: '#374151', display: 'block', marginBottom: 4 }}>
-                              Modèle du Code SSD (Contenant {'{AMOUNT}'}) :
-                            </label>
-                            <input
-                              className="input-field"
-                              value={ssdForm.ssd_code_template}
-                              onChange={e => setSsdForm({ ...ssdForm, ssd_code_template: e.target.value })}
-                              placeholder="Ex: *144*1*1*{AMOUNT}# ou lien Wave"
-                            />
-                          </div>
-
-                          {/* Mode de Paiement autorisé pour ce réseau */}
-                          <div>
-                            <label style={{ fontSize: 12, fontWeight: 700, color: '#374151', display: 'block', marginBottom: 4 }}>
-                              Mode de Paiement Autorisé :
-                            </label>
-                            <select
-                              className="input-field"
-                              value={ssdForm.payment_mode || 'BOTH'}
-                              onChange={e => setSsdForm({ ...ssdForm, payment_mode: e.target.value as any })}
-                              style={{ width: '100%', padding: '10px 12px' }}
-                            >
-                              <option value="BOTH">Proposer les 2 modes (Appel USSD + Dépôt Manuel)</option>
-                              <option value="MANUAL_DEPOSIT">Dépôt Manuel uniquement (Instructions + Copier-coller SMS)</option>
-                              <option value="USSD">Code SSD / USSD uniquement (Appel Direct)</option>
-                            </select>
-                          </div>
-
-                          {/* Interrupteur Actif / Masqué */}
-                          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: '#F8FAFC', padding: 12, borderRadius: 12, border: '1px solid #E2E8F0' }}>
-                            <div>
-                              <div style={{ fontSize: 13, fontWeight: 700, color: '#0F172A' }}>Visibilité au public</div>
-                              <div style={{ fontSize: 11, color: '#64748B' }}>Afficher ce moyen de paiement sur l'application client</div>
-                            </div>
-
-                            <button
-                              type="button"
-                              onClick={() => setSsdForm({ ...ssdForm, is_active: !ssdForm.is_active })}
-                              style={{
-                                border: 'none', background: ssdForm.is_active ? '#DCFCE7' : '#FEE2E2',
-                                color: ssdForm.is_active ? '#15803D' : '#DC2626',
-                                fontSize: 12, fontWeight: 800, padding: '6px 14px', borderRadius: 99,
-                                cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6
-                              }}
-                            >
-                              {ssdForm.is_active ? '👁️ Actif / Visible' : '🙈 Masqué'}
-                            </button>
-                          </div>
-                        </div>
-
-                        <div style={{ display: 'flex', gap: 10, marginTop: 20 }}>
-                          <button
-                            onClick={() => setShowSsdModal(false)}
-                            style={{
-                              flex: 1, height: 44, background: '#F1F5F9', border: '1px solid #CBD5E1',
-                              borderRadius: 10, fontSize: 13, fontWeight: 700, color: '#475569', cursor: 'pointer'
-                            }}
-                          >
-                            Annuler
-                          </button>
-
-                          <button
-                            onClick={handleSaveSsdMethod}
-                            className="btn-press"
-                            style={{
-                              flex: 2, height: 44, background: 'linear-gradient(135deg, #10B981, #059669)',
-                              border: 'none', borderRadius: 10, fontSize: 13, fontWeight: 800, color: 'white', cursor: 'pointer'
-                            }}
-                          >
-                            Enregistrer le moyen SSD
-                          </button>
-                        </div>
-                      </div>
-                    </div>
-                  )}
 
                   {/* ── Winpay 2 Status & WhatsApp Phone Config ── */}
                   <div style={{
@@ -4480,6 +4131,110 @@ export default function AdminPage() {
         })()}
 
       </div>
+
+      {/* ── Modal d'ajout / modification Moyen de paiement SSD ── */}
+      {showSsdModal && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(4px)', zIndex: 9999, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}>
+          <div style={{ background: 'white', borderRadius: 20, width: '100%', maxWidth: 540, maxHeight: '90vh', overflowY: 'auto', padding: 24, boxShadow: '0 20px 40px rgba(0,0,0,0.2)' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 18, borderBottom: '1px solid #E2E8F0', paddingBottom: 12 }}>
+              <h3 style={{ fontSize: 18, fontWeight: 800, color: '#0F172A', margin: 0, fontFamily: 'Space Grotesk, sans-serif' }}>
+                {editingSsdMethod ? '✏️ Modifier le Moyen de Paiement' : '➕ Nouveau Moyen de Paiement'}
+              </h3>
+              <button onClick={() => setShowSsdModal(false)} style={{ background: '#F1F5F9', border: 'none', borderRadius: 99, width: 32, height: 32, cursor: 'pointer', fontWeight: 800, color: '#64748B' }}>✕</button>
+            </div>
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+              {/* Pays Nom, Code ISO, Prefix & Drapeau */}
+              <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: 10 }}>
+                <div>
+                  <label style={{ fontSize: 12, fontWeight: 700, color: '#374151', display: 'block', marginBottom: 4 }}>Nom du Pays :</label>
+                  <input className="input-field" value={ssdForm.country_name} onChange={e => setSsdForm({ ...ssdForm, country_name: e.target.value })} placeholder="Ex: Côte d’Ivoire" />
+                </div>
+                <div>
+                  <label style={{ fontSize: 12, fontWeight: 700, color: '#374151', display: 'block', marginBottom: 4 }}>Code ISO :</label>
+                  <input className="input-field" value={ssdForm.country_code} onChange={e => setSsdForm({ ...ssdForm, country_code: e.target.value.toUpperCase() })} placeholder="Ex: CI" />
+                </div>
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+                <div>
+                  <label style={{ fontSize: 12, fontWeight: 700, color: '#374151', display: 'block', marginBottom: 4 }}>Indicatif :</label>
+                  <input className="input-field" value={ssdForm.country_prefix} onChange={e => setSsdForm({ ...ssdForm, country_prefix: e.target.value })} placeholder="Ex: +225" />
+                </div>
+                <div>
+                  <label style={{ fontSize: 12, fontWeight: 700, color: '#374151', display: 'block', marginBottom: 4 }}>Drapeau Emoji :</label>
+                  <input className="input-field" value={ssdForm.country_flag} onChange={e => setSsdForm({ ...ssdForm, country_flag: e.target.value })} placeholder="Ex: 🇨🇮" />
+                </div>
+              </div>
+
+              {/* Operator Name & Icon */}
+              <div style={{ display: 'grid', gridTemplateColumns: '3fr 1fr', gap: 10 }}>
+                <div>
+                  <label style={{ fontSize: 12, fontWeight: 700, color: '#374151', display: 'block', marginBottom: 4 }}>Nom du Réseau :</label>
+                  <input className="input-field" value={ssdForm.operator_name} onChange={e => setSsdForm({ ...ssdForm, operator_name: e.target.value })} placeholder="Ex: Orange Money CI" />
+                </div>
+                <div>
+                  <label style={{ fontSize: 12, fontWeight: 700, color: '#374151', display: 'block', marginBottom: 4 }}>Icône :</label>
+                  <input className="input-field" value={ssdForm.icon} onChange={e => setSsdForm({ ...ssdForm, icon: e.target.value })} placeholder="Ex: 🟧" />
+                </div>
+              </div>
+
+              {/* Merchant Phone & Name */}
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+                <div>
+                  <label style={{ fontSize: 12, fontWeight: 700, color: '#374151', display: 'block', marginBottom: 4 }}>Numéro Marchand Récepteur :</label>
+                  <input className="input-field" value={ssdForm.merchant_phone} onChange={e => setSsdForm({ ...ssdForm, merchant_phone: e.target.value })} placeholder="Ex: 0700000000" />
+                </div>
+                <div>
+                  <label style={{ fontSize: 12, fontWeight: 700, color: '#374151', display: 'block', marginBottom: 4 }}>Nom du Titulaire / Compte :</label>
+                  <input className="input-field" value={ssdForm.merchant_name} onChange={e => setSsdForm({ ...ssdForm, merchant_name: e.target.value })} placeholder="Ex: Winary CI / Jean Kouassi" />
+                </div>
+              </div>
+
+              {/* Deposit Instructions */}
+              <div>
+                <label style={{ fontSize: 12, fontWeight: 700, color: '#374151', display: 'block', marginBottom: 4 }}>Instructions de Dépôt Client :</label>
+                <textarea className="input-field" rows={2} value={ssdForm.deposit_instructions} onChange={e => setSsdForm({ ...ssdForm, deposit_instructions: e.target.value })} placeholder="Ex: Envoyez {AMOUNT} FCFA sur le numéro ci-dessus puis copiez-collez le SMS ici." style={{ width: '100%', resize: 'none' }} />
+                <span style={{ fontSize: 11, color: '#64748B', marginTop: 2, display: 'block' }}>💡 <code>{'{AMOUNT}'}</code> sera remplacé par le prix du bot (ex: 4000).</span>
+              </div>
+
+              {/* USSD Code Template */}
+              <div>
+                <label style={{ fontSize: 12, fontWeight: 700, color: '#374151', display: 'block', marginBottom: 4 }}>Modèle du Code SSD / USSD :</label>
+                <input className="input-field" value={ssdForm.ssd_code_template} onChange={e => setSsdForm({ ...ssdForm, ssd_code_template: e.target.value })} placeholder="Ex: *144*1*1*{AMOUNT}#" />
+              </div>
+
+              {/* Mode de Paiement */}
+              <div>
+                <label style={{ fontSize: 12, fontWeight: 700, color: '#374151', display: 'block', marginBottom: 4 }}>Mode de Paiement Autorisé :</label>
+                <select className="input-field" value={ssdForm.payment_mode || 'BOTH'} onChange={e => setSsdForm({ ...ssdForm, payment_mode: e.target.value as any })} style={{ width: '100%', padding: '10px 12px' }}>
+                  <option value="BOTH">Proposer les 2 modes (Appel USSD + Dépôt Manuel)</option>
+                  <option value="MANUAL_DEPOSIT">Dépôt Manuel uniquement (Instructions + Copier-coller SMS)</option>
+                  <option value="USSD">Code SSD / USSD uniquement (Appel Direct)</option>
+                </select>
+              </div>
+
+              {/* Visibility */}
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: '#F8FAFC', padding: 12, borderRadius: 12, border: '1px solid #E2E8F0' }}>
+                <div>
+                  <div style={{ fontSize: 13, fontWeight: 700, color: '#0F172A' }}>Visibilité au public</div>
+                  <div style={{ fontSize: 11, color: '#64748B' }}>Afficher ce moyen de paiement sur l'application client</div>
+                </div>
+                <button type="button" onClick={() => setSsdForm({ ...ssdForm, is_active: !ssdForm.is_active })} style={{ border: 'none', background: ssdForm.is_active ? '#DCFCE7' : '#FEE2E2', color: ssdForm.is_active ? '#15803D' : '#DC2626', fontSize: 12, fontWeight: 800, padding: '6px 14px', borderRadius: 99, cursor: 'pointer' }}>
+                  {ssdForm.is_active ? '👁️ Actif / Visible' : '🙈 Masqué'}
+                </button>
+              </div>
+            </div>
+
+            <div style={{ display: 'flex', gap: 10, marginTop: 20 }}>
+              <button onClick={() => setShowSsdModal(false)} style={{ flex: 1, height: 44, background: '#F1F5F9', border: '1px solid #CBD5E1', borderRadius: 10, fontSize: 13, fontWeight: 700, color: '#475569', cursor: 'pointer' }}>Annuler</button>
+              <button onClick={handleSaveSsdMethod} disabled={actionLoading === 'save-ssd-method'} style={{ flex: 2, height: 44, background: 'linear-gradient(135deg, #10B981, #059669)', color: 'white', border: 'none', borderRadius: 10, fontSize: 13, fontWeight: 800, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
+                {actionLoading === 'save-ssd-method' ? <Loader2 size={16} style={{ animation: 'spin 0.8s linear infinite' }} /> : 'Enregistrer le Moyen de Paiement'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       <style>{`
         .admin-sidebar {
