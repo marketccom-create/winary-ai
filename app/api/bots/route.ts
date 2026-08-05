@@ -47,6 +47,7 @@ export async function GET(req: Request) {
           merchant_name TEXT NOT NULL DEFAULT '',
           deposit_instructions TEXT NOT NULL DEFAULT '',
           ssd_code_template TEXT NOT NULL DEFAULT '',
+          payment_mode TEXT NOT NULL DEFAULT 'BOTH',
           requires_sms_paste BOOLEAN NOT NULL DEFAULT true,
           is_active BOOLEAN NOT NULL DEFAULT true,
           display_order INT NOT NULL DEFAULT 0,
@@ -55,6 +56,7 @@ export async function GET(req: Request) {
 
         ALTER TABLE ssd_payment_methods ADD COLUMN IF NOT EXISTS merchant_name TEXT NOT NULL DEFAULT '';
         ALTER TABLE ssd_payment_methods ADD COLUMN IF NOT EXISTS deposit_instructions TEXT NOT NULL DEFAULT '';
+        ALTER TABLE ssd_payment_methods ADD COLUMN IF NOT EXISTS payment_mode TEXT NOT NULL DEFAULT 'BOTH';
         ALTER TABLE ssd_payment_methods ADD COLUMN IF NOT EXISTS requires_sms_paste BOOLEAN NOT NULL DEFAULT true;
 
         INSERT INTO ssd_payment_methods (country_name, country_code, country_prefix, country_flag, operator_id, operator_name, icon, merchant_phone, merchant_name, deposit_instructions, ssd_code_template, is_active, display_order)

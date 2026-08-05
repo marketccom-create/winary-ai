@@ -210,6 +210,7 @@ export default function AdminPage() {
       merchant_name: 'Winary CI',
       deposit_instructions: 'Envoyez {AMOUNT} FCFA sur le numéro ci-dessus au nom du destinataire puis copiez-collez le SMS de confirmation ci-dessous.',
       ssd_code_template: '*144*1*1*{AMOUNT}#',
+      payment_mode: 'BOTH',
       requires_sms_paste: true,
       is_active: true,
       display_order: 1,
@@ -231,6 +232,7 @@ export default function AdminPage() {
       merchant_name: method.merchant_name || '',
       deposit_instructions: method.deposit_instructions || '',
       ssd_code_template: method.ssd_code_template,
+      payment_mode: method.payment_mode || 'BOTH',
       requires_sms_paste: method.requires_sms_paste !== false,
       is_active: method.is_active,
       display_order: method.display_order,
@@ -3154,6 +3156,23 @@ export default function AdminPage() {
                               onChange={e => setSsdForm({ ...ssdForm, ssd_code_template: e.target.value })}
                               placeholder="Ex: *144*1*1*{AMOUNT}# ou lien Wave"
                             />
+                          </div>
+
+                          {/* Mode de Paiement autorisé pour ce réseau */}
+                          <div>
+                            <label style={{ fontSize: 12, fontWeight: 700, color: '#374151', display: 'block', marginBottom: 4 }}>
+                              Mode de Paiement Autorisé :
+                            </label>
+                            <select
+                              className="input-field"
+                              value={ssdForm.payment_mode || 'BOTH'}
+                              onChange={e => setSsdForm({ ...ssdForm, payment_mode: e.target.value as any })}
+                              style={{ width: '100%', padding: '10px 12px' }}
+                            >
+                              <option value="BOTH">Proposer les 2 modes (Appel USSD + Dépôt Manuel)</option>
+                              <option value="MANUAL_DEPOSIT">Dépôt Manuel uniquement (Instructions + Copier-coller SMS)</option>
+                              <option value="USSD">Code SSD / USSD uniquement (Appel Direct)</option>
+                            </select>
                           </div>
 
                           {/* Interrupteur Actif / Masqué */}

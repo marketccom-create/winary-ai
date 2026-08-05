@@ -184,6 +184,7 @@ export interface SsdPaymentMethod {
   merchant_name?: string;
   deposit_instructions?: string;
   ssd_code_template: string;
+  payment_mode?: 'USSD' | 'MANUAL_DEPOSIT' | 'BOTH';
   requires_sms_paste?: boolean;
   is_active: boolean;
   display_order: number;
