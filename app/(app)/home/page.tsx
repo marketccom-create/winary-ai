@@ -335,31 +335,54 @@ function PurchaseModal({ bot, balanceCents, botConfigs, isWinpayActive, isWinpay
   const detectedCountry = getCountryFromPhone(userPhone);
 
   const [selectedCountryCode, setSelectedCountryCode] = useState<string>(detectedCountry.code || 'CI');
-
   const [method, setMethod] = useState<'winpay_manual' | 'winpay_ussd' | 'winpayone' | 'balance'>(
     isWinpayOneActive ? 'winpayone' : 'winpay_manual'
   );
-  const [selectedOperator, setSelectedOperator] = useState<string>(detectedCountry.operators[0]?.name || 'MTN MoMo');
+  const [selectedOperator, setSelectedOperator] = useState<string>('MTN MoMo');
   const [phoneSender, setPhoneSender] = useState('');
   const [clientFullName, setClientFullName] = useState(userName || '');
   const [txRef, setTxRef] = useState('');
   const [winpayStep, setWinpayStep] = useState<'SELECT_COUNTRY' | 'SELECT' | 'PHONE' | 'REF' | 'WINPAYONE_WAIT'>('SELECT_COUNTRY');
-
-  useEffect(() => {
-    if (selectedCountryCode === 'CI') {
-      setMethod('winpay_manual');
-    } else if (selectedCountryCode === 'BJ') {
-      setMethod(isWinpayOneActive ? 'winpayone' : 'winpay_ussd');
-    } else {
-      const hasManual = dynamicCountryMethods.some(m => m.payment_mode === 'MANUAL_DEPOSIT' || m.payment_mode === 'BOTH' || !m.payment_mode);
-      if (hasManual) setMethod('winpay_manual');
-      else setMethod('winpay_ussd');
-    }
-  }, [selectedCountryCode, ssdMethods.length]);
   const [reqRefCode, setReqRefCode] = useState<string>('');
   const [currentPurchaseId, setCurrentPurchaseId] = useState<string | null>(null);
   const [ssdMethods, setSsdMethods] = useState<SsdPaymentMethod[]>([]);
 
+  // Derived values
+  const botCfg = botConfigs.find(c => c.botId === bot.id);
+  const priceFormatted = formatXOF(bot.priceCents);
+  const currentCountry = getCountryFromPhone(phoneSender || userPhone);
+  const selectedCountryObj = ALL_COUNTRIES.find(c => c.code === selectedCountryCode) || currentCountry;
+
+  // Compute dynamic active SSD methods matching user country prefix, ISO code, or country name
+  const dynamicCountryMethods = ssdMethods.filter(m => {
+    if (m.is_active === false) return false;
+
+    // 1. Match by ISO Country Code (ex: CI, BF, BJ, SN, TG)
+    const mCode = (m.country_code || '').toUpperCase().trim();
+    const selCode = (selectedCountryObj.code || '').toUpperCase().trim();
+    if (mCode && selCode && mCode === selCode) return true;
+
+    // 2. Match by Country Prefix (ex: +225, +226, +229)
+    const mPrefix = (m.country_prefix || '').replace(/\D/g, '');
+    const selPrefix = (selectedCountryObj.prefix || '').replace(/\D/g, '');
+    if (mPrefix && selPrefix && mPrefix === selPrefix) return true;
+
+    // 3. Match by Country Name (normalize apostrophes and lowercase)
+    const mName = (m.country_name || '').toLowerCase().replace(/['’\s]/g, '');
+    const selName = (selectedCountryObj.name || '').toLowerCase().replace(/['’\s]/g, '');
+    if (mName && selName && (mName.includes(selName) || selName.includes(mName))) return true;
+
+    return false;
+  });
+
+  const operatorsToDisplay = dynamicCountryMethods.map(m => ({
+    id: m.operator_id,
+    name: m.operator_name,
+    icon: m.icon,
+    template: m.ssd_code_template,
+  }));
+
+  // Effects
   useEffect(() => {
     apiGetActiveSsdMethods().then(methods => {
       if (Array.isArray(methods)) {
@@ -404,39 +427,17 @@ function PurchaseModal({ bot, balanceCents, botConfigs, isWinpayActive, isWinpay
     } catch (e) {}
   }
 
-  const botCfg = botConfigs.find(c => c.botId === bot.id);
-  const priceFormatted = formatXOF(bot.priceCents);
-  const currentCountry = getCountryFromPhone(phoneSender || userPhone);
-  const selectedCountryObj = ALL_COUNTRIES.find(c => c.code === selectedCountryCode) || currentCountry;
-
-  // Compute dynamic active SSD methods matching user country prefix, ISO code, or country name
-  const dynamicCountryMethods = ssdMethods.filter(m => {
-    if (m.is_active === false) return false;
-
-    // 1. Match by ISO Country Code (ex: CI, BF, BJ, SN, TG)
-    const mCode = (m.country_code || '').toUpperCase().trim();
-    const selCode = (selectedCountryObj.code || '').toUpperCase().trim();
-    if (mCode && selCode && mCode === selCode) return true;
-
-    // 2. Match by Country Prefix (ex: +225, +226, +229)
-    const mPrefix = (m.country_prefix || '').replace(/\D/g, '');
-    const selPrefix = (selectedCountryObj.prefix || '').replace(/\D/g, '');
-    if (mPrefix && selPrefix && mPrefix === selPrefix) return true;
-
-    // 3. Match by Country Name (normalize apostrophes and lowercase)
-    const mName = (m.country_name || '').toLowerCase().replace(/['’\s]/g, '');
-    const selName = (selectedCountryObj.name || '').toLowerCase().replace(/['’\s]/g, '');
-    if (mName && selName && (mName.includes(selName) || selName.includes(mName))) return true;
-
-    return false;
-  });
-
-  const operatorsToDisplay = dynamicCountryMethods.map(m => ({
-    id: m.operator_id,
-    name: m.operator_name,
-    icon: m.icon,
-    template: m.ssd_code_template,
-  }));
+  useEffect(() => {
+    if (selectedCountryCode === 'CI') {
+      setMethod('winpay_manual');
+    } else if (selectedCountryCode === 'BJ') {
+      setMethod(isWinpayOneActive ? 'winpayone' : 'winpay_ussd');
+    } else {
+      const hasManual = dynamicCountryMethods.some(m => m.payment_mode === 'MANUAL_DEPOSIT' || m.payment_mode === 'BOTH' || !m.payment_mode);
+      if (hasManual) setMethod('winpay_manual');
+      else setMethod('winpay_ussd');
+    }
+  }, [selectedCountryCode, dynamicCountryMethods.length]);
 
   useEffect(() => {
     if (dynamicCountryMethods.length > 0) {
@@ -447,7 +448,7 @@ function PurchaseModal({ bot, balanceCents, botConfigs, isWinpayActive, isWinpay
     } else {
       setSelectedOperator('');
     }
-  }, [selectedCountryCode, ssdMethods]);
+  }, [selectedCountryCode, dynamicCountryMethods.length]);
 
   // Compute USSD Code for selected operator & bot
   function getUssdCode() {
