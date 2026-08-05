@@ -76,6 +76,23 @@ CREATE TABLE IF NOT EXISTS bot_payment_configs (
   is_active           BOOLEAN NOT NULL DEFAULT true
 );
 
+-- ─── Table : ssd_payment_methods (Moyens de paiement SSD par Pays) ────
+CREATE TABLE IF NOT EXISTS ssd_payment_methods (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  country_name TEXT NOT NULL,
+  country_code TEXT NOT NULL,
+  country_prefix TEXT NOT NULL,
+  country_flag TEXT NOT NULL DEFAULT '🌐',
+  operator_id TEXT NOT NULL UNIQUE,
+  operator_name TEXT NOT NULL,
+  icon TEXT NOT NULL DEFAULT '💳',
+  merchant_phone TEXT NOT NULL DEFAULT '',
+  ssd_code_template TEXT NOT NULL DEFAULT '',
+  is_active BOOLEAN NOT NULL DEFAULT true,
+  display_order INT NOT NULL DEFAULT 0,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
 -- ════════════════════════════════════════════════════════════════
 -- DONNÉES INITIALES
 -- ════════════════════════════════════════════════════════════════

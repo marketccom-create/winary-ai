@@ -171,6 +171,64 @@ export async function apiGetBotPaymentConfigs(): Promise<{
   };
 }
 
+export interface SsdPaymentMethod {
+  id: string;
+  country_name: string;
+  country_code: string;
+  country_prefix: string;
+  country_flag: string;
+  operator_id: string;
+  operator_name: string;
+  icon: string;
+  merchant_phone: string;
+  merchant_name?: string;
+  deposit_instructions?: string;
+  ssd_code_template: string;
+  requires_sms_paste?: boolean;
+  is_active: boolean;
+  display_order: number;
+}
+
+export async function apiGetActiveSsdMethods(): Promise<SsdPaymentMethod[]> {
+  try {
+    const data = await apiFetch<SsdPaymentMethod[]>('/api/ssd-methods');
+    return Array.isArray(data) ? data : [];
+  } catch (err) {
+    console.error('apiGetActiveSsdMethods error:', err);
+    return [];
+  }
+}
+
+export async function apiAdminGetSsdMethods(): Promise<SsdPaymentMethod[]> {
+  try {
+    const data = await apiFetch<SsdPaymentMethod[]>('/api/admin/ssd-methods');
+    return Array.isArray(data) ? data : [];
+  } catch (err) {
+    console.error('apiAdminGetSsdMethods error:', err);
+    return [];
+  }
+}
+
+export async function apiAdminCreateSsdMethod(payload: Partial<SsdPaymentMethod>): Promise<SsdPaymentMethod> {
+  return await apiFetch<SsdPaymentMethod>('/api/admin/ssd-methods', {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function apiAdminUpdateSsdMethod(id: string, updates: Partial<SsdPaymentMethod>): Promise<SsdPaymentMethod> {
+  return await apiFetch<SsdPaymentMethod>('/api/admin/ssd-methods', {
+    method: 'PUT',
+    body: JSON.stringify({ id, ...updates }),
+  });
+}
+
+export async function apiAdminDeleteSsdMethod(id: string): Promise<{ success: boolean }> {
+  return await apiFetch<{ success: boolean }>(`/api/admin/ssd-methods?id=${encodeURIComponent(id)}`, {
+    method: 'DELETE',
+  });
+}
+
 export async function apiAdminGetBotPaymentConfigs() {
   const rawRows = await apiFetch<any[]>('/api/admin/bots');
   return rawRows || [];

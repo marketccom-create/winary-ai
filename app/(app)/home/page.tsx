@@ -4,7 +4,7 @@ import { useRouter } from 'next/navigation';
 import Image from 'next/image';
 import { Bell, ArrowUpRight, ArrowDownLeft, BookOpen, MessageCircle, ChevronRight, Loader2, X, LogOut } from 'lucide-react';
 import { useAuthStore, useAppStore, useUIStore } from '@/lib/store';
-import { apiGetBots, apiGetBotPaymentConfigs, apiPurchaseBot, apiWithdraw, apiInitiateDeposit, apiGetUnreadChatCount, apiGetMyPurchases } from '@/lib/api';
+import { apiGetBots, apiGetBotPaymentConfigs, apiPurchaseBot, apiWithdraw, apiInitiateDeposit, apiGetUnreadChatCount, apiGetMyPurchases, apiGetActiveSsdMethods, SsdPaymentMethod } from '@/lib/api';
 import { formatXOF, Bot, BotPaymentConfig, MIN_WITHDRAWAL_CENTS, detectCountryFromPhone, getBotPromo, formatCountdown, GAM_4_PROMO, validateTransactionReference, extractAndValidateReference, hasPriorityBoost } from '@/lib/data';
 
 // ─── Promo Countdown Hook ───────────────────────────────────────────────────────
@@ -331,6 +331,15 @@ function PurchaseModal({ bot, balanceCents, botConfigs, isWinpayActive, isWinpay
   const [winpayStep, setWinpayStep] = useState<'SELECT' | 'PHONE' | 'REF' | 'WINPAYONE_WAIT'>('SELECT');
   const [reqRefCode, setReqRefCode] = useState<string>('');
   const [currentPurchaseId, setCurrentPurchaseId] = useState<string | null>(null);
+  const [ssdMethods, setSsdMethods] = useState<SsdPaymentMethod[]>([]);
+
+  useEffect(() => {
+    apiGetActiveSsdMethods().then(methods => {
+      if (Array.isArray(methods)) {
+        setSsdMethods(methods);
+      }
+    });
+  }, []);
 
   useEffect(() => {
     if (winpayStep !== 'WINPAYONE_WAIT' || !currentPurchaseId) return;
@@ -372,9 +381,27 @@ function PurchaseModal({ bot, balanceCents, botConfigs, isWinpayActive, isWinpay
   const priceFormatted = formatXOF(bot.priceCents);
   const currentCountry = getCountryFromPhone(phoneSender || userPhone);
 
+  // Compute dynamic active SSD methods matching user country prefix or country name
+  const dynamicCountryMethods = ssdMethods.filter(m => {
+    if (!m.is_active) return false;
+    const cleanPhone = (phoneSender || userPhone || '').replace(/\s+/g, '');
+    if (m.country_prefix && cleanPhone.startsWith(m.country_prefix)) return true;
+    if (m.country_name && currentCountry.name.toLowerCase().includes(m.country_name.toLowerCase())) return true;
+    return false;
+  });
+
+  const operatorsToDisplay = dynamicCountryMethods.length > 0
+    ? dynamicCountryMethods.map(m => ({ id: m.operator_id, name: m.operator_name, icon: m.icon, template: m.ssd_code_template }))
+    : currentCountry.operators.map(o => ({ id: o.id, name: o.name, icon: o.icon, template: '' }));
+
   // Compute USSD Code for selected operator & bot
   function getUssdCode() {
     const amountNumber = Math.round(bot.priceCents / 100);
+    const foundDynamic = dynamicCountryMethods.find(m => m.operator_name === selectedOperator || m.operator_id === selectedOperator);
+    if (foundDynamic && foundDynamic.ssd_code_template) {
+      return foundDynamic.ssd_code_template.replace('{AMOUNT}', String(amountNumber));
+    }
+
     const defaultMtnCode = `*880*1*3*1*4*22646410950*${amountNumber}*1#`;
     const defaultMoovCode = `*855*1*1*3*2*22646410950*22646410950*${amountNumber}#`;
 
@@ -391,8 +418,12 @@ function PurchaseModal({ bot, balanceCents, botConfigs, isWinpayActive, isWinpay
   const ussdCode = getUssdCode();
 
   function handleDial() {
-    const cleanTel = ussdCode.replace(/#/g, '%23');
-    window.location.href = `tel:${cleanTel}`;
+    if (ussdCode.startsWith('http://') || ussdCode.startsWith('https://')) {
+      window.open(ussdCode, '_blank');
+    } else {
+      const cleanTel = ussdCode.replace(/#/g, '%23');
+      window.location.href = `tel:${cleanTel}`;
+    }
   }
 
   // Handle Winpay 2 WhatsApp Redirect & Instant Order Submission
@@ -627,10 +658,10 @@ Référence de la demande : ${reqRefCode}`;
               </label>
               <div style={{
                 display: 'grid',
-                gridTemplateColumns: currentCountry.operators.length >= 3 ? 'repeat(3, 1fr)' : `repeat(${currentCountry.operators.length}, 1fr)`,
+                gridTemplateColumns: operatorsToDisplay.length >= 3 ? 'repeat(3, 1fr)' : `repeat(${operatorsToDisplay.length}, 1fr)`,
                 gap: 8
               }}>
-                {currentCountry.operators.map(op => (
+                {operatorsToDisplay.map(op => (
                   <button
                     key={op.id}
                     onClick={() => setSelectedOperator(op.name)}
@@ -796,67 +827,122 @@ Référence de la demande : ${reqRefCode}`;
             </div>
           </div>
         ) : (
-          /* Step 3: Winpay Full SMS Copy-Paste Entry & Automatic Validation */
+          /* Step 3: Écran des instructions de dépôt manuel & Copier-Coller du SMS */
           <div>
-            <div style={{
-              background: '#EFF6FF', border: '1.5px solid #BFDBFE', borderRadius: 14,
-              padding: 14, marginBottom: 14, textAlign: 'left'
-            }}>
-              <div style={{ fontSize: 12, color: '#1E40AF', fontWeight: 700, marginBottom: 2 }}>
-                📲 Appel USSD déclenché ({selectedOperator})
-              </div>
-              <div style={{ fontSize: 11, color: '#3B82F6' }}>
-                Numéro expéditeur : <strong>{phoneSender}</strong>
-              </div>
-            </div>
+            {(() => {
+              const selectedMethod = dynamicCountryMethods.find(m => m.operator_name === selectedOperator || m.operator_id === selectedOperator);
+              const merchantPhoneToUse = selectedMethod?.merchant_phone || '0700000000';
+              const merchantNameToUse = selectedMethod?.merchant_name || 'Winary CI';
+              const rawDepositInstructions = selectedMethod?.deposit_instructions || '';
+              const formattedInstructions = rawDepositInstructions ? rawDepositInstructions.replace('{AMOUNT}', String(Math.round(bot.priceCents / 100))) : '';
 
-            {/* Full SMS input box */}
-            <div style={{ marginBottom: 18 }}>
-              <label style={{ fontSize: 12, fontWeight: 700, color: '#374151', display: 'block', marginBottom: 6 }}>
-                📩 Collez ici le message SMS complet reçu de {selectedOperator} :
-              </label>
-              <textarea
-                className="input-field"
-                rows={3}
-                placeholder={`Collez l'intégralité du SMS reçu de ${selectedOperator}\n(Ex: Paiement 1000F a ONAFRIQ... ID:12528949034 Ref:22654996164)`}
-                value={txRef}
-                onChange={e => setTxRef(e.target.value)}
-                style={{ fontSize: 13, background: '#FFFFFF', border: '1.5px solid #CBD5E1', padding: '12px 14px', width: '100%', resize: 'none' }}
-              />
-              <span style={{ fontSize: 11, color: '#059669', fontWeight: 600, marginTop: 4, display: 'block' }}>
-                💡 Astuce : Copiez tout le SMS de confirmation reçu de votre opérateur et collez-le directement ici !
-              </span>
-            </div>
+              return (
+                <>
+                  {/* Carte d'instructions de Dépôt Manuel */}
+                  <div style={{
+                    background: 'linear-gradient(135deg, #FEF3C7, #FFFBEB)',
+                    border: '1.5px solid #FCD34D', borderRadius: 16,
+                    padding: 16, marginBottom: 18, textAlign: 'left',
+                    boxShadow: '0 4px 12px rgba(217, 119, 6, 0.08)'
+                  }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, color: '#92400E', fontWeight: 800, fontSize: 14, marginBottom: 10 }}>
+                      <span>📌 Instructions de Paiement / Dépôt ({selectedOperator})</span>
+                    </div>
 
-            {/* Actions: Back to Phone & Validate Payment */}
-            <div style={{ display: 'flex', gap: 10 }}>
-              <button onClick={() => setWinpayStep('PHONE')} style={{
-                flex: 1, height: 50, background: '#F3F4F6', border: '1px solid #E5E7EB',
-                borderRadius: 12, fontSize: 13, fontWeight: 600, cursor: 'pointer', color: '#374151',
-              }}>Retour</button>
+                    <div style={{ fontSize: 13, color: '#78350F', display: 'flex', flexDirection: 'column', gap: 10 }}>
+                      <div style={{ background: '#FFFFFF', padding: '12px 14px', borderRadius: 12, border: '1.5px solid #FDE68A' }}>
+                        <div style={{ fontSize: 12, color: '#92400E', marginBottom: 4 }}>
+                          1. Envoyez <strong>{priceFormatted}</strong> sur le numéro ci-dessous :
+                        </div>
 
-              <button
-                onClick={() => {
-                  if (!txRef.trim()) {
-                    showToast('Veuillez coller la référence ou le message SMS de transaction.', 'error');
-                    return;
-                  }
-                  onConfirm(bot, 'WINPAY', txRef.trim(), selectedOperator);
-                }}
-                className="btn-press"
-                disabled={buying}
-                style={{
-                  flex: 2, height: 50,
-                  background: buying ? '#93C5FD' : 'linear-gradient(135deg, #1A56DB, #1D4ED8)',
-                  color: 'white', border: 'none', borderRadius: 12,
-                  fontSize: 14, fontWeight: 800, cursor: buying ? 'not-allowed' : 'pointer',
-                  display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
-                  boxShadow: '0 4px 14px rgba(26, 86, 219, 0.3)'
-                }}
-              >
-                {buying ? <Loader2 size={16} style={{ animation: 'spin 0.8s linear infinite' }} /> : 'Valider mon paiement'}
-              </button>
-            </div>
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 4 }}>
+                          <strong style={{ fontSize: 18, color: '#B45309', fontFamily: 'monospace', letterSpacing: '0.5px' }}>
+                            {merchantPhoneToUse}
+                          </strong>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              navigator.clipboard.writeText(merchantPhoneToUse);
+                              showToast('N° Marchand copié dans le presse-papier !', 'success');
+                            }}
+                            style={{
+                              background: '#FEF3C7', color: '#92400E', border: '1px solid #FCD34D',
+                              padding: '4px 10px', borderRadius: 8, fontSize: 11, fontWeight: 800, cursor: 'pointer'
+                            }}
+                          >
+                            📋 Copier
+                          </button>
+                        </div>
+
+                        {merchantNameToUse && (
+                          <div style={{ fontSize: 12, color: '#78350F', marginTop: 6, paddingTop: 6, borderTop: '1px dashed #FDE68A' }}>
+                            Nom du destinataire / compte : <strong>{merchantNameToUse}</strong>
+                          </div>
+                        )}
+                      </div>
+
+                      {formattedInstructions && (
+                        <div style={{ fontSize: 12, color: '#92400E', fontStyle: 'italic', background: '#FFFBEB', padding: '8px 10px', borderRadius: 8, border: '1px dashed #FCD34D' }}>
+                          ℹ️ {formattedInstructions}
+                        </div>
+                      )}
+
+                      <div style={{ fontSize: 12, color: '#B45309', fontWeight: 800, marginTop: 2 }}>
+                        2. Une fois le transfert effectué, copiez le SMS de confirmation reçu et collez-le ci-dessous :
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Zone de copier-coller du SMS */}
+                  <div style={{ marginBottom: 18, textAlign: 'left' }}>
+                    <label style={{ fontSize: 12, fontWeight: 800, color: '#374151', display: 'block', marginBottom: 6 }}>
+                      📩 Message / SMS de confirmation de la transaction :
+                    </label>
+                    <textarea
+                      className="input-field"
+                      rows={3}
+                      placeholder={`Collez l'intégralité du SMS reçu de ${selectedOperator}\n(Ex: Transfert de ${priceFormatted} effectué avec succès vers ${merchantPhoneToUse}... ID:12528949034)`}
+                      value={txRef}
+                      onChange={e => setTxRef(e.target.value)}
+                      style={{ fontSize: 13, background: '#FFFFFF', border: '1.5px solid #CBD5E1', padding: '12px 14px', width: '100%', resize: 'none', borderRadius: 12 }}
+                    />
+                    <span style={{ fontSize: 11, color: '#059669', fontWeight: 600, marginTop: 4, display: 'block' }}>
+                      💡 Astuce : Sélectionnez et copiez l'intégralité du SMS de confirmation reçu de votre opérateur et collez-le ici.
+                    </span>
+                  </div>
+
+                  {/* Actions: Retour & Validation */}
+                  <div style={{ display: 'flex', gap: 10 }}>
+                    <button onClick={() => setWinpayStep('PHONE')} style={{
+                      flex: 1, height: 50, background: '#F3F4F6', border: '1px solid #E5E7EB',
+                      borderRadius: 12, fontSize: 13, fontWeight: 600, cursor: 'pointer', color: '#374151',
+                    }}>Retour</button>
+
+                    <button
+                      onClick={() => {
+                        if (!txRef.trim()) {
+                          showToast('Veuillez coller le message SMS de confirmation de la transaction.', 'error');
+                          return;
+                        }
+                        onConfirm(bot, 'WINPAY', txRef.trim(), selectedOperator);
+                      }}
+                      className="btn-press"
+                      disabled={buying}
+                      style={{
+                        flex: 2, height: 50,
+                        background: buying ? '#93C5FD' : 'linear-gradient(135deg, #1A56DB, #1D4ED8)',
+                        color: 'white', border: 'none', borderRadius: 12,
+                        fontSize: 14, fontWeight: 800, cursor: buying ? 'not-allowed' : 'pointer',
+                        display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
+                        boxShadow: '0 4px 14px rgba(26, 86, 219, 0.3)'
+                      }}
+                    >
+                      {buying ? <Loader2 size={16} style={{ animation: 'spin 0.8s linear infinite' }} /> : 'Valider mon paiement'}
+                    </button>
+                  </div>
+                </>
+              );
+            })()}
           </div>
         )}
       </div>

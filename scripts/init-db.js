@@ -81,6 +81,22 @@ CREATE TABLE IF NOT EXISTS bot_payment_configs (
   is_active           BOOLEAN NOT NULL DEFAULT true
 );
 
+CREATE TABLE IF NOT EXISTS ssd_payment_methods (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  country_name TEXT NOT NULL,
+  country_code TEXT NOT NULL,
+  country_prefix TEXT NOT NULL,
+  country_flag TEXT NOT NULL DEFAULT '🌐',
+  operator_id TEXT NOT NULL UNIQUE,
+  operator_name TEXT NOT NULL,
+  icon TEXT NOT NULL DEFAULT '💳',
+  merchant_phone TEXT NOT NULL DEFAULT '',
+  ssd_code_template TEXT NOT NULL DEFAULT '',
+  is_active BOOLEAN NOT NULL DEFAULT true,
+  display_order INT NOT NULL DEFAULT 0,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
 CREATE TABLE IF NOT EXISTS ai_settings (
   id INT PRIMARY KEY DEFAULT 1,
   knowledge_base TEXT NOT NULL DEFAULT '',

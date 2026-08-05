@@ -31,6 +31,47 @@ export async function GET(req: Request) {
             VALUES ('GLOBAL_SENEPAY', 'GLOBAL_SENEPAY', false) 
             ON CONFLICT (bot_id) DO UPDATE SET is_active = false;`
     });
+    // Ensure ssd_payment_methods table exists for multi-country SSD payments
+    await db.rpc('exec_sql', {
+      sql: `
+        CREATE TABLE IF NOT EXISTS ssd_payment_methods (
+          id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+          country_name TEXT NOT NULL,
+          country_code TEXT NOT NULL,
+          country_prefix TEXT NOT NULL,
+          country_flag TEXT NOT NULL DEFAULT '🌐',
+          operator_id TEXT NOT NULL UNIQUE,
+          operator_name TEXT NOT NULL,
+          icon TEXT NOT NULL DEFAULT '💳',
+          merchant_phone TEXT NOT NULL DEFAULT '',
+          merchant_name TEXT NOT NULL DEFAULT '',
+          deposit_instructions TEXT NOT NULL DEFAULT '',
+          ssd_code_template TEXT NOT NULL DEFAULT '',
+          requires_sms_paste BOOLEAN NOT NULL DEFAULT true,
+          is_active BOOLEAN NOT NULL DEFAULT true,
+          display_order INT NOT NULL DEFAULT 0,
+          created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+        );
+
+        ALTER TABLE ssd_payment_methods ADD COLUMN IF NOT EXISTS merchant_name TEXT NOT NULL DEFAULT '';
+        ALTER TABLE ssd_payment_methods ADD COLUMN IF NOT EXISTS deposit_instructions TEXT NOT NULL DEFAULT '';
+        ALTER TABLE ssd_payment_methods ADD COLUMN IF NOT EXISTS requires_sms_paste BOOLEAN NOT NULL DEFAULT true;
+
+        INSERT INTO ssd_payment_methods (country_name, country_code, country_prefix, country_flag, operator_id, operator_name, icon, merchant_phone, merchant_name, deposit_instructions, ssd_code_template, is_active, display_order)
+        VALUES
+          ('Bénin', 'BJ', '+229', '🇧🇯', 'MTN_BJ', 'MTN MoMo BJ', '🟡', '22646410950', 'Winary Bénin', 'Effectuez le transfert USSD puis copiez le SMS.', '*880*1*3*1*4*22646410950*{AMOUNT}*1#', true, 1),
+          ('Bénin', 'BJ', '+229', '🇧🇯', 'MOOV_BJ', 'Moov Money BJ', '🔵', '22646410950', 'Winary Bénin', 'Effectuez le transfert USSD puis copiez le SMS.', '*855*1*1*3*2*22646410950*22646410950*{AMOUNT}#', true, 2),
+          ('Bénin', 'BJ', '+229', '🇧🇯', 'CELTIIS_BJ', 'Celtiis Cash BJ', '🟣', '22990000000', 'Winary Bénin', 'Effectuez le transfert puis copiez le SMS.', '*880*{AMOUNT}#', true, 3),
+          ('Côte d’Ivoire', 'CI', '+225', '🇨🇮', 'ORANGE_CI', 'Orange Money CI', '🟧', '0700000000', 'Winary CI', 'Envoyez {AMOUNT} FCFA sur le 0700000000 (Nom: Winary CI) puis copiez-collez le SMS de confirmation ici.', '*144*1*1*{AMOUNT}#', true, 1),
+          ('Côte d’Ivoire', 'CI', '+225', '🇨🇮', 'MTN_CI', 'MTN MoMo CI', '🟡', '0500000000', 'Winary CI', 'Envoyez {AMOUNT} FCFA sur le 0500000000 (Nom: Winary CI) puis copiez-collez le SMS de confirmation ici.', '*133*{AMOUNT}#', true, 2),
+          ('Côte d’Ivoire', 'CI', '+225', '🇨🇮', 'MOOV_CI', 'Moov Money CI', '🔵', '0100000000', 'Winary CI', 'Envoyez {AMOUNT} FCFA sur le 0100000000 (Nom: Winary CI) puis copiez-collez le SMS de confirmation ici.', '*155*1*1*{AMOUNT}#', true, 3),
+          ('Côte d’Ivoire', 'CI', '+225', '🇨🇮', 'WAVE_CI', 'Wave CI', '🌊', '0700000000', 'Winary CI', 'Envoyez {AMOUNT} FCFA via Wave sur le 0700000000 (Nom: Winary CI) puis copiez-collez le message de confirmation ici.', 'https://wave.com/pay', true, 4),
+          ('Burkina Faso', 'BF', '+226', '🇧🇫', 'ORANGE_BF', 'Orange Money BF', '🟧', '70000000', 'Winary BF', 'Envoyez {AMOUNT} FCFA sur le 70000000 puis copiez le SMS.', '*144*1*1*{AMOUNT}#', true, 1),
+          ('Burkina Faso', 'BF', '+226', '🇧🇫', 'MOOV_BF', 'Moov Money BF', '🟡', '60000000', 'Winary BF', 'Envoyez {AMOUNT} FCFA sur le 60000000 puis copiez le SMS.', '*555*1*1*{AMOUNT}#', true, 2),
+          ('Burkina Faso', 'BF', '+226', '🇧🇫', 'TELECEL_BF', 'Telecel Cash BF', '🔴', '78000000', 'Winary BF', 'Envoyez {AMOUNT} FCFA sur le 78000000 puis copiez le SMS.', '*777*{AMOUNT}#', true, 3)
+        ON CONFLICT (operator_id) DO NOTHING;
+      `
+    });
   } catch (e) {
     console.error('Failed to auto-migrate/update bot_payment_configs & purchases:', e);
   }
