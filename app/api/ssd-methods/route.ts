@@ -16,7 +16,8 @@ export async function GET(req: Request) {
     .order('display_order', { ascending: true });
 
   if (error) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    console.warn('ssd_payment_methods notice:', error.message);
+    return NextResponse.json([]);
   }
 
   return NextResponse.json(data || []);

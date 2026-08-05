@@ -126,6 +126,7 @@ export default function AdminPage() {
 
   // Dynamic SSD Payment Methods state
   const [ssdMethods, setSsdMethods] = useState<SsdPaymentMethod[]>([]);
+  const [selectedSsdCountryFilter, setSelectedSsdCountryFilter] = useState<string>('ALL');
   const [showSsdModal, setShowSsdModal] = useState(false);
   const [editingSsdMethod, setEditingSsdMethod] = useState<SsdPaymentMethod | null>(null);
   const [ssdForm, setSsdForm] = useState({

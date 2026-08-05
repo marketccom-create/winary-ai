@@ -22,7 +22,8 @@ export async function GET(req: Request) {
     .order('display_order', { ascending: true });
 
   if (dbErr) {
-    return NextResponse.json({ error: dbErr.message }, { status: 500 });
+    console.warn('admin ssd_payment_methods notice:', dbErr.message);
+    return NextResponse.json([]);
   }
 
   return NextResponse.json(data || []);
