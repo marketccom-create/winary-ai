@@ -397,19 +397,45 @@ function PurchaseModal({ bot, balanceCents, botConfigs, isWinpayActive, isWinpay
   const currentCountry = getCountryFromPhone(phoneSender || userPhone);
   const selectedCountryObj = ALL_COUNTRIES.find(c => c.code === selectedCountryCode) || currentCountry;
 
-  // Compute dynamic active SSD methods matching user country prefix or country code
+  // Compute dynamic active SSD methods matching user country prefix, ISO code, or country name
   const dynamicCountryMethods = ssdMethods.filter(m => {
-    if (!m.is_active) return false;
-    if (m.country_code && selectedCountryObj.code && m.country_code.toUpperCase() === selectedCountryObj.code.toUpperCase()) return true;
-    const userPhoneClean = (phoneSender || userPhone || '').replace(/\D/g, '');
-    const prefixClean = m.country_prefix.replace(/\D/g, '');
-    if (prefixClean && userPhoneClean.startsWith(prefixClean)) return true;
+    if (m.is_active === false) return false;
+
+    // 1. Match by ISO Country Code (ex: CI, BF, BJ, SN, TG)
+    const mCode = (m.country_code || '').toUpperCase().trim();
+    const selCode = (selectedCountryObj.code || '').toUpperCase().trim();
+    if (mCode && selCode && mCode === selCode) return true;
+
+    // 2. Match by Country Prefix (ex: +225, +226, +229)
+    const mPrefix = (m.country_prefix || '').replace(/\D/g, '');
+    const selPrefix = (selectedCountryObj.prefix || '').replace(/\D/g, '');
+    if (mPrefix && selPrefix && mPrefix === selPrefix) return true;
+
+    // 3. Match by Country Name (normalize apostrophes and lowercase)
+    const mName = (m.country_name || '').toLowerCase().replace(/['’\s]/g, '');
+    const selName = (selectedCountryObj.name || '').toLowerCase().replace(/['’\s]/g, '');
+    if (mName && selName && (mName.includes(selName) || selName.includes(mName))) return true;
+
     return false;
   });
 
-  const operatorsToDisplay = dynamicCountryMethods.length > 0
-    ? dynamicCountryMethods.map(m => ({ id: m.operator_id, name: m.operator_name, icon: m.icon, template: m.ssd_code_template }))
-    : (selectedCountryObj.operators ? selectedCountryObj.operators.map(o => ({ id: o.id, name: o.name, icon: o.icon, template: '' })) : []);
+  const operatorsToDisplay = dynamicCountryMethods.map(m => ({
+    id: m.operator_id,
+    name: m.operator_name,
+    icon: m.icon,
+    template: m.ssd_code_template,
+  }));
+
+  useEffect(() => {
+    if (dynamicCountryMethods.length > 0) {
+      const exists = dynamicCountryMethods.some(m => m.operator_name === selectedOperator || m.operator_id === selectedOperator);
+      if (!exists) {
+        setSelectedOperator(dynamicCountryMethods[0].operator_name);
+      }
+    } else {
+      setSelectedOperator('');
+    }
+  }, [selectedCountryCode, ssdMethods]);
 
   // Compute USSD Code for selected operator & bot
   function getUssdCode() {
@@ -712,27 +738,34 @@ Référence de la demande : ${reqRefCode}`;
               <label style={{ fontSize: 12, fontWeight: 700, color: '#374151', display: 'block', marginBottom: 8, textAlign: 'left' }}>
                 2. Choisissez votre réseau Mobile Money ({selectedCountryObj.name}) :
               </label>
-              <div style={{
-                display: 'grid',
-                gridTemplateColumns: operatorsToDisplay.length >= 3 ? 'repeat(3, 1fr)' : `repeat(${operatorsToDisplay.length || 1}, 1fr)`,
-                gap: 8
-              }}>
-                {operatorsToDisplay.map(op => (
-                  <button
-                    key={op.id}
-                    onClick={() => setSelectedOperator(op.name)}
-                    style={{
-                      padding: '10px 8px', borderRadius: 12,
-                      border: selectedOperator === op.name ? '2px solid #10B981' : '1.5px solid #E5E7EB',
-                      background: selectedOperator === op.name ? '#ECFDF5' : '#F9FAFB',
-                      cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6
-                    }}
-                  >
-                    <span style={{ fontSize: 18 }}>{op.icon}</span>
-                    <span style={{ fontSize: 12, fontWeight: 700, color: selectedOperator === op.name ? '#065F46' : '#374151' }}>{op.name}</span>
-                  </button>
-                ))}
-              </div>
+              {operatorsToDisplay.length === 0 ? (
+                <div style={{ background: '#F8FAFC', padding: 14, borderRadius: 14, border: '1.5px dashed #CBD5E1', color: '#64748B', fontSize: 13, textAlign: 'center' }}>
+                  <span style={{ fontSize: 20, display: 'block', marginBottom: 4 }}>🌐</span>
+                  Aucun réseau Mobile Money n'est activé pour <strong>{selectedCountryObj.name}</strong>.
+                </div>
+              ) : (
+                <div style={{
+                  display: 'grid',
+                  gridTemplateColumns: operatorsToDisplay.length >= 3 ? 'repeat(3, 1fr)' : `repeat(${operatorsToDisplay.length}, 1fr)`,
+                  gap: 8
+                }}>
+                  {operatorsToDisplay.map(op => (
+                    <button
+                      key={op.id}
+                      onClick={() => setSelectedOperator(op.name)}
+                      style={{
+                        padding: '12px 10px', borderRadius: 12,
+                        border: selectedOperator === op.name ? '2px solid #10B981' : '1.5px solid #E5E7EB',
+                        background: selectedOperator === op.name ? '#ECFDF5' : '#F9FAFB',
+                        cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6
+                      }}
+                    >
+                      <span style={{ fontSize: 18 }}>{op.icon}</span>
+                      <span style={{ fontSize: 12, fontWeight: 700, color: selectedOperator === op.name ? '#065F46' : '#374151' }}>{op.name}</span>
+                    </button>
+                  ))}
+                </div>
+              )}
             </div>
 
             {/* Nom & Prénom Input */}
