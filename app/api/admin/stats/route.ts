@@ -15,7 +15,7 @@ export async function GET(req: Request) {
   if (error) return error;
 
   const db = createAdminClient();
-  const CUTOFF_DATE = '2026-08-04T00:00:00.000Z';
+  const CUTOFF_DATE = '2026-08-07T20:45:00.000Z';
 
   const [
     { data: allUsers },

@@ -59,132 +59,13 @@ export async function POST(req: Request) {
   const expiresAt = new Date(now.getTime() + VALIDITY_DAYS * 24 * 3600 * 1000);
 
   // ════════════════════════════════════════════════════════════════
-  // OPTION 1: PAYMENT WITH ACCOUNT BALANCE
+  // OPTION 1: PAYMENT WITH ACCOUNT BALANCE (DÉSACTIVÉ / INTERDIT)
   // ════════════════════════════════════════════════════════════════
   if (operator === 'BALANCE') {
-    if (botId === 'priority-boost') {
-      return NextResponse.json(
-        { error: '🔒 L\'achat du produit PRIORITY BOOST ne peut pas être effectué via votre solde principal. Veuillez utiliser le paiement direct Mobile Money (WinpayOne).' },
-        { status: 400 }
-      );
-    }
-
-    // Try using the atomic RPC function first
-    const { data: buyer } = await db
-      .from('users')
-      .select('referred_by_id, phone')
-      .eq('id', payload.sub)
-      .single();
-
-    const commission = Math.floor(bot.priceCents * REFERRAL_RATE);
-    
-    const { data: rpcData, error: rpcError } = await db.rpc('purchase_bot_with_balance', {
-      p_user_id: payload.sub,
-      p_bot_id: bot.id,
-      p_bot_name: bot.name,
-      p_price_cents: bot.priceCents,
-      p_expires_at: expiresAt.toISOString(),
-      p_sponsor_id: buyer?.referred_by_id || null,
-      p_commission_cents: commission
-    });
-
-    if (!rpcError && rpcData && rpcData.length > 0) {
-      const purchaseId = rpcData[0].purchase_id;
-      const newBalance = rpcData[0].new_balance_cents;
-      
-      const { data: newPurchase } = await db.from('purchases').select('*').eq('id', purchaseId).single();
-      
-      return NextResponse.json({
-        purchase: mapPurchase(newPurchase),
-        newBalanceCents: newBalance,
-      }, { status: 201 });
-    }
-
-    // Fallback if RPC is not yet installed
-    // Check user balance
-    const { data: user, error: userErr } = await db
-      .from('users')
-      .select('balance_cents')
-      .eq('id', payload.sub)
-      .single();
-
-    if (userErr || !user) {
-      return NextResponse.json({ error: 'Utilisateur introuvable' }, { status: 404 });
-    }
-
-    if (user.balance_cents < bot.priceCents) {
-      return NextResponse.json({ error: 'Solde insuffisant pour cet achat' }, { status: 400 });
-    }
-
-    // Deduct balance
-    const newBalance = user.balance_cents - bot.priceCents;
-    await db
-      .from('users')
-      .update({ balance_cents: newBalance })
-      .eq('id', payload.sub);
-
-    // Create ACTIVE purchase
-    const { data: purchase, error: purchaseErr } = await db
-      .from('purchases')
-      .insert({
-        user_id: payload.sub,
-        bot_id: bot.id,
-        bot_name: bot.name,
-        price_paid_cents: bot.priceCents,
-        purchased_at: now.toISOString(),
-        expires_at: expiresAt.toISOString(),
-        total_earned_cents: 0,
-        work_count: 0,
-        status: 'ACTIVE',
-        operator: 'BALANCE',
-        tx_reference: 'Achat via Solde',
-      })
-      .select()
-      .single();
-
-    if (purchaseErr || !purchase) {
-      return NextResponse.json({ error: purchaseErr?.message || 'Erreur création achat' }, { status: 500 });
-    }
-
-    // Create COMPLETED transaction
-    await db.from('transactions').insert({
-      user_id: payload.sub,
-      type: 'BOT_PURCHASE',
-      status: 'COMPLETED',
-      amount_cents: -bot.priceCents,
-      description: `Achat ${bot.name} (Solde)`,
-      operator: 'BALANCE',
-      tx_reference: 'Solde',
-    });
-
-    // Handle referral commission
-    if (buyer?.referred_by_id) {
-      const { data: sponsor } = await db
-        .from('users')
-        .select('id, balance_cents')
-        .eq('id', buyer.referred_by_id)
-        .single();
-
-      if (sponsor) {
-        await db
-          .from('users')
-          .update({ balance_cents: sponsor.balance_cents + commission })
-          .eq('id', sponsor.id);
-
-        await db.from('transactions').insert({
-          user_id: sponsor.id,
-          type: 'REFERRAL_BONUS',
-          status: 'COMPLETED',
-          amount_cents: commission,
-          description: `Commission parrainage (${buyer.phone})`,
-        });
-      }
-    }
-
-    return NextResponse.json({
-      purchase: mapPurchase(purchase),
-      newBalanceCents: newBalance,
-    }, { status: 201 });
+    return NextResponse.json(
+      { error: "L'achat de robots via le solde principal n'est plus autorisé. Veuillez utiliser un moyen de paiement direct (Mobile Money)." },
+      { status: 400 }
+    );
   }
 
   // ════════════════════════════════════════════════════════════════

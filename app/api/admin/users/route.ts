@@ -22,7 +22,7 @@ export async function GET(req: Request) {
 
   if (dbErr) return NextResponse.json({ error: dbErr.message }, { status: 500 });
 
-  const CUTOFF_DATE = '2026-08-04T00:00:00.000Z';
+  const CUTOFF_DATE = '2026-08-07T20:45:00.000Z';
 
   // Enrich with referral count, commissions earned and Priority Boost/New Client flags
   const enriched = await Promise.all(

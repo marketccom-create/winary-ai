@@ -335,7 +335,7 @@ function PurchaseModal({ bot, balanceCents, botConfigs, isWinpayActive, isWinpay
   const detectedCountry = getCountryFromPhone(userPhone);
 
   const [selectedCountryCode, setSelectedCountryCode] = useState<string>(detectedCountry.code || 'CI');
-  const [method, setMethod] = useState<'winpay_manual' | 'winpay_ussd' | 'winpayone' | 'balance'>(
+  const [method, setMethod] = useState<'winpay_manual' | 'winpay_ussd' | 'winpayone'>(
     isWinpayOneActive ? 'winpayone' : 'winpay_manual'
   );
   const [selectedOperator, setSelectedOperator] = useState<string>('MTN MoMo');
@@ -718,40 +718,6 @@ Référence de la demande : ${reqRefCode}`;
                 </button>
               )}
 
-              {/* Option 4: Balance Payment */}
-              <button
-                onClick={() => {
-                  if (bot.id === 'priority-boost') {
-                    alert('🔒 Le produit PRIORITY BOOST ne peut pas être acheté via votre solde principal. Seul le paiement direct Mobile Money est accepté.');
-                    return;
-                  }
-                  setMethod('balance');
-                }}
-                disabled={bot.id === 'priority-boost' || balanceCents < bot.priceCents}
-                style={{
-                  width: '100%', height: 56,
-                  background: method === 'balance' ? '#EFF6FF' : '#F9FAFB',
-                  border: `2px solid ${method === 'balance' ? '#1A56DB' : '#E5E7EB'}`,
-                  borderRadius: 12, cursor: (bot.id === 'priority-boost' || balanceCents < bot.priceCents) ? 'not-allowed' : 'pointer',
-                  display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 16px',
-                  opacity: (bot.id === 'priority-boost' || balanceCents < bot.priceCents) ? 0.5 : 1,
-                }}
-              >
-                <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                  <span style={{ fontSize: 20 }}>💳</span>
-                  <div style={{ textAlign: 'left' }}>
-                    <div style={{ fontSize: 13, fontWeight: 700, color: '#374151' }}>Payer avec mon solde</div>
-                    {bot.id === 'priority-boost' ? (
-                      <div style={{ fontSize: 10, color: '#DC2626', fontWeight: 800 }}>
-                        🔒 Incompatible solde — Paiement Direct Requis
-                      </div>
-                    ) : (
-                      <div style={{ fontSize: 11, color: '#6B7280' }}>Disponible: {formatXOF(balanceCents)}</div>
-                    )}
-                  </div>
-                </div>
-                {method === 'balance' && <span style={{ color: '#1A56DB', fontWeight: 'bold' }}>✓</span>}
-              </button>
             </div>
 
             <div style={{ display: 'flex', gap: 10 }}>
@@ -761,17 +727,7 @@ Référence de la demande : ${reqRefCode}`;
               }}>Retour</button>
 
               <button
-                onClick={() => {
-                  if (method === 'balance') {
-                    if (bot.id === 'priority-boost') {
-                      alert('🔒 Le produit PRIORITY BOOST ne peut pas être acheté via votre solde principal. Seul le paiement direct Mobile Money est accepté.');
-                      return;
-                    }
-                    onConfirm(bot, 'BALANCE', '', 'BALANCE');
-                  } else {
-                    setWinpayStep('PHONE');
-                  }
-                }}
+                onClick={() => setWinpayStep('PHONE')}
                 className="btn-press"
                 disabled={buying}
                 style={{
@@ -782,7 +738,7 @@ Référence de la demande : ${reqRefCode}`;
                   display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8
                 }}
               >
-                {buying ? <Loader2 size={16} style={{ animation: 'spin 0.8s linear infinite' }} /> : (method === 'balance' ? `Payer ${priceFormatted}` : 'Continuer')}
+                {buying ? <Loader2 size={16} style={{ animation: 'spin 0.8s linear infinite' }} /> : 'Continuer'}
               </button>
             </div>
           </>
@@ -1508,11 +1464,11 @@ export default function HomePage() {
     }).catch(() => {});
   }, [user]);
 
-  async function handleBuy(bot: Bot, method: string, txRef: string = '', operator: string = 'BALANCE') {
+  async function handleBuy(bot: Bot, method: string, txRef: string = '', operator: string = 'WINPAYONE') {
     if (!user) return;
     setBuying(true);
     try {
-      const op = method === 'BALANCE' ? 'BALANCE' : operator;
+      const op = operator || method;
       const { purchase, newBalanceCents, checkoutUrl } = await apiPurchaseBot(user.id, bot.id, op, txRef);
       if (newBalanceCents !== undefined) {
         updateBalance(newBalanceCents);
@@ -1529,13 +1485,8 @@ export default function HomePage() {
         return purchase;
       }
       setModal(null);
-      if (method === 'BALANCE') {
-        showToast(`Félicitations, ${bot.name} a été activé !`, 'success');
-        router.push('/products');
-      } else {
-        showToast("⏳ Votre demande d'activation a été soumise avec succès ! Elle est en attente d'approbation.", 'success');
-        router.push('/products');
-      }
+      showToast("⏳ Votre demande d'activation a été soumise avec succès ! Elle est en attente d'approbation.", 'success');
+      router.push('/products');
       return purchase;
     } catch (err: any) {
       showToast(err.message, 'error');

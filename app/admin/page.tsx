@@ -70,7 +70,7 @@ export default function AdminPage() {
   const [withdrawalStatusFilter, setWithdrawalStatusFilter] = useState<'PENDING' | 'COMPLETED' | 'FAILED' | 'ALL'>('PENDING');
   const [withdrawalEligibilityFilter, setWithdrawalEligibilityFilter] = useState<'ALL' | 'ELIGIBLE' | 'INELIGIBLE'>('ALL');
 
-  // Segment Filter States (Isolation Priority Boost & Clients 04/08/2026+)
+  // Segment Filter States (Isolation Priority Boost & Nouveaux Entrants)
   const [userSegmentFilter, setUserSegmentFilter] = useState<'ALL' | 'PRIORITY' | 'NEW' | 'OLD'>('ALL');
   const [winpaySegmentFilter, setWinpaySegmentFilter] = useState<'ALL' | 'PRIORITY' | 'NEW' | 'OLD'>('ALL');
   const [withdrawalSegmentFilter, setWithdrawalSegmentFilter] = useState<'ALL' | 'PRIORITY' | 'NEW' | 'OLD'>('ALL');
@@ -1476,7 +1476,7 @@ export default function AdminPage() {
                           📊 Bilan Comptable Segmenté & Séparé
                         </h2>
                         <p style={{ margin: '2px 0 0', fontSize: 12, color: '#6B7280' }}>
-                          Isolation de la comptabilité Priority Boost VIP vs Nouveaux Clients (Dès 04/08/2026) vs Anciens Clients
+                          Isolation de la comptabilité Priority Boost VIP vs Nouveaux Entrants vs Anciens Clients
                         </p>
                       </div>
                     </div>
@@ -1511,14 +1511,14 @@ export default function AdminPage() {
                         </div>
                       </div>
 
-                      {/* Card 2: Nouveaux Clients (Dès 04/08/2026) */}
+                      {/* Card 2: Nouveaux Entrants */}
                       <div style={{
                         background: 'linear-gradient(135deg, #ECFDF5, #D1FAE5)', borderRadius: 14, padding: 16,
                         border: '2px solid #6EE7B7', boxShadow: '0 4px 12px rgba(16, 185, 129, 0.1)'
                       }}>
                         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
                           <span style={{ fontSize: 14, fontWeight: 800, color: '#065F46', display: 'flex', alignItems: 'center', gap: 6 }}>
-                            🆕 NOUVEAUX CLIENTS (Dès 04/08/2026)
+                            🆕 NOUVEAUX ENTRANTS (Dès ce déploiement)
                           </span>
                           <span style={{ background: '#059669', color: 'white', padding: '2px 8px', borderRadius: 99, fontSize: 11, fontWeight: 700 }}>
                             {stats?.newUsersCount || 0} Clients
@@ -1540,14 +1540,14 @@ export default function AdminPage() {
                         </div>
                       </div>
 
-                      {/* Card 3: Anciens Clients (Avant 04/08/2026) */}
+                      {/* Card 3: Anciens Clients */}
                       <div style={{
                         background: 'linear-gradient(135deg, #F9FAFB, #F3F4F6)', borderRadius: 14, padding: 16,
                         border: '2px solid #E5E7EB', boxShadow: '0 2px 8px rgba(0, 0, 0, 0.03)'
                       }}>
                         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
                           <span style={{ fontSize: 14, fontWeight: 800, color: '#374151', display: 'flex', alignItems: 'center', gap: 6 }}>
-                            📁 ANCIENS CLIENTS (Avant 04/08/2026)
+                            📁 ANCIENS CLIENTS (Historique antérieur)
                           </span>
                           <span style={{ background: '#6B7280', color: 'white', padding: '2px 8px', borderRadius: 99, fontSize: 11, fontWeight: 700 }}>
                             {stats?.oldUsersCount || 0} Clients
@@ -1691,7 +1691,7 @@ export default function AdminPage() {
                       {[
                         { key: 'ALL', label: `Tous (${users.length})` },
                         { key: 'PRIORITY', label: `⚡ Priority Boost VIP (${users.filter(u => u.isPriorityBoost).length})` },
-                        { key: 'NEW', label: `🆕 Nouveaux (04/08+) (${users.filter(u => u.isNewClient).length})` },
+                        { key: 'NEW', label: `🆕 Nouveaux (${users.filter(u => u.isNewClient).length})` },
                         { key: 'OLD', label: `📁 Anciens (${users.filter(u => !u.isNewClient).length})` },
                       ].map(f => (
                         <button
@@ -1754,7 +1754,7 @@ export default function AdminPage() {
                                     background: '#10B981', color: 'white',
                                     fontSize: 10, fontWeight: 800, padding: '2px 6px', borderRadius: 99
                                   }}>
-                                    🆕 Nouveau (04/08+)
+                                    🆕 Nouveau
                                   </span>
                                 )}
                               </div>
@@ -1883,8 +1883,8 @@ export default function AdminPage() {
                         <span style={{ fontSize: 12, fontWeight: 700, color: '#6B7280' }}>Segment :</span>
                         {[
                           { key: 'ALL', label: 'Tous' },
-                          { key: 'PRIORITY', label: '⚡ Priority Boost' },
-                          { key: 'NEW', label: '🆕 Nouveaux (04/08+)' },
+                          { key: 'PRIORITY', label: '⚡ Priority Boost VIP' },
+                          { key: 'NEW', label: '🆕 Nouveaux' },
                           { key: 'OLD', label: '📁 Anciens' },
                         ].map(s => (
                           <button
@@ -1942,7 +1942,7 @@ export default function AdminPage() {
                           ) : (
                             todayPurchases
                               .filter(p => {
-                                const CUTOFF_DATE = '2026-08-04T00:00:00.000Z';
+                                const CUTOFF_DATE = '2026-08-07T20:45:00.000Z';
                                 const isPriority = p.botId === 'priority-boost' || p.isPriorityBoost;
                                 const isNew = (p.purchasedAt && p.purchasedAt >= CUTOFF_DATE) || p.isNewClient;
 
@@ -2324,7 +2324,7 @@ export default function AdminPage() {
                         {[
                           { key: 'ALL', label: 'Tous' },
                           { key: 'PRIORITY', label: '⚡ Priority Boost' },
-                          { key: 'NEW', label: '🆕 Nouveaux (04/08+)' },
+                          { key: 'NEW', label: '🆕 Nouveaux' },
                           { key: 'OLD', label: '📁 Anciens' },
                         ].map(s => (
                           <button
@@ -2447,7 +2447,7 @@ export default function AdminPage() {
                                         background: '#10B981', color: 'white',
                                         fontSize: 10, fontWeight: 800, padding: '2px 6px', borderRadius: 99
                                       }}>
-                                        🆕 Nouveau (04/08+)
+                                        🆕 Nouveau
                                       </span>
                                     )}
                                   </div>
