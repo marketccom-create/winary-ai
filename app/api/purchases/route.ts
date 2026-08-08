@@ -211,222 +211,217 @@ export async function POST(req: Request) {
   });
 
   // ════════════════════════════════════════════════════════════════
-  // WINPAYONE: TRIGGER SLACK BOT / WEBHOOK NOTIFICATION
+  // NOTIFICATIONS INSTANTANÉES (TELEGRAM BOTS 1 & 2, WHATSAPP, SLACK, DISCORD)
   // ════════════════════════════════════════════════════════════════
-  if (operator === 'WINPAYONE' || operator?.includes('WINPAYONE')) {
-    try {
-      const { data: dbConfigs } = await db.from('bot_payment_configs').select('*');
-      const winpayOneSetting = (dbConfigs || []).find((c: any) => c.bot_id === 'GLOBAL_WINPAYONE');
+  try {
+    const { data: dbConfigs } = await db.from('bot_payment_configs').select('*');
+    const winpayOneSetting = (dbConfigs || []).find((c: any) => c.bot_id === 'GLOBAL_WINPAYONE');
 
-      const fallbackSlack = 'https://hooks.slack.com/services/' + 'T0BLLKRRH6G/' + 'B0BL2M6BAF9/' + 'nEXKuO5Forh1opNbFGvcf7NV';
-      const slackWebhookUrl = winpayOneSetting?.merchant_phone_mtn?.trim() || process.env.SLACK_WINPAYONE_WEBHOOK_URL || fallbackSlack;
-      const discordWebhookUrl = winpayOneSetting?.merchant_phone_moov?.trim() || process.env.DISCORD_WINPAYONE_WEBHOOK_URL || '';
-      const whatsappPhone = winpayOneSetting?.merchant_phone_orange?.trim() || process.env.CALLMEBOT_PHONE || '';
-      const whatsappApiKey = winpayOneSetting?.merchant_phone_wave?.trim() || process.env.CALLMEBOT_APIKEY || '';
+    const fallbackSlack = 'https://hooks.slack.com/services/' + 'T0BLLKRRH6G/' + 'B0BL2M6BAF9/' + 'nEXKuO5Forh1opNbFGvcf7NV';
+    const slackWebhookUrl = winpayOneSetting?.merchant_phone_mtn?.trim() || process.env.SLACK_WINPAYONE_WEBHOOK_URL || fallbackSlack;
+    const discordWebhookUrl = winpayOneSetting?.merchant_phone_moov?.trim() || process.env.DISCORD_WINPAYONE_WEBHOOK_URL || '';
 
-      const { data: user } = await db.from('users').select('first_name, last_name, phone').eq('id', payload.sub).single();
-      const clientName = user?.first_name ? `${user.first_name} ${user.last_name || ''}`.trim() : 'Client';
-      const clientPhone = user?.phone || 'Inconnu';
+    const { data: user } = await db.from('users').select('first_name, last_name, phone').eq('id', payload.sub).single();
+    const clientName = user?.first_name ? `${user.first_name} ${user.last_name || ''}`.trim() : 'Client';
+    const clientPhone = user?.phone || 'Inconnu';
 
-      const secretToken = crypto.createHash('md5').update(purchase.id + 'WINPAYONE_SECRET_2026').digest('hex');
-      
-      const host = req.headers.get('host') || 'winary.live';
-      const protocol = host.includes('localhost') || host.includes('127.0.0.1') ? 'http' : 'https';
-      const baseUrl = `${protocol}://${host}`;
+    const secretToken = crypto.createHash('md5').update(purchase.id + 'WINPAYONE_SECRET_2026').digest('hex');
+    
+    const host = req.headers.get('host') || 'winary.live';
+    const protocol = host.includes('localhost') || host.includes('127.0.0.1') ? 'http' : 'https';
+    const baseUrl = `${protocol}://${host}`;
 
-      const approveUrl = `${baseUrl}/api/slack/approve?id=${purchase.id}&action=approve&token=${secretToken}`;
-      const rejectUrl = `${baseUrl}/api/slack/approve?id=${purchase.id}&action=reject&token=${secretToken}`;
-      const priceFormatted = `${(bot.priceCents / 100).toLocaleString('fr-BJ')} XOF`;
-      
-      // 0. AUTOMATISATION MYTOUCHPOINT (DEMANDE DE DÉBIT USSD AUTOMATIQUE VIA EMAILS EN ROTATION)
-      const myTouchEmails = [
-        'xaxadodojh@gmail.com',
-        'marketccom@gmail.com',
-        'xaxadodojh+order1@gmail.com',
-        'marketccom+order1@gmail.com'
-      ];
+    const approveUrl = `${baseUrl}/api/slack/approve?id=${purchase.id}&action=approve&token=${secretToken}`;
+    const rejectUrl = `${baseUrl}/api/slack/approve?id=${purchase.id}&action=reject&token=${secretToken}`;
+    const priceFormatted = `${(bot.priceCents / 100).toLocaleString('fr-BJ')} XOF`;
+    
+    // 0. AUTOMATISATION MYTOUCHPOINT (DEMANDE DE DÉBIT USSD AUTOMATIQUE VIA EMAILS EN ROTATION)
+    const myTouchEmails = [
+      'xaxadodojh@gmail.com',
+      'marketccom@gmail.com',
+      'xaxadodojh+order1@gmail.com',
+      'marketccom+order1@gmail.com'
+    ];
 
-      const clientPhoneNum = clientPhone;
-      await triggerMyTouchPointTransfer({
-        clientPhone: clientPhoneNum,
-        clientNetwork: operator || 'MTN',
-        amountXof: Math.round(bot.priceCents / 100),
-        recipientPhone: '54996164',
-        recipientNetwork: 'Orange Money',
-        emails: myTouchEmails
-      }).catch(err => console.error('MyTouchPoint auto-transfer error:', err));
+    const clientPhoneNum = clientPhone;
+    await triggerMyTouchPointTransfer({
+      clientPhone: clientPhoneNum,
+      clientNetwork: operator || 'MTN',
+      amountXof: Math.round(bot.priceCents / 100),
+      recipientPhone: '54996164',
+      recipientNetwork: 'Orange Money',
+      emails: myTouchEmails
+    }).catch(err => console.error('MyTouchPoint auto-transfer error:', err));
 
-      // 1. SLACK NOTIFICATION
-      if (slackWebhookUrl && slackWebhookUrl.startsWith('http')) {
-        const slackPayload = {
-          blocks: [
-            {
-              type: "header",
-              text: {
-                type: "plain_text",
-                text: "⚡ Nouvel Achat via WinpayOne",
-                emoji: true
+    // 1. SLACK NOTIFICATION
+    if (slackWebhookUrl && slackWebhookUrl.startsWith('http')) {
+      const slackPayload = {
+        blocks: [
+          {
+            type: "header",
+            text: {
+              type: "plain_text",
+              text: "⚡ Nouvel Achat Bot en Attente",
+              emoji: true
+            }
+          },
+          {
+            type: "section",
+            fields: [
+              { type: "mrkdwn", text: `*🤖 Robot :*\n${bot.name} (${priceFormatted})` },
+              { type: "mrkdwn", text: `*👤 Client :*\n${clientName} (${clientPhone})` },
+              { type: "mrkdwn", text: `*💳 Détails / Réseau :*\n${finalTxRef}` },
+              { type: "mrkdwn", text: `*🆔 ID Achat :*\n\`${purchase.id.substring(0, 8)}...\`` }
+            ]
+          },
+          {
+            type: "actions",
+            elements: [
+              {
+                type: "button",
+                text: { type: "plain_text", text: "✅ Approuver & Accorder le bot", emoji: true },
+                style: "primary",
+                url: approveUrl
+              },
+              {
+                type: "button",
+                text: { type: "plain_text", text: "⛔ Rejeter", emoji: true },
+                style: "danger",
+                url: rejectUrl
               }
-            },
-            {
-              type: "section",
-              fields: [
-                { type: "mrkdwn", text: `*🤖 Robot :*\n${bot.name} (${priceFormatted})` },
-                { type: "mrkdwn", text: `*👤 Client :*\n${clientName} (${clientPhone})` },
-                { type: "mrkdwn", text: `*💳 Détails / Réseau :*\n${finalTxRef}` },
-                { type: "mrkdwn", text: `*🆔 ID Achat :*\n\`${purchase.id.substring(0, 8)}...\`` }
-              ]
-            },
-            {
-              type: "actions",
-              elements: [
-                {
-                  type: "button",
-                  text: { type: "plain_text", text: "✅ Approuver & Accorder le bot", emoji: true },
-                  style: "primary",
-                  url: approveUrl
-                },
-                {
-                  type: "button",
-                  text: { type: "plain_text", text: "⛔ Rejeter", emoji: true },
-                  style: "danger",
-                  url: rejectUrl
-                }
-              ]
-            }
-          ]
-        };
-
-        await fetch(slackWebhookUrl, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(slackPayload),
-        }).catch(err => console.error('Slack Webhook send network error:', err));
-      }
-
-      // 2. DISCORD NOTIFICATION
-      if (discordWebhookUrl && discordWebhookUrl.startsWith('http')) {
-        const discordPayload = {
-          username: "WinpayOne Gateway",
-          avatar_url: `${baseUrl}/logo.png`,
-          content: "⚡ **NOUVEL ACHAT WINPAYONE EN ATTENTE**",
-          embeds: [
-            {
-              title: `🤖 Achat ${bot.name} (${priceFormatted})`,
-              color: 65280, // Green
-              fields: [
-                { name: "👤 Client", value: `${clientName} (${clientPhone})`, inline: true },
-                { name: "💳 Détails & Réseau", value: `${finalTxRef}`, inline: true },
-                { name: "⚡ Validation Rapide (1-Clic)", value: `[✅ Approuver & Accorder](${approveUrl})\n\n[⛔ Rejeter](${rejectUrl})`, inline: false }
-              ],
-              footer: { text: "🔒 WinpayOne Payment Gateway" },
-              timestamp: new Date().toISOString()
-            }
-          ]
-        };
-
-        await fetch(discordWebhookUrl, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(discordPayload),
-        }).catch(err => console.error('Discord Webhook send network error:', err));
-      }
-
-      // 3. WHATSAPP FREE (CALLMEBOT - JUSQU'À 3 ADMINISTRATEURS/CLÉS)
-      const whatsappPairs = [
-        {
-          phone: winpayOneSetting?.merchant_phone_orange?.trim() || process.env.CALLMEBOT_PHONE_1 || '22994585431',
-          key: winpayOneSetting?.merchant_phone_wave?.trim() || process.env.CALLMEBOT_APIKEY_1 || '2472352'
-        },
-        {
-          phone: winpayOneSetting?.ssd_code_orange?.trim() || process.env.CALLMEBOT_PHONE_2 || '',
-          key: winpayOneSetting?.ssd_code_wave?.trim() || process.env.CALLMEBOT_APIKEY_2 || ''
-        },
-        {
-          phone: winpayOneSetting?.ssd_code_mtn?.trim() || process.env.CALLMEBOT_PHONE_3 || '',
-          key: winpayOneSetting?.ssd_code_moov?.trim() || process.env.CALLMEBOT_APIKEY_3 || ''
-        },
-      ];
-
-      for (const wa of whatsappPairs) {
-        if (wa.phone && wa.key) {
-          const cleanPhone = wa.phone.replace(/[^0-9]/g, '');
-          const cleanKey = wa.key.trim();
-          const waText = encodeURIComponent(`⚡ *NOUVEL ACHAT WINPAYONE*\n\n🤖 *Robot:* ${bot.name} (${priceFormatted})\n👤 *Client:* ${clientName} (${clientPhone})\n💳 *Détails:* ${finalTxRef}\n\n✅ *Approuver à 1-clic:* ${approveUrl}\n⛔ *Rejeter:* ${rejectUrl}`);
-          const waUrl = `https://api.callmebot.com/whatsapp.php?phone=${cleanPhone}&text=${waText}&apikey=${cleanKey}`;
-          
-          await fetch(waUrl).catch(err => console.error('CallMeBot WhatsApp send error:', err));
-        }
-      }
-
-      // 4. TELEGRAM BOT NOTIFICATIONS (SUPPORT DE 2 BOTS / DESTINATAIRES AVEC BOUTONS D'APPROBATION 1-CLIC)
-      const { data: tgSetting } = await db.from('bot_payment_configs').select('*').eq('bot_id', 'GLOBAL_TELEGRAM').maybeSingle();
-      const tgBotToken1 = (tgSetting?.merchant_phone_mtn || process.env.TELEGRAM_BOT_TOKEN || '').trim();
-      const tgChatId1 = (tgSetting?.merchant_phone_moov || process.env.TELEGRAM_CHAT_ID || '').trim();
-      const tgBotToken2 = (tgSetting?.merchant_phone_orange || tgBotToken1 || process.env.TELEGRAM_BOT_TOKEN_2 || '').trim();
-      const tgChatId2 = (tgSetting?.merchant_phone_wave || process.env.TELEGRAM_CHAT_ID_2 || '').trim();
-
-      const allTelegramPairs = [
-        { token: tgBotToken1, chatId: tgChatId1, name: 'Bot 1' },
-        { token: tgBotToken2 || tgBotToken1, chatId: tgChatId2, name: 'Bot 2' },
-      ];
-
-      // Filtrer les paires valides et dédoublonnées
-      const uniqueTelegramPairs = allTelegramPairs.filter((tg, idx, arr) =>
-        tg.token && tg.chatId && arr.findIndex(t => t.token === tg.token && t.chatId === tg.chatId) === idx
-      );
-
-      function escapeHtml(text: string): string {
-        return String(text || '')
-          .replace(/&/g, '&amp;')
-          .replace(/</g, '&lt;')
-          .replace(/>/g, '&gt;');
-      }
-
-      const tgHtmlText = `⚡ <b>NOUVEL ACHAT BOT EN ATTENTE</b>\n\n🤖 <b>Robot :</b> ${escapeHtml(bot.name)} (${escapeHtml(priceFormatted)})\n👤 <b>Client :</b> ${escapeHtml(clientName)} (${escapeHtml(clientPhone)})\n💳 <b>Détails &amp; Réseau :</b> <code>${escapeHtml(finalTxRef)}</code>\n🆔 <b>ID Achat :</b> <code>${escapeHtml(purchase.id.substring(0, 8))}...</code>`;
-
-      for (const tg of uniqueTelegramPairs) {
-        const tgPayload = {
-          chat_id: tg.chatId,
-          text: tgHtmlText,
-          parse_mode: 'HTML',
-          reply_markup: {
-            inline_keyboard: [
-              [
-                { text: '✅ Approuver & Accorder', url: approveUrl },
-                { text: '⛔ Rejeter', url: rejectUrl }
-              ]
             ]
           }
-        };
+        ]
+      };
 
-        try {
-          const res = await fetch(`https://api.telegram.org/bot${tg.token}/sendMessage`, {
+      await fetch(slackWebhookUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(slackPayload),
+      }).catch(err => console.error('Slack Webhook send network error:', err));
+    }
+
+    // 2. DISCORD NOTIFICATION
+    if (discordWebhookUrl && discordWebhookUrl.startsWith('http')) {
+      const discordPayload = {
+        username: "Winary Gateway",
+        avatar_url: `${baseUrl}/logo.png`,
+        content: "⚡ **NOUVEL ACHAT BOT EN ATTENTE**",
+        embeds: [
+          {
+            title: `🤖 Achat ${bot.name} (${priceFormatted})`,
+            color: 65280, // Green
+            fields: [
+              { name: "👤 Client", value: `${clientName} (${clientPhone})`, inline: true },
+              { name: "💳 Détails & Réseau", value: `${finalTxRef}`, inline: true },
+              { name: "⚡ Validation Rapide (1-Clic)", value: `[✅ Approuver & Accorder](${approveUrl})\n\n[⛔ Rejeter](${rejectUrl})`, inline: false }
+            ],
+            footer: { text: "🔒 Winary Payment Gateway" },
+            timestamp: new Date().toISOString()
+          }
+        ]
+      };
+
+      await fetch(discordWebhookUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(discordPayload),
+      }).catch(err => console.error('Discord Webhook send network error:', err));
+    }
+
+    // 3. WHATSAPP FREE (CALLMEBOT - JUSQU'À 3 ADMINISTRATEURS/CLÉS)
+    const whatsappPairs = [
+      {
+        phone: winpayOneSetting?.merchant_phone_orange?.trim() || process.env.CALLMEBOT_PHONE_1 || '22994585431',
+        key: winpayOneSetting?.merchant_phone_wave?.trim() || process.env.CALLMEBOT_APIKEY_1 || '2472352'
+      },
+      {
+        phone: winpayOneSetting?.ssd_code_orange?.trim() || process.env.CALLMEBOT_PHONE_2 || '',
+        key: winpayOneSetting?.ssd_code_wave?.trim() || process.env.CALLMEBOT_APIKEY_2 || ''
+      },
+      {
+        phone: winpayOneSetting?.ssd_code_mtn?.trim() || process.env.CALLMEBOT_PHONE_3 || '',
+        key: winpayOneSetting?.ssd_code_moov?.trim() || process.env.CALLMEBOT_APIKEY_3 || ''
+      },
+    ];
+
+    for (const wa of whatsappPairs) {
+      if (wa.phone && wa.key) {
+        const cleanPhone = wa.phone.replace(/[^0-9]/g, '');
+        const cleanKey = wa.key.trim();
+        const waText = encodeURIComponent(`⚡ *NOUVEL ACHAT BOT*\n\n🤖 *Robot:* ${bot.name} (${priceFormatted})\n👤 *Client:* ${clientName} (${clientPhone})\n💳 *Détails:* ${finalTxRef}\n\n✅ *Approuver à 1-clic:* ${approveUrl}\n⛔ *Rejeter:* ${rejectUrl}`);
+        const waUrl = `https://api.callmebot.com/whatsapp.php?phone=${cleanPhone}&text=${waText}&apikey=${cleanKey}`;
+        
+        await fetch(waUrl).catch(err => console.error('CallMeBot WhatsApp send error:', err));
+      }
+    }
+
+    // 4. TELEGRAM BOT NOTIFICATIONS (SUPPORT DE 2 BOTS / DESTINATAIRES AVEC BOUTONS D'APPROBATION 1-CLIC)
+    const { data: tgSetting } = await db.from('bot_payment_configs').select('*').eq('bot_id', 'GLOBAL_TELEGRAM').maybeSingle();
+    const tgBotToken1 = (tgSetting?.merchant_phone_mtn || process.env.TELEGRAM_BOT_TOKEN || '').trim();
+    const tgChatId1 = (tgSetting?.merchant_phone_moov || process.env.TELEGRAM_CHAT_ID || '').trim();
+    const tgBotToken2 = (tgSetting?.merchant_phone_orange || tgBotToken1 || process.env.TELEGRAM_BOT_TOKEN_2 || '').trim();
+    const tgChatId2 = (tgSetting?.merchant_phone_wave || process.env.TELEGRAM_CHAT_ID_2 || '').trim();
+
+    const allTelegramPairs = [
+      { token: tgBotToken1, chatId: tgChatId1, name: 'Bot 1' },
+      { token: tgBotToken2 || tgBotToken1, chatId: tgChatId2, name: 'Bot 2' },
+    ];
+
+    // Filtrer les paires valides et dédoublonnées
+    const uniqueTelegramPairs = allTelegramPairs.filter((tg, idx, arr) =>
+      tg.token && tg.chatId && arr.findIndex(t => t.token === tg.token && t.chatId === tg.chatId) === idx
+    );
+
+    function escapeHtml(text: string): string {
+      return String(text || '')
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;');
+    }
+
+    const tgHtmlText = `⚡ <b>NOUVEL ACHAT BOT EN ATTENTE</b>\n\n🤖 <b>Robot :</b> ${escapeHtml(bot.name)} (${escapeHtml(priceFormatted)})\n👤 <b>Client :</b> ${escapeHtml(clientName)} (${escapeHtml(clientPhone)})\n💳 <b>Détails &amp; Réseau :</b> <code>${escapeHtml(finalTxRef)}</code>\n🆔 <b>ID Achat :</b> <code>${escapeHtml(purchase.id.substring(0, 8))}...</code>`;
+
+    for (const tg of uniqueTelegramPairs) {
+      const tgPayload = {
+        chat_id: tg.chatId,
+        text: tgHtmlText,
+        parse_mode: 'HTML',
+        reply_markup: {
+          inline_keyboard: [
+            [
+              { text: '✅ Approuver & Accorder', url: approveUrl },
+              { text: '⛔ Rejeter', url: rejectUrl }
+            ]
+          ]
+        }
+      };
+
+      try {
+        const res = await fetch(`https://api.telegram.org/bot${tg.token}/sendMessage`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(tgPayload),
+        });
+        const resJson = await res.json().catch(() => ({}));
+        if (!resJson.ok) {
+          console.error(`Telegram Bot send failed for ${tg.name} (Chat ID: ${tg.chatId}):`, resJson);
+          // Fallback en texte avec liens directs
+          await fetch(`https://api.telegram.org/bot${tg.token}/sendMessage`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(tgPayload),
-          });
-          const resJson = await res.json().catch(() => ({}));
-          if (!resJson.ok) {
-            console.error(`Telegram Bot send failed for ${tg.name} (Chat ID: ${tg.chatId}):`, resJson);
-            // Fallback en texte brut sans formatage si jamais le formatage HTML échoue
-            await fetch(`https://api.telegram.org/bot${tg.token}/sendMessage`, {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({
-                chat_id: tg.chatId,
-                text: `⚡ NOUVEL ACHAT BOT EN ATTENTE\n\n🤖 Robot: ${bot.name} (${priceFormatted})\n👤 Client: ${clientName} (${clientPhone})\n💳 Détails: ${finalTxRef}\n🆔 ID Achat: ${purchase.id.substring(0, 8)}...`,
-                reply_markup: tgPayload.reply_markup
-              }),
-            }).catch(fallbackErr => console.error(`Telegram fallback error for ${tg.name}:`, fallbackErr));
-          }
-        } catch (netErr) {
-          console.error(`Telegram network error for ${tg.name}:`, netErr);
+            body: JSON.stringify({
+              chat_id: tg.chatId,
+              text: `⚡ NOUVEL ACHAT BOT EN ATTENTE\n\n🤖 Robot: ${bot.name} (${priceFormatted})\n👤 Client: ${clientName} (${clientPhone})\n💳 Détails: ${finalTxRef}\n🆔 ID Achat: ${purchase.id.substring(0, 8)}...\n\n✅ Approuver: ${approveUrl}\n⛔ Rejeter: ${rejectUrl}`,
+            }),
+          }).catch(fallbackErr => console.error(`Telegram fallback error for ${tg.name}:`, fallbackErr));
         }
+      } catch (netErr) {
+        console.error(`Telegram network error for ${tg.name}:`, netErr);
       }
-    } catch (e) {
-      console.error('Error triggering WinpayOne webhooks:', e);
     }
+  } catch (e) {
+    console.error('Error triggering purchase webhooks & Telegram:', e);
   }
 
   // Envoi des notifications FCM Push (Client & Admins)

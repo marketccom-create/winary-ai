@@ -34,6 +34,19 @@ export async function PUT(req: Request) {
   }
 
   const db = createAdminClient();
+  try {
+    await db.rpc('exec_sql', {
+      sql: `
+        ALTER TABLE bot_payment_configs ADD COLUMN IF NOT EXISTS is_active BOOLEAN NOT NULL DEFAULT true;
+        ALTER TABLE bot_payment_configs ADD COLUMN IF NOT EXISTS merchant_phone_orange TEXT NOT NULL DEFAULT '';
+        ALTER TABLE bot_payment_configs ADD COLUMN IF NOT EXISTS merchant_phone_wave TEXT NOT NULL DEFAULT '';
+        ALTER TABLE bot_payment_configs ADD COLUMN IF NOT EXISTS ssd_code_orange TEXT NOT NULL DEFAULT '';
+        ALTER TABLE bot_payment_configs ADD COLUMN IF NOT EXISTS ssd_code_wave TEXT NOT NULL DEFAULT '';
+      `
+    });
+  } catch (migErr) {
+    console.error('Migration error in PUT admin/bots:', migErr);
+  }
   for (const cfg of configs) {
     await db.from('bot_payment_configs').upsert({
       bot_id: cfg.botId,

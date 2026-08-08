@@ -10,10 +10,16 @@ export async function GET(req: Request) {
 
   const db = createAdminClient();
 
-  // Self-healing migration: Ensure is_active column exists on bot_payment_configs
+  // Self-healing migration: Ensure all columns exist on bot_payment_configs
   try {
     await db.rpc('exec_sql', {
-      sql: 'ALTER TABLE bot_payment_configs ADD COLUMN IF NOT EXISTS is_active BOOLEAN NOT NULL DEFAULT true;'
+      sql: `
+        ALTER TABLE bot_payment_configs ADD COLUMN IF NOT EXISTS is_active BOOLEAN NOT NULL DEFAULT true;
+        ALTER TABLE bot_payment_configs ADD COLUMN IF NOT EXISTS merchant_phone_orange TEXT NOT NULL DEFAULT '';
+        ALTER TABLE bot_payment_configs ADD COLUMN IF NOT EXISTS merchant_phone_wave TEXT NOT NULL DEFAULT '';
+        ALTER TABLE bot_payment_configs ADD COLUMN IF NOT EXISTS ssd_code_orange TEXT NOT NULL DEFAULT '';
+        ALTER TABLE bot_payment_configs ADD COLUMN IF NOT EXISTS ssd_code_wave TEXT NOT NULL DEFAULT '';
+      `
     });
     // Ensure purchases table does not restrict operator values (which prevents 'WINPAY2', 'Orange Money', etc.)
     await db.rpc('exec_sql', {

@@ -2992,20 +2992,22 @@ export default function AdminPage() {
                                 type="button"
                                 onClick={async () => {
                                   try {
-                                    const res = await fetch(`https://api.telegram.org/bot${telegramBotToken}/sendMessage`, {
+                                    const activeToken = telegramBotToken.trim();
+                                    const activeChatId = telegramChatId.trim();
+                                    const res = await fetch(`https://api.telegram.org/bot${activeToken}/sendMessage`, {
                                       method: 'POST',
                                       headers: { 'Content-Type': 'application/json' },
                                       body: JSON.stringify({
-                                        chat_id: telegramChatId,
-                                        text: "✈️ *TEST NOTIFICATION TELEGRAM WINARY AI (BOT 1)*\n\nLe robot Telegram 1 est correctement configuré !",
-                                        parse_mode: "Markdown"
+                                        chat_id: activeChatId,
+                                        text: "✈️ <b>TEST NOTIFICATION TELEGRAM WINARY AI (BOT 1)</b>\n\nLe robot Telegram 1 est correctement configuré et opérationnel !",
+                                        parse_mode: "HTML"
                                       })
                                     });
-                                    const data = await res.json();
+                                    const data = await res.json().catch(() => ({}));
                                     if (data.ok) {
                                       notify("✅ Message de test envoyé sur le Telegram 1 avec succès !", "success");
                                     } else {
-                                      notify(`❌ Erreur Telegram 1: ${data.description}`, "error");
+                                      notify(`❌ Erreur Telegram 1: ${data.description || 'Vérifiez le Token ou Chat ID'}`, "error");
                                     }
                                   } catch (err: any) {
                                     notify(`❌ Erreur réseau: ${err.message}`, "error");
@@ -3071,20 +3073,21 @@ export default function AdminPage() {
                                 onClick={async () => {
                                   try {
                                     const activeToken = (telegramBotToken2 || telegramBotToken).trim();
+                                    const activeChatId = telegramChatId2.trim();
                                     const res = await fetch(`https://api.telegram.org/bot${activeToken}/sendMessage`, {
                                       method: 'POST',
                                       headers: { 'Content-Type': 'application/json' },
                                       body: JSON.stringify({
-                                        chat_id: telegramChatId2.trim(),
-                                        text: "✈️ *TEST NOTIFICATION TELEGRAM WINARY AI (BOT 2)*\n\nLe robot Telegram 2 est correctement configuré !",
-                                        parse_mode: "Markdown"
+                                        chat_id: activeChatId,
+                                        text: "✈️ <b>TEST NOTIFICATION TELEGRAM WINARY AI (BOT 2)</b>\n\nLe robot Telegram 2 est correctement configuré et opérationnel !",
+                                        parse_mode: "HTML"
                                       })
                                     });
-                                    const data = await res.json();
+                                    const data = await res.json().catch(() => ({}));
                                     if (data.ok) {
                                       notify("✅ Message de test envoyé sur le Telegram 2 avec succès !", "success");
                                     } else {
-                                      notify(`❌ Erreur Telegram 2: ${data.description}`, "error");
+                                      notify(`❌ Erreur Telegram 2: ${data.description || 'Vérifiez le Token ou Chat ID'}`, "error");
                                     }
                                   } catch (err: any) {
                                     notify(`❌ Erreur réseau: ${err.message}`, "error");
