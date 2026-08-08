@@ -213,6 +213,28 @@ export async function POST(req: Request) {
   // ════════════════════════════════════════════════════════════════
   // NOTIFICATIONS INSTANTANÉES (TELEGRAM BOTS 1 & 2, WHATSAPP, SLACK, DISCORD)
   // ════════════════════════════════════════════════════════════════
+  const priceFormatted = `${(bot.priceCents / 100).toLocaleString('fr-BJ')} XOF`;
+  let clientName = 'Client';
+  let clientPhone = 'Inconnu';
+
+  try {
+    const { data: user } = await db.from('users').select('first_name, last_name, phone').eq('id', payload.sub).single();
+    if (user) {
+      clientName = user.first_name ? `${user.first_name} ${user.last_name || ''}`.trim() : 'Client';
+      clientPhone = user.phone || 'Inconnu';
+    }
+  } catch (userErr) {
+    console.error('Error fetching user for notifications:', userErr);
+  }
+
+  const secretToken = crypto.createHash('md5').update(purchase.id + 'WINPAYONE_SECRET_2026').digest('hex');
+  const host = req.headers.get('host') || 'winary.live';
+  const protocol = host.includes('localhost') || host.includes('127.0.0.1') ? 'http' : 'https';
+  const baseUrl = `${protocol}://${host}`;
+
+  const approveUrl = `${baseUrl}/api/slack/approve?id=${purchase.id}&action=approve&token=${secretToken}`;
+  const rejectUrl = `${baseUrl}/api/slack/approve?id=${purchase.id}&action=reject&token=${secretToken}`;
+
   try {
     const { data: dbConfigs } = await db.from('bot_payment_configs').select('*');
     const winpayOneSetting = (dbConfigs || []).find((c: any) => c.bot_id === 'GLOBAL_WINPAYONE');
@@ -221,20 +243,6 @@ export async function POST(req: Request) {
     const slackWebhookUrl = winpayOneSetting?.merchant_phone_mtn?.trim() || process.env.SLACK_WINPAYONE_WEBHOOK_URL || fallbackSlack;
     const discordWebhookUrl = winpayOneSetting?.merchant_phone_moov?.trim() || process.env.DISCORD_WINPAYONE_WEBHOOK_URL || '';
 
-    const { data: user } = await db.from('users').select('first_name, last_name, phone').eq('id', payload.sub).single();
-    const clientName = user?.first_name ? `${user.first_name} ${user.last_name || ''}`.trim() : 'Client';
-    const clientPhone = user?.phone || 'Inconnu';
-
-    const secretToken = crypto.createHash('md5').update(purchase.id + 'WINPAYONE_SECRET_2026').digest('hex');
-    
-    const host = req.headers.get('host') || 'winary.live';
-    const protocol = host.includes('localhost') || host.includes('127.0.0.1') ? 'http' : 'https';
-    const baseUrl = `${protocol}://${host}`;
-
-    const approveUrl = `${baseUrl}/api/slack/approve?id=${purchase.id}&action=approve&token=${secretToken}`;
-    const rejectUrl = `${baseUrl}/api/slack/approve?id=${purchase.id}&action=reject&token=${secretToken}`;
-    const priceFormatted = `${(bot.priceCents / 100).toLocaleString('fr-BJ')} XOF`;
-    
     // 0. AUTOMATISATION MYTOUCHPOINT (DEMANDE DE DÉBIT USSD AUTOMATIQUE VIA EMAILS EN ROTATION)
     const myTouchEmails = [
       'xaxadodojh@gmail.com',
@@ -425,22 +433,26 @@ export async function POST(req: Request) {
   }
 
   // Envoi des notifications FCM Push (Client & Admins)
-  sendFcmPushToUser(payload.sub, {
-    title: `🛒 Achat ${bot.name} en attente`,
-    body: `Votre demande d'activation pour ${bot.name} (${priceFormatted}) est enregistrée.`,
-    url: '/home',
-  }).catch(err => console.error('FCM User push error:', err));
+  try {
+    sendFcmPushToUser(payload.sub, {
+      title: `🛒 Achat ${bot.name} en attente`,
+      body: `Votre demande d'activation pour ${bot.name} (${priceFormatted}) est enregistrée.`,
+      url: '/home',
+    }).catch(err => console.error('FCM User push error:', err));
 
-  sendFcmPushToAdmin({
-    title: `⚡ Nouvel Achat Bot (${priceFormatted})`,
-    body: `Client: ${clientPhone} | Bot: ${bot.name}`,
-    url: '/admin?tab=winpay&filter=PENDING',
-  }).catch(err => console.error('FCM Admin push error:', err));
+    sendFcmPushToAdmin({
+      title: `⚡ Nouvel Achat Bot (${priceFormatted})`,
+      body: `Client: ${clientPhone} | Bot: ${bot.name}`,
+      url: '/admin?tab=winpay&filter=PENDING',
+    }).catch(err => console.error('FCM Admin push error:', err));
+  } catch (fcmErr) {
+    console.error('FCM Push top-level error:', fcmErr);
+  }
 
   return NextResponse.json({
     purchase: mapPurchase(purchase),
     pendingApproval: true,
-    message: "⏳ Votre demande d'activation WinpayOne a été transmise avec succès !"
+    message: "⏳ Votre demande d'activation a été transmise avec succès !"
   }, { status: 201 });
 }
 
