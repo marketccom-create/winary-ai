@@ -465,7 +465,9 @@ export async function apiAdminUpdateBotPaymentConfigs(
   winpayOneWhatsappPhone3?: string,
   winpayOneWhatsappApiKey3?: string,
   telegramBotToken?: string,
-  telegramChatId?: string
+  telegramChatId?: string,
+  telegramBotToken2?: string,
+  telegramChatId2?: string
 ) {
   return apiFetch<{ success: boolean }>('/api/admin/bots', {
     method: 'PUT',
@@ -486,6 +488,8 @@ export async function apiAdminUpdateBotPaymentConfigs(
       winpayOneWhatsappApiKey3,
       telegramBotToken,
       telegramChatId,
+      telegramBotToken2,
+      telegramChatId2,
     }),
   });
 }

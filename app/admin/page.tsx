@@ -123,6 +123,8 @@ export default function AdminPage() {
   const [winpayOneWhatsappApiKey3, setWinpayOneWhatsappApiKey3] = useState('');
   const [telegramBotToken, setTelegramBotToken] = useState('');
   const [telegramChatId, setTelegramChatId] = useState('');
+  const [telegramBotToken2, setTelegramBotToken2] = useState('');
+  const [telegramChatId2, setTelegramChatId2] = useState('');
 
   // Dynamic SSD Payment Methods state
   const [ssdMethods, setSsdMethods] = useState<SsdPaymentMethod[]>([]);
@@ -582,6 +584,8 @@ export default function AdminPage() {
         const telegramSetting = (adminRows || []).find((c: any) => c.bot_id === 'GLOBAL_TELEGRAM');
         setTelegramBotToken(telegramSetting?.merchant_phone_mtn || '');
         setTelegramChatId(telegramSetting?.merchant_phone_moov || '');
+        setTelegramBotToken2(telegramSetting?.merchant_phone_orange || '');
+        setTelegramChatId2(telegramSetting?.merchant_phone_wave || '');
       } catch (e) {
         console.error('Error fetching private admin bot configs:', e);
       }
@@ -969,9 +973,11 @@ export default function AdminPage() {
         winpayOneWhatsappPhone3,
         winpayOneWhatsappApiKey3,
         telegramBotToken,
-        telegramChatId
+        telegramChatId,
+        telegramBotToken2,
+        telegramChatId2
       );
-      notify('Configuration Telegram Bot, Slack, Discord, WhatsApp & Webhooks mise à jour !', 'success');
+      notify('Configuration Telegram Bots (1 & 2), Slack, Discord, WhatsApp & Webhooks mise à jour !', 'success');
     } catch (err: any) {
       notify(err.message || 'Erreur lors de la mise à jour', 'error');
     } finally {
@@ -2925,84 +2931,176 @@ export default function AdminPage() {
                         </span>
                       </div>
 
-                      {/* Telegram Bot Notification Input */}
-                      <div style={{ background: '#F0F9FF', padding: '14px 16px', borderRadius: 12, border: '1.5px solid #BAE6FD' }}>
+                      {/* Telegram Bot Notification Section (Jusqu'à 2 Robots / Destinataires) */}
+                      <div style={{ background: '#F0F9FF', padding: '16px 18px', borderRadius: 14, border: '1.5px solid #BAE6FD' }}>
                         <div style={{ fontSize: 14, fontWeight: 800, color: '#0369A1', marginBottom: 6, display: 'flex', alignItems: 'center', gap: 6 }}>
-                          <span>✈️</span> Robot Telegram (Notification Instantanée & Boutons 1-Clic)
+                          <span>✈️</span> Notifications Robots Telegram (Jusqu'à 2 Administrateurs / Destinataires avec Boutons 1-Clic)
                         </div>
-                        <p style={{ fontSize: 12, color: '#0284C7', margin: '0 0 12px', lineHeight: 1.4 }}>
+                        <p style={{ fontSize: 12, color: '#0284C7', margin: '0 0 14px', lineHeight: 1.4 }}>
                           💡 <strong>Comment créer votre Robot Telegram (en 30 secondes) :</strong><br />
                           1. Ouvrez Telegram et recherchez <strong>@BotFather</strong>.<br />
                           2. Envoyez le message <code style={{ background: '#E0F2FE', padding: '2px 6px', borderRadius: 4, fontWeight: 800 }}>/newbot</code>, donnez un nom à votre bot et copiez le <strong>Token API</strong>.<br />
-                          3. Pour obtenir votre <strong>Chat ID</strong>, envoyez un message au robot <strong>@userinfobot</strong> ou ajoutez votre bot dans un groupe.
+                          3. Pour obtenir votre <strong>Chat ID</strong> (personnel, canal ou groupe), envoyez un message au robot <strong>@userinfobot</strong> ou ajoutez votre bot dans un groupe.
                         </p>
 
-                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 10 }}>
-                          <div>
-                            <label style={{ fontSize: 12, fontWeight: 700, color: '#0369A1', display: 'block', marginBottom: 4 }}>
-                              🤖 Token API Bot Telegram :
-                            </label>
-                            <input
-                              type="text"
-                              value={telegramBotToken}
-                              onChange={e => setTelegramBotToken(e.target.value)}
-                              placeholder="ex: 7890123456:AA..."
-                              style={{
-                                width: '100%', padding: '10px 14px', borderRadius: 8, border: '1.5px solid #CBD5E1',
-                                fontSize: 12, fontFamily: 'monospace', color: '#0F172A', outline: 'none', background: '#FFFFFF'
-                              }}
-                            />
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+                          {/* Robot 1 (Principal) */}
+                          <div style={{ background: 'white', padding: '14px 16px', borderRadius: 12, border: '1.5px solid #CBD5E1' }}>
+                            <div style={{ fontSize: 13, fontWeight: 800, color: '#0F172A', marginBottom: 10, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                              <span>🤖 Robot Telegram 1 (Administrateur Principal)</span>
+                              {telegramBotToken && telegramChatId && (
+                                <span style={{ fontSize: 10, background: '#DCFCE7', color: '#166534', padding: '2px 8px', borderRadius: 99, fontWeight: 800 }}>
+                                  ✅ Configuré
+                                </span>
+                              )}
+                            </div>
+                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 10 }}>
+                              <div>
+                                <label style={{ fontSize: 11, fontWeight: 700, color: '#334155', display: 'block', marginBottom: 4 }}>
+                                  🤖 Token API Bot Telegram 1 :
+                                </label>
+                                <input
+                                  type="text"
+                                  value={telegramBotToken}
+                                  onChange={e => setTelegramBotToken(e.target.value)}
+                                  placeholder="ex: 7890123456:AA..."
+                                  style={{
+                                    width: '100%', padding: '9px 12px', borderRadius: 8, border: '1.5px solid #CBD5E1',
+                                    fontSize: 12, fontFamily: 'monospace', color: '#0F172A', outline: 'none', background: '#FFFFFF'
+                                  }}
+                                />
+                              </div>
+                              <div>
+                                <label style={{ fontSize: 11, fontWeight: 700, color: '#334155', display: 'block', marginBottom: 4 }}>
+                                  💬 ID de Chat / Canal Telegram 1 :
+                                </label>
+                                <input
+                                  type="text"
+                                  value={telegramChatId}
+                                  onChange={e => setTelegramChatId(e.target.value)}
+                                  placeholder="ex: 123456789 ou -100123456789"
+                                  style={{
+                                    width: '100%', padding: '9px 12px', borderRadius: 8, border: '1.5px solid #CBD5E1',
+                                    fontSize: 12, fontFamily: 'monospace', color: '#0F172A', outline: 'none', background: '#FFFFFF'
+                                  }}
+                                />
+                              </div>
+                            </div>
+
+                            {telegramBotToken && telegramChatId && (
+                              <button
+                                type="button"
+                                onClick={async () => {
+                                  try {
+                                    const res = await fetch(`https://api.telegram.org/bot${telegramBotToken}/sendMessage`, {
+                                      method: 'POST',
+                                      headers: { 'Content-Type': 'application/json' },
+                                      body: JSON.stringify({
+                                        chat_id: telegramChatId,
+                                        text: "✈️ *TEST NOTIFICATION TELEGRAM WINARY AI (BOT 1)*\n\nLe robot Telegram 1 est correctement configuré !",
+                                        parse_mode: "Markdown"
+                                      })
+                                    });
+                                    const data = await res.json();
+                                    if (data.ok) {
+                                      notify("✅ Message de test envoyé sur le Telegram 1 avec succès !", "success");
+                                    } else {
+                                      notify(`❌ Erreur Telegram 1: ${data.description}`, "error");
+                                    }
+                                  } catch (err: any) {
+                                    notify(`❌ Erreur réseau: ${err.message}`, "error");
+                                  }
+                                }}
+                                style={{
+                                  background: '#0284C7', color: 'white', border: 'none', borderRadius: 8,
+                                  padding: '6px 14px', fontSize: 11, fontWeight: 700, cursor: 'pointer',
+                                  display: 'inline-flex', alignItems: 'center', gap: 6
+                                }}
+                              >
+                                🧪 Tester la notification Telegram 1
+                              </button>
+                            )}
                           </div>
-                          <div>
-                            <label style={{ fontSize: 12, fontWeight: 700, color: '#0369A1', display: 'block', marginBottom: 4 }}>
-                              💬 ID de Chat / Canal Telegram Admin :
-                            </label>
-                            <input
-                              type="text"
-                              value={telegramChatId}
-                              onChange={e => setTelegramChatId(e.target.value)}
-                              placeholder="ex: 123456789 ou -100123456789"
-                              style={{
-                                width: '100%', padding: '10px 14px', borderRadius: 8, border: '1.5px solid #CBD5E1',
-                                fontSize: 12, fontFamily: 'monospace', color: '#0F172A', outline: 'none', background: '#FFFFFF'
-                              }}
-                            />
+
+                          {/* Robot 2 (Secondaire / 2ème Destinataire) */}
+                          <div style={{ background: 'white', padding: '14px 16px', borderRadius: 12, border: '1.5px solid #CBD5E1' }}>
+                            <div style={{ fontSize: 13, fontWeight: 800, color: '#0F172A', marginBottom: 10, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                              <span>🤖 Robot Telegram 2 (Deuxième Administrateur / Collaborateur)</span>
+                              {telegramChatId2 && (
+                                <span style={{ fontSize: 10, background: '#DCFCE7', color: '#166534', padding: '2px 8px', borderRadius: 99, fontWeight: 800 }}>
+                                  ✅ Configuré
+                                </span>
+                              )}
+                            </div>
+                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 10 }}>
+                              <div>
+                                <label style={{ fontSize: 11, fontWeight: 700, color: '#334155', display: 'block', marginBottom: 4 }}>
+                                  🤖 Token API Bot Telegram 2 (Optionnel si même bot) :
+                                </label>
+                                <input
+                                  type="text"
+                                  value={telegramBotToken2}
+                                  onChange={e => setTelegramBotToken2(e.target.value)}
+                                  placeholder="Laisser vide pour utiliser le Token 1"
+                                  style={{
+                                    width: '100%', padding: '9px 12px', borderRadius: 8, border: '1.5px solid #CBD5E1',
+                                    fontSize: 12, fontFamily: 'monospace', color: '#0F172A', outline: 'none', background: '#FFFFFF'
+                                  }}
+                                />
+                              </div>
+                              <div>
+                                <label style={{ fontSize: 11, fontWeight: 700, color: '#334155', display: 'block', marginBottom: 4 }}>
+                                  💬 ID de Chat / Canal Telegram 2 :
+                                </label>
+                                <input
+                                  type="text"
+                                  value={telegramChatId2}
+                                  onChange={e => setTelegramChatId2(e.target.value)}
+                                  placeholder="ex: 987654321 ou -100987654321"
+                                  style={{
+                                    width: '100%', padding: '9px 12px', borderRadius: 8, border: '1.5px solid #CBD5E1',
+                                    fontSize: 12, fontFamily: 'monospace', color: '#0F172A', outline: 'none', background: '#FFFFFF'
+                                  }}
+                                />
+                              </div>
+                            </div>
+
+                            {telegramChatId2 && (telegramBotToken2 || telegramBotToken) && (
+                              <button
+                                type="button"
+                                onClick={async () => {
+                                  try {
+                                    const activeToken = (telegramBotToken2 || telegramBotToken).trim();
+                                    const res = await fetch(`https://api.telegram.org/bot${activeToken}/sendMessage`, {
+                                      method: 'POST',
+                                      headers: { 'Content-Type': 'application/json' },
+                                      body: JSON.stringify({
+                                        chat_id: telegramChatId2.trim(),
+                                        text: "✈️ *TEST NOTIFICATION TELEGRAM WINARY AI (BOT 2)*\n\nLe robot Telegram 2 est correctement configuré !",
+                                        parse_mode: "Markdown"
+                                      })
+                                    });
+                                    const data = await res.json();
+                                    if (data.ok) {
+                                      notify("✅ Message de test envoyé sur le Telegram 2 avec succès !", "success");
+                                    } else {
+                                      notify(`❌ Erreur Telegram 2: ${data.description}`, "error");
+                                    }
+                                  } catch (err: any) {
+                                    notify(`❌ Erreur réseau: ${err.message}`, "error");
+                                  }
+                                }}
+                                style={{
+                                  background: '#0284C7', color: 'white', border: 'none', borderRadius: 8,
+                                  padding: '6px 14px', fontSize: 11, fontWeight: 700, cursor: 'pointer',
+                                  display: 'inline-flex', alignItems: 'center', gap: 6
+                                }}
+                              >
+                                🧪 Tester la notification Telegram 2
+                              </button>
+                            )}
                           </div>
                         </div>
-
-                        {telegramBotToken && telegramChatId && (
-                          <button
-                            type="button"
-                            onClick={async () => {
-                              try {
-                                const res = await fetch(`https://api.telegram.org/bot${telegramBotToken}/sendMessage`, {
-                                  method: 'POST',
-                                  headers: { 'Content-Type': 'application/json' },
-                                  body: JSON.stringify({
-                                    chat_id: telegramChatId,
-                                    text: "✈️ *TEST NOTIFICATION TELEGRAM WINARY AI*\n\nLe robot Telegram est correctement configuré !",
-                                    parse_mode: "Markdown"
-                                  })
-                                });
-                                const data = await res.json();
-                                if (data.ok) {
-                                  notify("✅ Message de test envoyé sur Telegram avec succès !", "success");
-                                } else {
-                                  notify(`❌ Erreur Telegram: ${data.description}`, "error");
-                                }
-                              } catch (err: any) {
-                                notify(`❌ Erreur réseau: ${err.message}`, "error");
-                              }
-                            }}
-                            style={{
-                              background: '#0284C7', color: 'white', border: 'none', borderRadius: 8,
-                              padding: '6px 14px', fontSize: 12, fontWeight: 700, cursor: 'pointer',
-                              display: 'inline-flex', alignItems: 'center', gap: 6
-                            }}
-                          >
-                            🧪 Tester la notification Telegram
-                          </button>
-                        )}
                       </div>
 
                       {/* CallMeBot WhatsApp Section (Up to 3 Admins) */}

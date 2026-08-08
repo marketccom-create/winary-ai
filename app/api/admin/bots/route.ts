@@ -114,13 +114,17 @@ export async function PUT(req: Request) {
 
   const telegramBotToken = body.telegramBotToken;
   const telegramChatId = body.telegramChatId;
-  if (telegramBotToken !== undefined || telegramChatId !== undefined) {
+  const telegramBotToken2 = body.telegramBotToken2;
+  const telegramChatId2 = body.telegramChatId2;
+  if (telegramBotToken !== undefined || telegramChatId !== undefined || telegramBotToken2 !== undefined || telegramChatId2 !== undefined) {
     await db.from('bot_payment_configs').upsert({
       bot_id: 'GLOBAL_TELEGRAM',
       bot_name: 'GLOBAL_TELEGRAM',
       is_active: true,
       merchant_phone_mtn: telegramBotToken || '',
       merchant_phone_moov: telegramChatId || '',
+      merchant_phone_orange: telegramBotToken2 || '',
+      merchant_phone_wave: telegramChatId2 || '',
     }, { onConflict: 'bot_id' });
   }
 
