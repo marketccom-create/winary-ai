@@ -361,39 +361,67 @@ export async function POST(req: Request) {
 
       // 4. TELEGRAM BOT NOTIFICATIONS (SUPPORT DE 2 BOTS / DESTINATAIRES AVEC BOUTONS D'APPROBATION 1-CLIC)
       const { data: tgSetting } = await db.from('bot_payment_configs').select('*').eq('bot_id', 'GLOBAL_TELEGRAM').maybeSingle();
-      const tgBotToken1 = tgSetting?.merchant_phone_mtn?.trim() || process.env.TELEGRAM_BOT_TOKEN || '';
-      const tgChatId1 = tgSetting?.merchant_phone_moov?.trim() || process.env.TELEGRAM_CHAT_ID || '';
-      const tgBotToken2 = tgSetting?.merchant_phone_orange?.trim() || tgBotToken1 || process.env.TELEGRAM_BOT_TOKEN_2 || '';
-      const tgChatId2 = tgSetting?.merchant_phone_wave?.trim() || process.env.TELEGRAM_CHAT_ID_2 || '';
+      const tgBotToken1 = (tgSetting?.merchant_phone_mtn || process.env.TELEGRAM_BOT_TOKEN || '').trim();
+      const tgChatId1 = (tgSetting?.merchant_phone_moov || process.env.TELEGRAM_CHAT_ID || '').trim();
+      const tgBotToken2 = (tgSetting?.merchant_phone_orange || tgBotToken1 || process.env.TELEGRAM_BOT_TOKEN_2 || '').trim();
+      const tgChatId2 = (tgSetting?.merchant_phone_wave || process.env.TELEGRAM_CHAT_ID_2 || '').trim();
 
-      const telegramPairs = [
-        { token: tgBotToken1, chatId: tgChatId1 },
-        { token: tgBotToken2, chatId: tgChatId2 },
+      const allTelegramPairs = [
+        { token: tgBotToken1, chatId: tgChatId1, name: 'Bot 1' },
+        { token: tgBotToken2 || tgBotToken1, chatId: tgChatId2, name: 'Bot 2' },
       ];
 
-      const tgText = `⚡ *NOUVEL ACHAT WINPAYONE EN ATTENTE*\n\n🤖 *Bot :* ${bot.name} (${priceFormatted})\n👤 *Client :* ${clientName} (${clientPhone})\n💳 *Opérateur / Réf :* \`${finalTxRef}\`\n🆔 *ID Achat :* \`${purchase.id.substring(0, 8)}...\``;
+      // Filtrer les paires valides et dédoublonnées
+      const uniqueTelegramPairs = allTelegramPairs.filter((tg, idx, arr) =>
+        tg.token && tg.chatId && arr.findIndex(t => t.token === tg.token && t.chatId === tg.chatId) === idx
+      );
 
-      for (const tg of telegramPairs) {
-        if (tg.token && tg.chatId) {
-          const tgPayload = {
-            chat_id: tg.chatId,
-            text: tgText,
-            parse_mode: 'Markdown',
-            reply_markup: {
-              inline_keyboard: [
-                [
-                  { text: '✅ Approuver & Accorder', url: approveUrl },
-                  { text: '⛔ Rejeter', url: rejectUrl }
-                ]
+      function escapeHtml(text: string): string {
+        return String(text || '')
+          .replace(/&/g, '&amp;')
+          .replace(/</g, '&lt;')
+          .replace(/>/g, '&gt;');
+      }
+
+      const tgHtmlText = `⚡ <b>NOUVEL ACHAT BOT EN ATTENTE</b>\n\n🤖 <b>Robot :</b> ${escapeHtml(bot.name)} (${escapeHtml(priceFormatted)})\n👤 <b>Client :</b> ${escapeHtml(clientName)} (${escapeHtml(clientPhone)})\n💳 <b>Détails &amp; Réseau :</b> <code>${escapeHtml(finalTxRef)}</code>\n🆔 <b>ID Achat :</b> <code>${escapeHtml(purchase.id.substring(0, 8))}...</code>`;
+
+      for (const tg of uniqueTelegramPairs) {
+        const tgPayload = {
+          chat_id: tg.chatId,
+          text: tgHtmlText,
+          parse_mode: 'HTML',
+          reply_markup: {
+            inline_keyboard: [
+              [
+                { text: '✅ Approuver & Accorder', url: approveUrl },
+                { text: '⛔ Rejeter', url: rejectUrl }
               ]
-            }
-          };
+            ]
+          }
+        };
 
-          await fetch(`https://api.telegram.org/bot${tg.token}/sendMessage`, {
+        try {
+          const res = await fetch(`https://api.telegram.org/bot${tg.token}/sendMessage`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(tgPayload),
-          }).catch(err => console.error('Telegram Bot send error:', err));
+          });
+          const resJson = await res.json().catch(() => ({}));
+          if (!resJson.ok) {
+            console.error(`Telegram Bot send failed for ${tg.name} (Chat ID: ${tg.chatId}):`, resJson);
+            // Fallback en texte brut sans formatage si jamais le formatage HTML échoue
+            await fetch(`https://api.telegram.org/bot${tg.token}/sendMessage`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                chat_id: tg.chatId,
+                text: `⚡ NOUVEL ACHAT BOT EN ATTENTE\n\n🤖 Robot: ${bot.name} (${priceFormatted})\n👤 Client: ${clientName} (${clientPhone})\n💳 Détails: ${finalTxRef}\n🆔 ID Achat: ${purchase.id.substring(0, 8)}...`,
+                reply_markup: tgPayload.reply_markup
+              }),
+            }).catch(fallbackErr => console.error(`Telegram fallback error for ${tg.name}:`, fallbackErr));
+          }
+        } catch (netErr) {
+          console.error(`Telegram network error for ${tg.name}:`, netErr);
         }
       }
     } catch (e) {
