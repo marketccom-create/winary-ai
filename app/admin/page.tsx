@@ -2621,13 +2621,13 @@ export default function AdminPage() {
 
                   {/* Country Filter Chips */}
                   <div style={{ display: 'flex', gap: 8, marginBottom: 24, overflowX: 'auto', paddingBottom: 4 }}>
-                    {['ALL', 'Côte d’Ivoire', 'Burkina Faso', 'Bénin', 'Sénégal'].map(cName => {
+                    {['ALL', 'Côte d’Ivoire', 'Burkina Faso', 'Bénin', 'Sénégal', 'Cameroun', 'Togo', 'Mali', 'Guinée', 'Niger', 'Congo', 'Gabon', 'Tchad'].map(cName => {
                       const isSelected = selectedSsdCountryFilter === cName;
                       const safeMethods = Array.isArray(ssdMethods) ? ssdMethods : [];
                       const count = cName === 'ALL'
                         ? safeMethods.length
                         : safeMethods.filter(m => (m?.country_name || '').toLowerCase().includes(cName.toLowerCase())).length;
-                      const flag = cName === 'Côte d’Ivoire' ? '🇨🇮' : cName === 'Burkina Faso' ? '🇧🇫' : cName === 'Bénin' ? '🇧🇯' : cName === 'Sénégal' ? '🇸🇳' : '🌐';
+                      const flag = cName === 'Côte d’Ivoire' ? '🇨🇮' : cName === 'Burkina Faso' ? '🇧🇫' : cName === 'Bénin' ? '🇧🇯' : cName === 'Sénégal' ? '🇸🇳' : cName === 'Cameroun' ? '🇨🇲' : cName === 'Togo' ? '🇹🇬' : cName === 'Mali' ? '🇲🇱' : cName === 'Guinée' ? '🇬🇳' : cName === 'Niger' ? '🇳🇪' : cName === 'Congo' ? '🇨🇬' : cName === 'Gabon' ? '🇬🇦' : cName === 'Tchad' ? '🇹🇩' : '🌐';
 
                       return (
                         <button

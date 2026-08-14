@@ -223,7 +223,7 @@ function getCountryFromPhone(phone?: string): { code: string; name: string; pref
   }
   if (clean.startsWith('+223') || clean.startsWith('223')) {
     return {
-      name: 'Mali', prefix: '+223', flag: '🇲🇱',
+      code: 'ML', name: 'Mali', prefix: '+223', flag: '🇲🇱',
       operators: [
         { id: 'ORANGE', name: 'Orange Money', icon: '🟠' },
         { id: 'MOOV', name: 'Moov Money', icon: '🟡' },
@@ -232,7 +232,7 @@ function getCountryFromPhone(phone?: string): { code: string; name: string; pref
   }
   if (clean.startsWith('+224') || clean.startsWith('224')) {
     return {
-      name: 'Guinée', prefix: '+224', flag: '🇬🇳',
+      code: 'GN', name: 'Guinée', prefix: '+224', flag: '🇬🇳',
       operators: [
         { id: 'ORANGE', name: 'Orange Money', icon: '🟠' },
         { id: 'MTN', name: 'MTN MoMo', icon: '🟡' },
@@ -241,7 +241,7 @@ function getCountryFromPhone(phone?: string): { code: string; name: string; pref
   }
   if (clean.startsWith('+237') || clean.startsWith('237')) {
     return {
-      name: 'Cameroun', prefix: '+237', flag: '🇨🇲',
+      code: 'CM', name: 'Cameroun', prefix: '+237', flag: '🇨🇲',
       operators: [
         { id: 'MTN', name: 'MTN MoMo', icon: '🟡' },
         { id: 'ORANGE', name: 'Orange Money', icon: '🟠' },
@@ -250,7 +250,7 @@ function getCountryFromPhone(phone?: string): { code: string; name: string; pref
   }
   if (clean.startsWith('+232') || clean.startsWith('232')) {
     return {
-      name: 'Sierra Leone', prefix: '+232', flag: '🇸🇱',
+      code: 'SL', name: 'Sierra Leone', prefix: '+232', flag: '🇸🇱',
       operators: [
         { id: 'ORANGE', name: 'Orange Money', icon: '🟠' },
         { id: 'AFRICELL', name: 'Africell Money', icon: '🔴' },
@@ -259,7 +259,7 @@ function getCountryFromPhone(phone?: string): { code: string; name: string; pref
   }
   if (clean.startsWith('+242') || clean.startsWith('242')) {
     return {
-      name: 'Congo', prefix: '+242', flag: '🇨🇬',
+      code: 'CG', name: 'Congo', prefix: '+242', flag: '🇨🇬',
       operators: [
         { id: 'MTN', name: 'MTN MoMo', icon: '🟡' },
         { id: 'AIRTEL', name: 'Airtel Money', icon: '🔴' },
@@ -268,7 +268,7 @@ function getCountryFromPhone(phone?: string): { code: string; name: string; pref
   }
   if (clean.startsWith('+243') || clean.startsWith('243')) {
     return {
-      name: 'RDC', prefix: '+243', flag: '🇨🇩',
+      code: 'CD', name: 'RDC', prefix: '+243', flag: '🇨🇩',
       operators: [
         { id: 'MPESA', name: 'M-Pesa', icon: '🔴' },
         { id: 'AIRTEL', name: 'Airtel Money', icon: '🔴' },
@@ -278,7 +278,7 @@ function getCountryFromPhone(phone?: string): { code: string; name: string; pref
   }
   if (clean.startsWith('+235') || clean.startsWith('235')) {
     return {
-      name: 'Tchad', prefix: '+235', flag: '🇹🇩',
+      code: 'TD', name: 'Tchad', prefix: '+235', flag: '🇹🇩',
       operators: [
         { id: 'AIRTEL', name: 'Airtel Money', icon: '🔴' },
         { id: 'MOOV', name: 'Moov Money', icon: '🟡' },
@@ -287,7 +287,7 @@ function getCountryFromPhone(phone?: string): { code: string; name: string; pref
   }
   if (clean.startsWith('+227') || clean.startsWith('227')) {
     return {
-      name: 'Niger', prefix: '+227', flag: '🇳🇪',
+      code: 'NE', name: 'Niger', prefix: '+227', flag: '🇳🇪',
       operators: [
         { id: 'AIRTEL', name: 'Airtel Money', icon: '🔴' },
         { id: 'MOOV', name: 'Moov Money', icon: '🟡' },
@@ -296,7 +296,7 @@ function getCountryFromPhone(phone?: string): { code: string; name: string; pref
   }
   if (clean.startsWith('+241') || clean.startsWith('241')) {
     return {
-      name: 'Gabon', prefix: '+241', flag: '🇬🇦',
+      code: 'GA', name: 'Gabon', prefix: '+241', flag: '🇬🇦',
       operators: [
         { id: 'AIRTEL', name: 'Airtel Money', icon: '🔴' },
         { id: 'MOOV', name: 'Moov Money', icon: '🟡' },
@@ -305,7 +305,7 @@ function getCountryFromPhone(phone?: string): { code: string; name: string; pref
   }
 
   return {
-    name: 'International', prefix: clean.startsWith('+') ? clean.substring(0, 4) : '+229', flag: '🌍',
+    code: 'INTL', name: 'International', prefix: clean.startsWith('+') ? clean.substring(0, 4) : '+229', flag: '🌍',
     operators: [
       { id: 'MTN', name: 'MTN MoMo', icon: '🟡' },
       { id: 'MOOV', name: 'Moov Money', icon: '🔵' },

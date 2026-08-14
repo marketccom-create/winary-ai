@@ -76,7 +76,9 @@ export async function GET(req: Request) {
           ('Côte d’Ivoire', 'CI', '+225', '🇨🇮', 'WAVE_CI', 'Wave CI', '🌊', '0700000000', 'Winary CI', 'Envoyez {AMOUNT} FCFA via Wave sur le 0700000000 (Nom: Winary CI) puis copiez-collez le message de confirmation ici.', 'https://wave.com/pay', true, 4),
           ('Burkina Faso', 'BF', '+226', '🇧🇫', 'ORANGE_BF', 'Orange Money BF', '🟧', '70000000', 'Winary BF', 'Envoyez {AMOUNT} FCFA sur le 70000000 puis copiez le SMS.', '*144*1*1*{AMOUNT}#', true, 1),
           ('Burkina Faso', 'BF', '+226', '🇧🇫', 'MOOV_BF', 'Moov Money BF', '🟡', '60000000', 'Winary BF', 'Envoyez {AMOUNT} FCFA sur le 60000000 puis copiez le SMS.', '*555*1*1*{AMOUNT}#', true, 2),
-          ('Burkina Faso', 'BF', '+226', '🇧🇫', 'TELECEL_BF', 'Telecel Cash BF', '🔴', '78000000', 'Winary BF', 'Envoyez {AMOUNT} FCFA sur le 78000000 puis copiez le SMS.', '*777*{AMOUNT}#', true, 3)
+          ('Burkina Faso', 'BF', '+226', '🇧🇫', 'TELECEL_BF', 'Telecel Cash BF', '🔴', '78000000', 'Winary BF', 'Envoyez {AMOUNT} FCFA sur le 78000000 puis copiez le SMS.', '*777*{AMOUNT}#', true, 3),
+          ('Cameroun', 'CM', '+237', '🇨🇲', 'MTN_CM', 'MTN MoMo CM', '🟡', '600000000', 'Winary Cameroun', 'Effectuez le transfert USSD puis copiez le SMS.', '*126*1*1*{AMOUNT}#', true, 1),
+          ('Cameroun', 'CM', '+237', '🇨🇲', 'ORANGE_CM', 'Orange Money CM', '🟧', '600000000', 'Winary Cameroun', 'Effectuez le transfert USSD puis copiez le SMS.', '#150*1*1*{AMOUNT}#', true, 2)
         ON CONFLICT (operator_id) DO NOTHING;
       `
     });
