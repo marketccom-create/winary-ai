@@ -36,7 +36,9 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: 'Minimum 3 000 XOF' }, { status: 400 });
   }
 
-  // Schedule restriction (Monday to Friday, 8h to 21h)
+  const db = createAdminClient();
+
+  // Schedule restriction (Monday to Friday or 7d/7, 8h to 21h)
   const now = new Date();
   const formatter = new Intl.DateTimeFormat('en-US', {
     timeZone: 'Africa/Porto-Novo',
@@ -49,14 +51,26 @@ export async function POST(req: Request) {
   const hourStr = parts.find(p => p.type === 'hour')?.value;
   const hour = parseInt(hourStr || '0', 10);
 
-  if (weekday === 'Sat' || weekday === 'Sun') {
+  // Check if weekend withdrawal restriction is lifted in admin settings
+  const { data: weekendCfg } = await db
+    .from('bot_payment_configs')
+    .select('is_active')
+    .eq('bot_id', 'GLOBAL_WITHDRAWAL_WEEKEND')
+    .maybeSingle();
+
+  const allowWeekend = weekendCfg?.is_active === true;
+
+  if (!allowWeekend && (weekday === 'Sat' || weekday === 'Sun')) {
     return NextResponse.json({ error: 'Les retraits ne sont pas possibles les week-ends.' }, { status: 400 });
   }
   if (hour < 8 || hour >= 21) {
-    return NextResponse.json({ error: 'Les retraits sont uniquement ouverts du Lundi au Vendredi, de 08h à 21h.' }, { status: 400 });
+    return NextResponse.json({
+      error: allowWeekend
+        ? 'Les retraits sont uniquement ouverts de 08h à 21h.'
+        : 'Les retraits sont uniquement ouverts du Lundi au Vendredi, de 08h à 21h.'
+    }, { status: 400 });
   }
 
-  const db = createAdminClient();
   const { data: user } = await db
     .from('users')
     .select('balance_cents')

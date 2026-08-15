@@ -13,6 +13,7 @@ import {
   apiGetBots, apiGetBotPaymentConfigs, apiAdminGetBotPaymentConfigs, apiAdminUpdateBotPaymentConfigs,
   apiAdminGetPendingPurchases, apiAdminGetAllPurchases, apiAdminApprovePurchase, apiAdminRejectPurchase, apiAdminRejectAllPurchases,
   apiAdminGetPendingWithdrawals, apiAdminApproveWithdrawal, apiAdminRejectWithdrawal, apiAdminDeleteWithdrawal,
+  apiAdminGetWithdrawalSettings, apiAdminUpdateWithdrawalSettings,
   apiAdminGetChatConversations, apiAdminGetChatMessages, apiAdminSendChatMessage,
   apiAdminGrantBot, apiAdminEditChatMessage, apiAdminDeleteChatMessage, apiAdminRevokePurchase,
   apiAdminGetAiSettings, apiAdminUpdateAiSettings, apiAdminBroadcastMessage,
@@ -69,6 +70,8 @@ export default function AdminPage() {
   const [withdrawalSearch, setWithdrawalSearch] = useState('');
   const [withdrawalStatusFilter, setWithdrawalStatusFilter] = useState<'PENDING' | 'COMPLETED' | 'FAILED' | 'ALL'>('PENDING');
   const [withdrawalEligibilityFilter, setWithdrawalEligibilityFilter] = useState<'ALL' | 'ELIGIBLE' | 'INELIGIBLE'>('ALL');
+  const [allowWeekendWithdrawals, setAllowWeekendWithdrawals] = useState<boolean>(false);
+  const [savingWeekendWithdrawals, setSavingWeekendWithdrawals] = useState<boolean>(false);
 
   // Segment Filter States (Isolation Priority Boost & Nouveaux Entrants)
   const [userSegmentFilter, setUserSegmentFilter] = useState<'ALL' | 'PRIORITY' | 'NEW' | 'OLD'>('ALL');
@@ -521,7 +524,7 @@ export default function AdminPage() {
   async function loadData() {
     setLoading(true);
     try {
-      const [s, u, b, cfgData, ann, p, w, c, ai, allP, ssdM] = await Promise.all([
+      const [s, u, b, cfgData, ann, p, w, c, ai, allP, ssdM, wSettings] = await Promise.all([
         apiAdminGetStats(),
         apiAdminGetUsers(),
         apiGetBots(),
@@ -533,6 +536,7 @@ export default function AdminPage() {
         apiAdminGetAiSettings(),
         apiAdminGetAllPurchases(),
         apiAdminGetSsdMethods(),
+        apiAdminGetWithdrawalSettings().catch(() => ({ allowWeekendWithdrawals: false })),
       ]);
       setStats(s);
       setUsers(u);
@@ -592,6 +596,7 @@ export default function AdminPage() {
       setAnnouncements(ann);
       setPendingPurchases(p);
       setPendingWithdrawals(w);
+      setAllowWeekendWithdrawals(wSettings?.allowWeekendWithdrawals ?? false);
       setChatConversations(c.conversations || []);
       setAiSettings(ai);
     } catch (err: any) {
@@ -951,6 +956,24 @@ export default function AdminPage() {
       notify(err.message || 'Erreur lors de la suppression', 'error');
     } finally {
       setActionLoading(null);
+    }
+  }
+
+  async function handleToggleWeekendWithdrawals(enable: boolean) {
+    setSavingWeekendWithdrawals(true);
+    try {
+      await apiAdminUpdateWithdrawalSettings(enable);
+      setAllowWeekendWithdrawals(enable);
+      notify(
+        enable
+          ? '✅ Restriction levée : Les retraits sont désormais AUTORISÉS le week-end !'
+          : '🔒 Restriction maintenue : Les retraits sont désormais BLOQUÉS le week-end.',
+        'success'
+      );
+    } catch (err: any) {
+      notify(err.message || 'Erreur lors de la configuration des retraits le week-end', 'error');
+    } finally {
+      setSavingWeekendWithdrawals(false);
     }
   }
 
@@ -2253,6 +2276,92 @@ export default function AdminPage() {
                           ⛔ Rejeter les {ineligiblePendingCount} non éligibles en bloc
                         </button>
                       )}
+                    </div>
+
+                    {/* ── Bandeau de Gestion Restriction Week-end (Samedi & Dimanche) ── */}
+                    <div style={{
+                      background: allowWeekendWithdrawals
+                        ? 'linear-gradient(135deg, #ECFDF5 0%, #D1FAE5 100%)'
+                        : 'linear-gradient(135deg, #FEF2F2 0%, #FEE2E2 100%)',
+                      border: `1.5px solid ${allowWeekendWithdrawals ? '#6EE7B7' : '#FCA5A5'}`,
+                      borderRadius: 16, padding: '16px 20px', marginBottom: 20,
+                      display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                      flexWrap: 'wrap', gap: 16, boxShadow: '0 2px 8px rgba(0,0,0,0.03)'
+                    }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
+                        <div style={{
+                          width: 44, height: 44, borderRadius: 12,
+                          background: allowWeekendWithdrawals ? '#10B981' : '#EF4444',
+                          color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                          fontSize: 22, flexShrink: 0,
+                          boxShadow: allowWeekendWithdrawals ? '0 4px 10px rgba(16,185,129,0.3)' : '0 4px 10px rgba(239,68,68,0.3)',
+                        }}>
+                          {allowWeekendWithdrawals ? '🟢' : '🔒'}
+                        </div>
+                        <div>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+                            <h3 style={{
+                              fontSize: 15, fontWeight: 800, margin: 0,
+                              color: allowWeekendWithdrawals ? '#065F46' : '#991B1B',
+                              fontFamily: 'Space Grotesk, sans-serif'
+                            }}>
+                              {allowWeekendWithdrawals
+                                ? 'Retraits le week-end : AUTORISÉS (Restriction levée)'
+                                : 'Retraits le week-end : BLOQUÉS (Restriction active)'}
+                            </h3>
+                            <span style={{
+                              fontSize: 11, fontWeight: 800, padding: '2px 8px', borderRadius: 99,
+                              background: allowWeekendWithdrawals ? '#059669' : '#DC2626',
+                              color: 'white'
+                            }}>
+                              {allowWeekendWithdrawals ? 'Ouvert 7j/7' : 'Lun - Ven uniquement'}
+                            </span>
+                          </div>
+                          <p style={{
+                            fontSize: 12, margin: '4px 0 0',
+                            color: allowWeekendWithdrawals ? '#047857' : '#7F1D1D',
+                            fontWeight: 500
+                          }}>
+                            {allowWeekendWithdrawals
+                              ? 'Les clients peuvent soumettre des demandes de retrait tous les jours (Samedi et Dimanche inclus, de 08h à 21h).'
+                              : 'Les retraits sont bloqués le samedi et le dimanche. Les clients reçoivent un message indiquant l\'indisponibilité.'}
+                          </p>
+                        </div>
+                      </div>
+
+                      <button
+                        onClick={() => handleToggleWeekendWithdrawals(!allowWeekendWithdrawals)}
+                        disabled={savingWeekendWithdrawals}
+                        className="btn-press"
+                        style={{
+                          background: allowWeekendWithdrawals
+                            ? 'linear-gradient(135deg, #DC2626, #B91C1C)'
+                            : 'linear-gradient(135deg, #10B981, #059669)',
+                          color: 'white', border: 'none', borderRadius: 12,
+                          padding: '11px 20px', fontSize: 13, fontWeight: 800,
+                          cursor: savingWeekendWithdrawals ? 'not-allowed' : 'pointer',
+                          display: 'flex', alignItems: 'center', gap: 8,
+                          boxShadow: allowWeekendWithdrawals
+                            ? '0 4px 12px rgba(220, 38, 38, 0.25)'
+                            : '0 4px 12px rgba(16, 185, 129, 0.25)',
+                          flexShrink: 0, transition: 'all 0.2s ease',
+                        }}
+                      >
+                        {savingWeekendWithdrawals ? (
+                          <>
+                            <Loader2 size={16} style={{ animation: 'spin 0.8s linear infinite' }} />
+                            Enregistrement...
+                          </>
+                        ) : allowWeekendWithdrawals ? (
+                          <>
+                            🔒 Rétablir la restriction (Bloquer le week-end)
+                          </>
+                        ) : (
+                          <>
+                            ⚡ Lever la restriction (Autoriser le week-end)
+                          </>
+                        )}
+                      </button>
                     </div>
 
                     {/* Onglets de Filtrage par Statut (En attente, Approuvés, Rejetés, Tous) */}

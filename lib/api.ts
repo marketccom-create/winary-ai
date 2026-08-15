@@ -448,6 +448,17 @@ export async function apiAdminDeleteWithdrawal(transactionId: string) {
   });
 }
 
+export async function apiAdminGetWithdrawalSettings() {
+  return apiFetch<{ allowWeekendWithdrawals: boolean }>('/api/admin/withdrawals/settings');
+}
+
+export async function apiAdminUpdateWithdrawalSettings(allowWeekendWithdrawals: boolean) {
+  return apiFetch<{ success: boolean; allowWeekendWithdrawals: boolean }>('/api/admin/withdrawals/settings', {
+    method: 'POST',
+    body: JSON.stringify({ allowWeekendWithdrawals }),
+  });
+}
+
 
 export async function apiAdminUpdateBotPaymentConfigs(
   configs: BotPaymentConfig[],
